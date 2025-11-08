@@ -1,0 +1,1 @@
+make recode && cp -f ./model01.dsk /var/www/gamez

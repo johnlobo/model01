@@ -1,0 +1,67 @@
+;;-----------------------------LICENSE NOTICE------------------------------------
+
+;;
+;;  This program is free software: you can redistribute it and/or modify
+;;  it under the terms of the GNU Lesser General Public License as published by
+;;  the Free Software Foundation, either version 3 of the License, or
+;;  (at your option) any later version.
+;;
+;;  This program is distributed in the hope that it will be useful,
+;;  but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;;  GNU Lesser General Public License for more details.
+;;
+;;  You should have received a copy of the GNU Lesser General Public License
+;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;-------------------------------------------------------------------------------
+.module entity_manager
+
+.include "common.h.s"
+
+;;===============================================================================
+;; PUBLIC VARIABLES
+;;===============================================================================
+MAX_ENTITIES = 10
+
+.globl entities
+
+;;===============================================================================
+;; PUBLIC METHODS
+;;===============================================================================
+.globl man_entity_init
+
+;;===============================================================================
+;; DATA ARRAY STRUCTURE CREATION
+;;===============================================================================
+.mdelete DefineEntity
+.macro DefineEntity _cpms, _status, _x, _y, _coord_x, _coord_y, _speed_x, _speed_y, _width, _height
+    .db _cpms
+    .db _status
+    .db _x
+    .db _y
+    .db _x              ;; px
+    .db _y              ;; py
+    .dw _coord_x
+    .dw _coord_y
+    .dw _speed_x
+    .dw _speed_x
+    .db _width
+    .db _height
+    .db 0               ;; moved
+    .endm
+
+BeginStruct e
+Field e, cmps, 1
+Field e, status, 1
+Field e, x, 1
+Field e, y, 1
+Field e, px, 1
+Field e, py, 1
+Field e, coord_x, 2
+Field e, coord_y, 2
+Field e, speed_x, 2
+Field e, speed_y, 2
+Field e, width, 1
+Field e, height, 1
+Field e, moved, 1
+EndStruct e 
