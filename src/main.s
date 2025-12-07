@@ -117,4 +117,6 @@ _main::
    call man_game_init            ;; Initialize game
    ;; Loop forever
 loop:
+   cpctm_WINAPE_BRK
+   call man_game_update
    jr    loop

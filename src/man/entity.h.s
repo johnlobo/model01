@@ -24,11 +24,13 @@
 MAX_ENTITIES = 10
 
 .globl entities
+.globl entity_template
 
 ;;===============================================================================
 ;; PUBLIC METHODS
 ;;===============================================================================
 .globl man_entity_init
+.globl man_entity_create_player_paddle
 
 ;;===============================================================================
 ;; DATA ARRAY STRUCTURE CREATION

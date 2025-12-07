@@ -20,6 +20,7 @@
 .include "common.h.s"
 .include "sys/render.h.s"
 .include "sys/input.h.s"
+.include "man/entity.h.s"
 
 ;;
 ;; Start of _DATA area 
@@ -42,6 +43,8 @@
 ;;  Modified: AF, HL
 ;;
 man_game_init::
+    call man_entity_init
+    call man_entity_create_player_paddle
     call sys_render_init
     ret
 
