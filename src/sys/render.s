@@ -367,3 +367,16 @@ sys_render_entities::
    call man_array_execute_each_ix_matching
    ret
 
+   ;;-----------------------------------------------------------------
+;;
+;; sys_render_update
+;;
+;;  Render all the entities
+;;  Input: 
+;;  Output: 
+;;  Modified: AF, BC, DE, HL
+;;
+sys_render_update::
+   call sys_render_entities
+   ret
+

@@ -19,6 +19,7 @@
 ;; Include all CPCtelera constant definitions, macros and variables
 .include "cpctelera.h.s"
 .include "common.h.s"
+.include "man/game.h.s"
 
 ;;-----------------------------------------------------------------
 ;;
@@ -29,7 +30,7 @@
 ;;
 .area _DATA
 
-_game_loaded_string: .asciz " GAME LOADED - V.001"      ;;27 chars, 54 bytes
+_game_loaded_string: .asciz " GAME LOADED - V.002"      ;;27 chars, 54 bytes
 
 .area _ABS   (ABS)
 .org 0x100
@@ -112,6 +113,8 @@ _main::
 
    call cpct_drawStringM1_asm  ;; Draw the string
 
+
+   call man_game_init            ;; Initialize game
    ;; Loop forever
 loop:
    jr    loop
