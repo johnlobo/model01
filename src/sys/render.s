@@ -19,6 +19,7 @@
 .include "common.h.s"
 .include "man/entity.h.s"
 .include "man/array.h.s"
+.include "sys/text.h.s"
 
 .module render_system
 
@@ -31,6 +32,7 @@
 .area _DATA
 
 FONT_NUMBERS: .dw #0000
+_welcome_string: .asciz "WELCOME - V.001"   ;;
 
 
 sys_render_front_buffer: .db 0xc0
@@ -107,19 +109,22 @@ sys_render_clear_front_buffer::
 ;;  Modified: AF, BC, DE, HL
 ;;
 sys_render_init::
-    
-    ld c,#0                                 ;; Set video mode
-    call cpct_setVideoMode_asm              ;;
-    
-    ld hl, #_g_palette0                     ;; Set palette
-    ld de, #16                              ;;
-    call cpct_setPalette_asm                ;;
 
-    ;;cpctm_setBorder_asm HW_BLACK            ;; Set Border
+   ld c,#0                                 ;; Set video mode
+   call cpct_setVideoMode_asm              ;;
+    
+   ld hl, #_g_palette0                     ;; Set palette
+   ld de, #16                              ;;
+   call cpct_setPalette_asm                ;;
+   ;;cpctm_setBorder_asm HW_BLACK            ;; Set Border
     cpctm_setBorder_asm HW_WHITE            ;; Set Border
 
     ;;call sys_render_clear_back_buffer
     call sys_render_clear_front_buffer
+
+   ld hl, #_welcome_string
+   cpctm_screenPtr_asm DE, FRONT_BUFFER, 10, 10
+   call sys_text_draw_string
 
     ;;cpctm_clearScreen_asm 0                 ;; Clear screen
 
@@ -339,6 +344,7 @@ dms_restore_ix:
 ;;  Modified: AF, BC, DE, HL
 ;;
 sys_render_one_entity::
+   cpctm_WINAPE_BRK
    ;; Calculate a video-memory location for printing a string
    ld de, #sys_render_front_buffer
    ld b, e_y(ix)

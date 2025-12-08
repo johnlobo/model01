@@ -82,8 +82,9 @@ transparency_table::
 ;;
 .globl cpct_disableFirmware_asm
 .globl cpct_getScreenPtr_asm
-.globl cpct_setDrawCharM1_asm
-.globl cpct_drawStringM1_asm
+.globl cpct_setDrawCharM0_asm
+.globl cpct_drawStringM0_asm
+.globl cpct_setVideoMode_asm
 
 ;;
 ;; MAIN function. This is the entry point of the application.
@@ -93,11 +94,15 @@ _main::
    ;; Disable firmware to prevent it from interfering with string drawing
    call cpct_disableFirmware_asm
 
+   ;; Set mode 0
+   ld c,#0 
+   call cpct_setVideoMode_asm
+
    ;; Set up draw char colours before calling draw string
    ld    d, #0         ;; D = Background PEN (0)
    ld    e, #3         ;; E = Foreground PEN (3)
 
-   call cpct_setDrawCharM1_asm   ;; Set draw char colours
+   call cpct_setDrawCharM0_asm   ;; Set draw char colours
 
    ;; Calculate a video-memory location for printing a string
    ld   de, #CPCT_VMEM_START_ASM ;; DE = Pointer to start of the screen
@@ -111,12 +116,12 @@ _main::
    ;; value from cpct_getScreenPtr_asm
    ld   iy, #_game_loaded_string    ;; IY = Pointer to the string 
 
-   call cpct_drawStringM1_asm  ;; Draw the string
+   call cpct_drawStringM0_asm  ;; Draw the string
 
 
    call man_game_init            ;; Initialize game
    ;; Loop forever
 loop:
-   cpctm_WINAPE_BRK
+   ;;cpctm_WINAPE_BRK
    call man_game_update
    jr    loop

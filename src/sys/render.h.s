@@ -28,7 +28,7 @@ sys_render_zone_foe_effect    = 0b00010000
 sys_render_zone_hand          = 0b00100000
 sys_render_zone_icon_numbers  = 0b01000000
 sys_render_zone_messages      = 0b10000000
-
+FRONT_BUFFER = 0xc000
 ;;===============================================================================
 ;; PUBLIC VARIABLES
 ;;===============================================================================
