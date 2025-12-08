@@ -345,16 +345,26 @@ dms_restore_ix:
 ;;
 sys_render_one_entity::
    cpctm_WINAPE_BRK
+   ;; calculating color
+   ld h, e_color(ix)
+   ld l, e_color(ix)
+   call cpct_px2byteM0_asm
+   ld (#_sroe_color+1), a
+
    ;; Calculate a video-memory location for printing a string
-   ld de, #sys_render_front_buffer
+   ld de, #FRONT_BUFFER
    ld b, e_y(ix)
    ld c, e_x(ix)
    call cpct_getScreenPtr_asm    ;; Calculate video memory location and return it in HL
+   ex de,hl
 
    ld c, e_width(ix)
-   ld b, e_height(ix)    
-   ld a, #0xff
+   ld b, e_height(ix)
+_sroe_color:
+   ld a, #00
    call cpct_drawSolidBox_asm
+   xor a
+   ld e_moved(ix), a
    ret
 
 ;;-----------------------------------------------------------------

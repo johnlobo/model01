@@ -65,6 +65,7 @@
 .globl cpct_pens2pixelPatternPairM0_asm
 .globl sys_render_drawSpriteMaskedAlignedColorizeM0_asm
 .globl cpct_getRandom_mxor_u8_asm
+.globl cpct_px2byteM0_asm
 
 ;;===============================================================================
 ;; DEFINED CONSTANTS

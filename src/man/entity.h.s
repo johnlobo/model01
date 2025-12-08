@@ -24,19 +24,21 @@
 MAX_ENTITIES = 10
 
 .globl entities
-.globl entity_template
+.globl paddle_template
+.globl ball_template
 
 ;;===============================================================================
 ;; PUBLIC METHODS
 ;;===============================================================================
 .globl man_entity_init
 .globl man_entity_create_player_paddle
+.globl man_entity_create_ball
 
 ;;===============================================================================
 ;; DATA ARRAY STRUCTURE CREATION
 ;;===============================================================================
 .mdelete DefineEntity
-.macro DefineEntity _cpms, _status, _x, _y, _coord_x, _coord_y, _speed_x, _speed_y, _width, _height
+.macro DefineEntity _cpms, _status, _x, _y, _coord_x, _coord_y, _speed_x, _speed_y, _width, _height, _color
     .db _cpms
     .db _status
     .db _x
@@ -49,6 +51,7 @@ MAX_ENTITIES = 10
     .dw _speed_x
     .db _width
     .db _height
+    .db _color
     .db 0               ;; moved
     .endm
 
@@ -65,5 +68,6 @@ Field e, speed_x, 2
 Field e, speed_y, 2
 Field e, width, 1
 Field e, height, 1
+Field e, color, 1
 Field e, moved, 1
 EndStruct e 
