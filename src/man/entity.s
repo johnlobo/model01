@@ -33,11 +33,8 @@ entities::
 DefineArrayStructure entity, MAX_ENTITIES, sizeof_e     
 .db 0   ;;ponemos este aqui como trampita para que siempre haya un tipo invalido al final
 
-paddle_template::
-DefineEntity c_cmp_invalid, 0, 10, 100, 10, 100, 00, 00, 2, 10, 15
-.db 0   ;;ponemos este aqui como trampita para que siempre haya un tipo invalido al final
-ball_template::
-DefineEntity c_cmp_invalid, 0, 100, 104, 100, 104, 00, 00, 1, 2, 3
+player_template::
+DefineEntity c_cmp_invalid, 0, 10, 100, 10, 100, 00, 00, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk
 .db 0   ;;ponemos este aqui como trampita para que siempre haya un tipo invalido al final
 
 ;;
@@ -60,36 +57,29 @@ man_entity_init::
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_entity_create_player_paddle
+;; man_entity_create_player_player
 ;;
 ;;  Creates the user paddle
 ;;  Input: 
 ;;  Output: 
 ;;  Modified: AF, HL
 ;;
-man_entity_create_player_paddle::
+man_entity_create_player_player::
+    ;; Player 1
     ld ix, #entities                    ;; create entity in entity array
-    ld hl, #paddle_template             ;;
+    ld hl, #player_template             ;;
     call man_array_create_element       ;;
     ld__ix_hl
     ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_input)
+    ld e_moved(ix), #1                  ;; moved = 1 to be drawn
+    
+    ;; Player 2
+    ld ix, #entities                    ;; create entity in entity array
+    ld hl, #player_template             ;;
+    call man_array_create_element       ;;
+    ld__ix_hl
+    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_input)
+    ld e_x(ix), #30
     ld e_moved(ix), #1                  ;; moved = 1 to be drawn
     ret
 
-;;-----------------------------------------------------------------
-;;
-;; man_entity_create_player_paddle
-;;
-;;  Creates the user paddle
-;;  Input: 
-;;  Output: 
-;;  Modified: AF, HL
-;;
-man_entity_create_ball::
-    ld ix, #entities                    ;; create entity in entity array
-    ld hl, #ball_template             ;;
-    call man_array_create_element       ;;
-    ld__ix_hl
-    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_input)
-    ld e_moved(ix), #1                  ;; moved = 1 to be drawn
-    ret

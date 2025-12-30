@@ -33,6 +33,7 @@
 .globl _s_small_numbers_07
 .globl _s_small_numbers_08
 .globl _s_small_numbers_09
+.globl _s_monk
 
 .globl transparency_table
 
@@ -102,7 +103,8 @@ SCORE_NUM_BYTES = 4
 S_SMALL_NUMBERS_WIDTH = 2
 S_SMALL_NUMBERS_HEIGHT = 5
 
-
+S_MONK_WIDTH = 5
+S_MONK_HEIGHT = 16
 
 ;; Font constants
 FONT_WIDTH = 2

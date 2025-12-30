@@ -344,12 +344,10 @@ dms_restore_ix:
 ;;  Modified: AF, BC, DE, HL
 ;;
 sys_render_one_entity::
-   cpctm_WINAPE_BRK
-   ;; calculating color
-   ld h, e_color(ix)
-   ld l, e_color(ix)
-   call cpct_px2byteM0_asm
-   ld (#_sroe_color+1), a
+   ;; Check if the entity has moved otherwise ret
+   ld a, e_moved(ix)
+   or a
+   ret z
 
    ;; Calculate a video-memory location for printing a string
    ld de, #FRONT_BUFFER
@@ -360,9 +358,10 @@ sys_render_one_entity::
 
    ld c, e_width(ix)
    ld b, e_height(ix)
-_sroe_color:
-   ld a, #00
-   call cpct_drawSolidBox_asm
+   ld l, e_sprite(ix)
+   ld h, e_sprite+1(ix)
+   call cpct_drawSprite_asm
+
    xor a
    ld e_moved(ix), a
    ret

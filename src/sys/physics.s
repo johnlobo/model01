@@ -13,14 +13,12 @@
 ;;  You should have received a copy of the GNU Lesser General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;-------------------------------------------------------------------------------
-.module game_manager
+.module physics_system
 
 .include "man/array.h.s"
 .include "cpctelera.h.s"
 .include "common.h.s"
-.include "sys/render.h.s"
 .include "sys/physics.h.s"
-.include "sys/input.h.s"
 .include "man/entity.h.s"
 
 ;;
@@ -36,29 +34,54 @@
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_game_init
+;; man_physics_init
 ;;
 ;;  Initilizes the game
 ;;  Input: 
 ;;  Output: 
 ;;  Modified: AF, HL
 ;;
-man_game_init::
-    call man_entity_init
-    call man_entity_create_player_player
-    call sys_render_init
+sys_physics_init::
+
     ret
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_game_init
+;; sys_physics_entities
+;;
+;;  Render all the entities
+;;  Input: 
+;;  Output: 
+;;  Modified: AF, BC, DE, HL
+;;
+sys_physics_update_one_entity::
+    inc e_speed_y(ix)
+    ld e_moved(ix), #1
+
+    ld a, e_y(ix)
+    add a, e_speed_y(ix)
+    ld e_y(ix), a
+
+    add #(256-184)
+    ret nc
+
+    ld e_speed_y(ix), #-16
+    ld e_y(ix), #184
+
+   ret
+
+;;-----------------------------------------------------------------
+;;
+;; man_physics_update
 ;;
 ;;  Initilizes the game
 ;;  Input: 
 ;;  Output: 
 ;;  Modified: AF, HL
 ;;
-man_game_update::
-    call sys_physics_update
-    call sys_render_update
+sys_physics_update::
+    ld ix, #entities
+    ld b, #c_cmp_movable
+    ld hl, #sys_physics_update_one_entity
+    call man_array_execute_each_ix_matching
     ret
