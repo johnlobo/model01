@@ -60,5 +60,8 @@ man_game_init::
 ;;
 man_game_update::
     call sys_physics_update
+    call cpct_waitVSYNC_asm
     call sys_render_update
+    ld b, #120
+    call cpct_waitHalts_asm
     ret

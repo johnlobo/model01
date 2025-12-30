@@ -349,12 +349,33 @@ sys_render_one_entity::
    or a
    ret z
 
-   ;; Calculate a video-memory location for printing a string
+   ;; Erasing the entity
+   ld e, e_p_address(ix)
+   ld d, e_p_address+1(ix)
+   ld c, e_width(ix)
+   ld b, e_height(ix)
+   ld a, #0x00
+   call cpct_drawSolidBox_asm
+
+   ld b, #240
+    call cpct_waitHalts_asm
+
+   ;; update previous address
+   ld a, e_address(ix)
+   ld e_p_address(ix), a
+   ld a, e_address+1(ix)
+   ld e_p_address+1(ix), a
+ 
+   ;; Calculate a video-memory location for rendering the entity
    ld de, #FRONT_BUFFER
    ld b, e_y(ix)
    ld c, e_x(ix)
    call cpct_getScreenPtr_asm    ;; Calculate video memory location and return it in HL
    ex de,hl
+
+   ;; update current address
+   ld e_address(ix), e
+   ld e_address+1(ix), d
 
    ld c, e_width(ix)
    ld b, e_height(ix)

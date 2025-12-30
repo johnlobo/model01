@@ -36,21 +36,21 @@ MAX_ENTITIES = 10
 ;; DATA ARRAY STRUCTURE CREATION
 ;;===============================================================================
 .mdelete DefineEntity
-.macro DefineEntity _cpms, _status, _x, _y, _coord_x, _coord_y, _speed_x, _speed_y, _width, _height, _color, _sprite
-    .db _cpms
-    .db _status
-    .db _x
-    .db _y
-    .db _x              ;; px
-    .db _y              ;; py
-    .dw _coord_x
-    .dw _coord_y
-    .dw _speed_x
-    .dw _speed_x
-    .db _width
-    .db _height
-    .db _color
-    .dw _sprite
+.macro DefineEntity _cpms, _status, _x, _y, _a, _pa, _speed_x, _speed_y, _width, _height, _color, _sprite
+    .db _cpms           ;; cpms
+    .db _status         ;; status
+    .db _x              ;; x
+    .db _y              ;; y
+    .dw _x              ;; x_coord
+    .dw _y              ;; y_coord
+    .dw _a              ;; address
+    .dw _pa             ;; previous address
+    .dw _speed_x        ;; speed_x
+    .dw _speed_x        ;; speed_y
+    .db _width          ;; width
+    .db _height         ;; height
+    .db _color          ;; color
+    .dw _sprite         ;; sprite
     .db 0               ;; moved
     .endm
 
@@ -59,10 +59,10 @@ Field e, cmps, 1
 Field e, status, 1
 Field e, x, 1
 Field e, y, 1
-Field e, px, 1
-Field e, py, 1
 Field e, coord_x, 2
 Field e, coord_y, 2
+Field e, address, 2
+Field e, p_address, 2
 Field e, speed_x, 2
 Field e, speed_y, 2
 Field e, width, 1
