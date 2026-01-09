@@ -34,3 +34,4 @@
 .globl sys_util_fadeIn
 .globl sys_util_temblor
 .globl sys_util_count_set_bits
+.globl sys_utiL_reduce_a

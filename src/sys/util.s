@@ -374,3 +374,25 @@ NEXT_BIT:
     JR NZ, BIT_LOOP ; If C is not zero, more bits to check, loop again.
 
     RET             ; Return from the routine. The result is in B.
+
+;;-----------------------------------------------------------------
+;;
+;; crt_delay
+;;
+;;  
+;;  Input: El valor a modificar está en el registro A
+;;  Output: El registro A con su magnitud reducida en 1
+;;  Destroyed: 
+;;
+sys_utiL_reduce_a:
+  or a            ; 1. Actualiza las banderas (S y Z) sin cambiar el valor de A.
+  ret z           ; 2. Si es CERO (Flag Z=1), no hacemos nada. Saltamos al final.
+  jp M, es_neg    ; 3. Si es NEGATIVO (Flag S=1/Minus), saltamos a sumar.
+; --- Caso Positivo ---
+  dec a           ; Si es positivo (ej: 5), restamos 1 (queda 4).
+  ret             ; Retornamos para no ejecutar la parte negativa.
+es_neg:
+; --- Caso Negativo ---
+  inc A           ; Si es negativo (ej: -5), sumamos 1 (queda -4).
+                  ; Al sumar 1 a un negativo, reducimos su magnitud.
+	ret

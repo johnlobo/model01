@@ -13,15 +13,12 @@
 ;;  You should have received a copy of the GNU Lesser General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;-------------------------------------------------------------------------------
-.module game_manager
+.module ai_system
 
 .include "man/array.h.s"
 .include "cpctelera.h.s"
 .include "common.h.s"
-.include "sys/render.h.s"
 .include "sys/ai.h.s"
-.include "sys/physics.h.s"
-.include "sys/input.h.s"
 .include "man/entity.h.s"
 
 ;;
@@ -37,33 +34,56 @@
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_game_init
+;; man_ai_init
 ;;
 ;;  Initilizes the game
 ;;  Input: 
 ;;  Output: 
 ;;  Modified: AF, HL
 ;;
-man_game_init::
-    call man_entity_init
-    call man_entity_create_player_player
-    call sys_render_init
+sys_ai_init::
+
     ret
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_game_init
+;; sys_ai_entities
+;;
+;;  Render all the entities
+;;  Input: 
+;;  Output: 
+;;  Modified: AF, BC, DE, HL
+;;
+sys_ai_update_one_entity::
+    ;; Vertical movement
+    inc e_speed_y(ix)           ;; gravity effect
+    ld e_moved(ix), #1          ;; set moved flag
+
+    ld a, e_y(ix)               ;; load vertical position
+    add a, e_speed_y(ix)        ;; add vertical speed
+
+    ld b, e_height(ix)          ;; load entity height
+    add b                       ;; calculate bottom position
+    cp #199                   ;; compare with ground level
+    ret c                      ;; if not collided with ground, return
+
+    ld e_speed_y(ix), #-16      ;; reset vertical speed
+    ld e_y(ix), #184          ;; place entity on the ground          
+
+   ret
+
+;;-----------------------------------------------------------------
+;;
+;; man_ai_update
 ;;
 ;;  Initilizes the game
 ;;  Input: 
 ;;  Output: 
 ;;  Modified: AF, HL
 ;;
-man_game_update::
-    call sys_physics_update
-    ld ix, #entity_array
-    call sys_input_update
-    call sys_ai_update
-    call cpct_waitVSYNC_asm
-    call sys_render_update
+sys_ai_update::
+    ld ix, #entities
+    ld b, #c_cmp_ai
+    ld hl, #sys_ai_update_one_entity
+    call man_array_execute_each_ix_matching
     ret

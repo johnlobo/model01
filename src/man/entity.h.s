@@ -24,6 +24,7 @@
 MAX_ENTITIES = 10
 
 .globl entities
+.globl entity_array
 .globl player_template
 
 ;;===============================================================================
@@ -36,7 +37,7 @@ MAX_ENTITIES = 10
 ;; DATA ARRAY STRUCTURE CREATION
 ;;===============================================================================
 .mdelete DefineEntity
-.macro DefineEntity _cpms, _status, _x, _y, _a, _pa, _speed_x, _speed_y, _width, _height, _color, _sprite
+.macro DefineEntity _cpms, _status, _x, _y, _a, _pa, _speed_x, _speed_y, _on_air, _width, _height, _color, _sprite
     .db _cpms           ;; cpms
     .db _status         ;; status
     .db _x              ;; x
@@ -47,6 +48,7 @@ MAX_ENTITIES = 10
     .dw _pa             ;; previous address
     .dw _speed_x        ;; speed_x
     .dw _speed_x        ;; speed_y
+    .db _on_air         ;; on_air
     .db _width          ;; width
     .db _height         ;; height
     .db _color          ;; color
@@ -65,6 +67,7 @@ Field e, address, 2
 Field e, p_address, 2
 Field e, speed_x, 2
 Field e, speed_y, 2
+Field e, on_air, 1
 Field e, width, 1
 Field e, height, 1
 Field e, color, 1

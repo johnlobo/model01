@@ -19,6 +19,7 @@
 .include "cpctelera.h.s"
 .include "common.h.s"
 .include "sys/physics.h.s"
+.include "sys/util.h.s"
 .include "man/entity.h.s"
 
 ;;
@@ -55,19 +56,40 @@ sys_physics_init::
 ;;  Modified: AF, BC, DE, HL
 ;;
 sys_physics_update_one_entity::
-    inc e_speed_y(ix)
-    ld e_moved(ix), #1
+    ;; Horizontal movement
+    ld a, e_speed_x(ix)             ;; load horizontal speed
+    or a                            ;; check if horizontal speed is zero
+    jr z, spuoe_vertical_movement   ;; jump if horizontal speed is zero
 
-    ld a, e_y(ix)
-    add a, e_speed_y(ix)
-    ld e_y(ix), a
+    ;; Friction application
+    call sys_utiL_reduce_a          ;; apply friction to horizontal speed
+    ld e_speed_x(ix), a             ;; update horizontal speed
 
-    add #(256-184)
-    ret nc
+    add a, e_x(ix)                  ;; update x position
+    ld e_x(ix), a                   ;; store new x position
+    ld e_moved(ix), #1              ;; set moved flag
 
-    ld e_speed_y(ix), #-16
-    ld e_y(ix), #184
+    ;; Vertical movement
+spuoe_vertical_movement:
+cpctm_WINAPE_BRK
+    ld a, e_speed_y(ix)         ;; load vertical speed
+    or a                        ;;
+    ret z                       ;; return if vertical speed is zero
 
+    add a, e_y(ix)              ;; Add vertical speed to vertical position
+
+    ;; check ground collision
+    ld b, a                     ;; load bottom position on b
+    ld a, #GROUND_LEVEL         ;; ground level
+    sub e_height(ix)         ;; calculate bottom position
+    cp b
+    ld a, b
+    jr nc, spuoe_not_ground      ;; if not collided with ground, continue vertical movement
+    ld a, #184
+
+spuoe_not_ground:
+    ld e_y(ix), a               ;; update y position
+    ld e_moved(ix), #1          ;; set moved flag
    ret
 
 ;;-----------------------------------------------------------------

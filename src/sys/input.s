@@ -21,6 +21,7 @@
 .include "../common.h.s"
 .include "sys/util.h.s"
 .include "man/array.h.s"
+.include "man/entity.h.s"
 
 ;;
 ;; Start of _DATA area 
@@ -208,7 +209,7 @@ sys_input_action::
 ;;  Modified: AF, HL, IX
 ;;
 sys_input_selected_left::
- 
+    ld e_speed_x(ix), #-2
     ret
 
 ;;-----------------------------------------------------------------
@@ -220,8 +221,7 @@ sys_input_selected_left::
 ;;  Modified: 
 ;;
 sys_input_selected_right::
-    
-
+    ld e_speed_x(ix), #2
     ret
 
 ;;-----------------------------------------------------------------
@@ -267,12 +267,7 @@ first_key:
 ;;  Output:
 ;;  Modified: iy, bc
 ;;
-sys_input_update::
+sys_input_update::   
     ld iy, #sys_input_key_actions
     call sys_input_generic_update
     ret
-
-
-
-
-

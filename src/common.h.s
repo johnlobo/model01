@@ -84,13 +84,12 @@ c_cmp_invalid = 0x00    ;; Type invalid
 c_cmp_render = 0x01     ;;entidad renderizable
 c_cmp_movable = 0x02    ;;entidad que se puede mover
 c_cmp_input = 0x04      ;;entidad controlable por input  
-c_cmp_ia = 0x08         ;;entidad controlable con ia
+c_cmp_ai = 0x08         ;;entidad controlable con ia
 c_cmp_animated = 0x10   ;;entidad animada
 c_cmp_collider = 0x20   ;;entidad que puede colisionar
 c_cmp_default = c_cmp_render | c_cmp_movable | c_cmp_collider  ;;componente por defecto
 
 x_cmps = 0
-
 
 ;; Keyboard constants
 BUFFER_SIZE = 10
@@ -110,6 +109,8 @@ S_MONK_HEIGHT = 16
 FONT_WIDTH = 2
 FONT_HEIGHT = 9
 
+;; GAME_CONSTANTS
+GROUND_LEVEL = 199
 
 
 ;;===============================================================================

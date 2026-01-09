@@ -34,7 +34,7 @@ DefineArrayStructure entity, MAX_ENTITIES, sizeof_e
 .db 0   ;;ponemos este aqui como trampita para que siempre haya un tipo invalido al final
 
 player_template::
-DefineEntity c_cmp_invalid, 0, 10, 100, 0xE3CA, 0xE3CA, 10, 100, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk
+DefineEntity c_cmp_invalid, 0, 10, 184, 0xE3CA, 0xE3CA, 0, 0, 0, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk
 .db 0   ;;ponemos este aqui como trampita para que siempre haya un tipo invalido al final
 
 ;;
@@ -74,12 +74,22 @@ man_entity_create_player_player::
     ld e_moved(ix), #1                  ;; moved = 1 to be drawn
     
     ;; Player 2
-    ;;ld ix, #entities                    ;; create entity in entity array
-    ;;ld hl, #player_template             ;;
-    ;;call man_array_create_element       ;;
-    ;;ld__ix_hl
-    ;;ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_input)
-    ;;ld e_x(ix), #30
-    ;;ld e_moved(ix), #1                  ;; moved = 1 to be drawn
+    ld ix, #entities                    ;; create entity in entity array
+    ld hl, #player_template             ;;
+    call man_array_create_element       ;;
+    ld__ix_hl
+    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_ai)
+    ld e_x(ix), #30
+    ld e_moved(ix), #1                  ;; moved = 1 to be drawn
+
+    ;; Player 3
+    ld ix, #entities                    ;; create entity in entity array
+    ld hl, #player_template             ;;
+    call man_array_create_element       ;;
+    ld__ix_hl
+    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_ai)
+    ld e_x(ix), #50
+    ld e_moved(ix), #1                  ;; moved = 1 to be drawn
+
     ret
 

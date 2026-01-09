@@ -20,6 +20,7 @@
 .include "man/entity.h.s"
 .include "man/array.h.s"
 .include "sys/text.h.s"
+.include "sys/input.h.s"
 
 .module render_system
 
@@ -350,22 +351,13 @@ sys_render_one_entity::
    ret z
 
    ;; Erasing the entity
-   ld e, e_p_address(ix)
-   ld d, e_p_address+1(ix)
+   ld e, e_address(ix)
+   ld d, e_address+1(ix)
    ld c, e_width(ix)
    ld b, e_height(ix)
    ld a, #0x00
    call cpct_drawSolidBox_asm
 
-   ld b, #240
-    call cpct_waitHalts_asm
-
-   ;; update previous address
-   ld a, e_address(ix)
-   ld e_p_address(ix), a
-   ld a, e_address+1(ix)
-   ld e_p_address+1(ix), a
- 
    ;; Calculate a video-memory location for rendering the entity
    ld de, #FRONT_BUFFER
    ld b, e_y(ix)

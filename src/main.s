@@ -20,6 +20,7 @@
 .include "cpctelera.h.s"
 .include "common.h.s"
 .include "man/game.h.s"
+.include "sys/system.h.s"
 
 ;;-----------------------------------------------------------------
 ;;
@@ -92,7 +93,8 @@ transparency_table::
 ;;
 _main::
    ;; Disable firmware to prevent it from interfering with string drawing
-   call cpct_disableFirmware_asm
+   ;;call cpct_disableFirmware_asm
+   call sys_system_disable_firmware
 
    ;; Set mode 0
    ld c,#0 
