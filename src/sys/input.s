@@ -20,7 +20,7 @@
 .include "cpctelera.h.s"
 .include "../common.h.s"
 .include "sys/util.h.s"
-.include "man/array.h.s"
+.include "sys/array.h.s"
 .include "man/entity.h.s"
 
 ;;

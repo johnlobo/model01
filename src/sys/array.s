@@ -15,7 +15,7 @@
 ;;-------------------------------------------------------------------------------
 .module array_manager
 
-.include "man/array.h.s"
+.include "sys/array.h.s"
 .include "cpctelera.h.s"
 .include "common.h.s"
 .include "sys/util.h.s"
@@ -37,14 +37,14 @@
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_array_init
+;; sys_array_init
 ;;
 ;;  Initilizes an array
 ;;  Input: ix points to the array
 ;;  Output: 
 ;;  Modified: AF, HL
 ;;
-man_array_init::
+sys_array_init::
     xor a
     ld a_count(ix), a           ;; Initialize the number of elements in the array
 
@@ -61,7 +61,7 @@ man_array_init::
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_array_create_element
+;; sys_array_create_element
 ;;
 ;;  Create a element from the model pointed by HL
 ;;  Input:  ix: pointer to the array 
@@ -69,7 +69,7 @@ man_array_init::
 ;;  Output: hl: points to the new created entity
 ;;  Modified: AF, BC, DE, HL
 ;;
-man_array_create_element::
+sys_array_create_element::
     ld b, #0                        ;; bc = component size
     ld a, a_component_size(ix)      ;;
     ld c, a                         ;;    
@@ -101,14 +101,14 @@ ret
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_array_remove_element
+;; sys_array_remove_element
 ;;
 ;;  Remove an element from the array
 ;;  Input: a: number of element to remove
 ;;  Output: 
 ;;  Modified: AF, BC, DE, HL
 ;;
-man_array_remove_element::
+sys_array_remove_element::
 
     ld b, a                     ;; copy element to erase to b
     ld a, a_count(ix)           ;; check if we have to erase the last element
@@ -170,7 +170,7 @@ ret
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_array_get_element
+;; sys_array_get_element
 ;;
 ;;  Retrieves in hl the element in position a
 ;;  Input:  a: number of element to return
@@ -178,8 +178,8 @@ ret
 ;;  Output: hl: pointer to the element
 ;;  Modified: AF, BC, DE, HL
 ;;
-man_array_get_address_from_pointer::
-    call man_array_get_element          ;; call the function to get in hl the element "a"
+sys_array_get_address_from_pointer::
+    call sys_array_get_element          ;; call the function to get in hl the element "a"
     ld__ix_hl
     ld l, p_p(ix)
     ld h, p_p+1(ix)
@@ -187,7 +187,7 @@ man_array_get_address_from_pointer::
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_array_get_element
+;; sys_array_get_element
 ;;
 ;;  Retrieves in hl the element in position a
 ;;  Input:  a: number of element to return
@@ -195,7 +195,7 @@ man_array_get_address_from_pointer::
 ;;  Output: hl: pointer to the element
 ;;  Modified: AF, BC, DE, HL
 ;;
-man_array_get_element::
+sys_array_get_element::
     push ix                     ;; load in hl the beginning of the array
     pop hl                      ;;
     ld de, #a_array
@@ -216,7 +216,7 @@ _g_e_sum_loop:                  ;;
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_array_get_random_element
+;; sys_array_get_random_element
 ;;
 ;;  Retrieves in hl the element in a random position and in a the position
 ;;  Input:  ix: array structure
@@ -225,7 +225,7 @@ _g_e_sum_loop:                  ;;
 ;;          a : number of element.
 ;;  Modified: AF, BC, DE, HL
 ;;
-man_array_get_random_element::
+sys_array_get_random_element::
     ld (SUB_OFFSET), a
     ld (ADD_OFFSET), a
     push ix                         ;; load in hl the beginning of the array
@@ -263,7 +263,7 @@ _r_e_output = .+1
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_array_move_all_elements
+;; sys_array_move_all_elements
 ;;
 ;;  moves all the elements form one array to the other
 ;;  Input:  hl: array from
@@ -271,7 +271,7 @@ _r_e_output = .+1
 ;;  Output: 
 ;;  Modified: AF, BC, DE, HL
 ;;
-man_array_move_all_elements::
+sys_array_move_all_elements::
     ld (FIRST_ARRAY), hl
     ld (THIRD_ARRAY), hl
     ex de, hl
@@ -280,16 +280,16 @@ _move_loop:
 FIRST_ARRAY = .+2
     ld ix, #0000
     xor a
-    call man_array_get_element
+    call sys_array_get_element
 
 SECOND_ARRAY = .+2
     ld ix, #0000
-    call man_array_create_element
+    call sys_array_create_element
 
 THIRD_ARRAY = .+2    
     ld ix, #0000
     xor a
-    call man_array_remove_element
+    call sys_array_remove_element
     
     ld a, a_count(ix)
     or a
@@ -298,7 +298,7 @@ THIRD_ARRAY = .+2
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_array_execute_each
+;; sys_array_execute_each
 ;;
 ;;  executes the routine pointed in HL for each element in the array pointed in IX
 ;;  Input:  hl: routine to execute on each
@@ -306,7 +306,7 @@ THIRD_ARRAY = .+2
 ;;  Output: 
 ;;  Modified: AF, BC, DE, HL
 ;;
-man_array_execute_each::
+sys_array_execute_each::
     ld a, a_count(ix)       ;; retrieve number of elements in the array
     or a                    ;; If no elements in arrary return
     ret z 
@@ -354,7 +354,7 @@ pattern: .db #0
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_array_execute_each_ix_matching
+;; sys_array_execute_each_ix_matching
 ;;
 ;;  executes the routine pointed in HL for each element in the array pointed in IX
 ;;  Input:  hl: routine to execute on each
@@ -363,7 +363,7 @@ pattern: .db #0
 ;;  Output: 
 ;;  Modified: AF, BC, DE, HL
 ;;
-man_array_execute_each_ix_matching::
+sys_array_execute_each_ix_matching::
     ld a, b                 ;; Save pattern for latter use
     ld (pattern), a         ;;
 
@@ -416,7 +416,7 @@ maeeixm_return_point:
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_array_execute_each_iy_matching
+;; sys_array_execute_each_iy_matching
 ;;
 ;;  executes the routine pointed in HL for each element in the array pointed in IY
 ;;  Input:  hl: routine to execute on each
@@ -425,7 +425,7 @@ maeeixm_return_point:
 ;;  Output: 
 ;;  Modified: AF, BC, DE, HL
 ;;
-man_array_execute_each_iy_matching::
+sys_array_execute_each_iy_matching::
     ld a, b                 ;; Save pattern for latter use
     ld (pattern), a         ;;
 

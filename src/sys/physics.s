@@ -15,7 +15,7 @@
 ;;-------------------------------------------------------------------------------
 .module physics_system
 
-.include "man/array.h.s"
+.include "sys/array.h.s"
 .include "cpctelera.h.s"
 .include "common.h.s"
 .include "sys/physics.h.s"
@@ -105,5 +105,5 @@ sys_physics_update::
     ld ix, #entities
     ld b, #c_cmp_movable
     ld hl, #sys_physics_update_one_entity
-    call man_array_execute_each_ix_matching
+    call sys_array_execute_each_ix_matching
     ret

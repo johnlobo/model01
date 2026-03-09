@@ -26,15 +26,15 @@
 ;;===============================================================================
 ;; PUBLIC METHODS
 ;;===============================================================================
-.globl man_array_init
-.globl man_array_create_element
-.globl man_array_remove_element
-.globl man_array_get_element
-.globl man_array_get_random_element
-.globl man_array_get_address_from_pointer
-.globl man_array_move_all_elements
-.globl man_array_execute_each
-.globl man_array_execute_each_ix_matching
+.globl sys_array_init
+.globl sys_array_create_element
+.globl sys_array_remove_element
+.globl sys_array_get_element
+.globl sys_array_get_random_element
+.globl sys_array_get_address_from_pointer
+.globl sys_array_move_all_elements
+.globl sys_array_execute_each
+.globl sys_array_execute_each_ix_matching
 
 ;;===============================================================================
 ;; COMPONENT DEFINITION MACRO

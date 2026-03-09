@@ -15,13 +15,16 @@
 ;;-------------------------------------------------------------------------------
 .module game_manager
 
-.include "man/array.h.s"
+.include "sys/array.h.s"
 .include "cpctelera.h.s"
 .include "common.h.s"
 .include "sys/render.h.s"
 .include "sys/ai.h.s"
 .include "sys/physics.h.s"
 .include "sys/input.h.s"
+.include "sys/collision.h.s"
+.include "sys/anim.h.s"
+.include "sys/beh.h.s"
 .include "man/entity.h.s"
 
 ;;
@@ -64,6 +67,9 @@ man_game_update::
     ld ix, #entity_array
     call sys_input_update
     call sys_ai_update
+    call sys_beh_update
+    call sys_collision_update
+    call sys_anim_update
     call cpct_waitVSYNC_asm
     call sys_render_update
     ret

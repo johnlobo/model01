@@ -18,7 +18,7 @@
 .include "man/entity.h.s"
 .include "cpctelera.h.s"
 .include "common.h.s"
-.include "man/array.h.s"
+.include "sys/array.h.s"
 .include "sys/util.h.s"
 
 ;;
@@ -68,7 +68,7 @@ man_entity_create_player_player::
     ;; Player 1
     ld ix, #entities                    ;; create entity in entity array
     ld hl, #player_template             ;;
-    call man_array_create_element       ;;
+    call sys_array_create_element       ;;
     ld__ix_hl
     ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_input)
     ld e_moved(ix), #1                  ;; moved = 1 to be drawn
@@ -76,7 +76,7 @@ man_entity_create_player_player::
     ;; Player 2
     ld ix, #entities                    ;; create entity in entity array
     ld hl, #player_template             ;;
-    call man_array_create_element       ;;
+    call sys_array_create_element       ;;
     ld__ix_hl
     ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_ai)
     ld e_x(ix), #30
@@ -85,7 +85,7 @@ man_entity_create_player_player::
     ;; Player 3
     ld ix, #entities                    ;; create entity in entity array
     ld hl, #player_template             ;;
-    call man_array_create_element       ;;
+    call sys_array_create_element       ;;
     ld__ix_hl
     ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_ai)
     ld e_x(ix), #50

@@ -86,7 +86,8 @@ c_cmp_movable = 0x02    ;;entidad que se puede mover
 c_cmp_input = 0x04      ;;entidad controlable por input  
 c_cmp_ai = 0x08         ;;entidad controlable con ia
 c_cmp_animated = 0x10   ;;entidad animada
-c_cmp_collider = 0x20   ;;entidad que puede colisionar
+c_cmp_collider = 0x20       ;;entidad que puede colisionar (activo, inicia la comprobacion)
+c_cmp_collisionable = 0x40  ;;entidad que puede ser colisionada (pasivo, receptor)
 c_cmp_default = c_cmp_render | c_cmp_movable | c_cmp_collider  ;;componente por defecto
 
 x_cmps = 0

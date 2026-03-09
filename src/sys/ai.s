@@ -15,7 +15,7 @@
 ;;-------------------------------------------------------------------------------
 .module ai_system
 
-.include "man/array.h.s"
+.include "sys/array.h.s"
 .include "cpctelera.h.s"
 .include "common.h.s"
 .include "sys/ai.h.s"
@@ -55,6 +55,13 @@ sys_ai_init::
 ;;  Modified: AF, BC, DE, HL
 ;;
 sys_ai_update_one_entity::
+    ;; Skip entities that have a behavior program — sys_beh_update handles those
+    ld e, e_beh(ix)
+    ld d, e_beh+1(ix)
+    ld a, d
+    or e
+    ret nz
+
     ;; Vertical movement
     inc e_speed_y(ix)           ;; gravity effect
     ld e_moved(ix), #1          ;; set moved flag
@@ -85,5 +92,5 @@ sys_ai_update::
     ld ix, #entities
     ld b, #c_cmp_ai
     ld hl, #sys_ai_update_one_entity
-    call man_array_execute_each_ix_matching
+    call sys_array_execute_each_ix_matching
     ret

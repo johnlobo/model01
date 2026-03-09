@@ -54,6 +54,11 @@ MAX_ENTITIES = 10
     .db _color          ;; color
     .dw _sprite         ;; sprite
     .db 0               ;; moved
+    .dw 0               ;; anim (null = no animation)
+    .db 0               ;; anim_frame
+    .db 0               ;; anim_timer (0 = expired, update on first tick)
+    .dw 0               ;; beh (null = no behavior program)
+    .db 0               ;; beh_timer
     .endm
 
 BeginStruct e
@@ -73,4 +78,9 @@ Field e, height, 1
 Field e, color, 1
 Field e, sprite, 2
 Field e, moved, 1
+Field e, anim, 2
+Field e, anim_frame, 1
+Field e, anim_timer, 1
+Field e, beh, 2
+Field e, beh_timer, 1
 EndStruct e

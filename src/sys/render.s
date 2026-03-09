@@ -18,7 +18,7 @@
 .include "cpctelera.h.s"
 .include "common.h.s"
 .include "man/entity.h.s"
-.include "man/array.h.s"
+.include "sys/array.h.s"
 .include "sys/text.h.s"
 .include "sys/input.h.s"
 
@@ -392,7 +392,7 @@ sys_render_entities::
    ld ix, #entities
    ld b, #c_cmp_render
    ld hl, #sys_render_one_entity
-   call man_array_execute_each_ix_matching
+   call sys_array_execute_each_ix_matching
    ret
 
    ;;-----------------------------------------------------------------
