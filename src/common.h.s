@@ -33,7 +33,13 @@
 .globl _s_small_numbers_07
 .globl _s_small_numbers_08
 .globl _s_small_numbers_09
-.globl _s_monk
+.globl _s_monk_0
+.globl _s_monk_1
+.globl _s_monk_2
+.globl _s_monk_3
+.globl _s_monk_4
+.globl _s_monk_5
+.globl _s_monk_6
 
 .globl transparency_table
 

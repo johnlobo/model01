@@ -40,10 +40,11 @@ Entry point is `_main::`. Initialization sequence:
 1. `sys_physics_update` — apply gravity/friction/movement
 2. `sys_input_update` — read keyboard, dispatch to handlers (IX = active entity)
 3. `sys_ai_update` — AI bounce/gravity for AI-controlled entities
-4. `sys_collision_update` — AABB collision detection between collider/collisionable entities
-5. `sys_anim_update` — advance animation frames for animated entities
-6. `cpct_waitVSYNC_asm` — wait for vertical sync
-7. `sys_render_update` — draw all dirty entities
+4. `sys_beh_update` — bytecode behavior state machine for `c_cmp_ai` entities with `e_beh != 0`
+5. `sys_collision_update` — AABB collision detection between collider/collisionable entities
+6. `sys_anim_update` — advance animation frames for animated entities
+7. `cpct_waitVSYNC_asm` — wait for vertical sync
+8. `sys_render_update` — draw all dirty entities
 
 ### Entity Component System
 
@@ -81,15 +82,16 @@ src/
   sys/
     array.s / array.h.s   # Generic array + iteration system
     render.s / render.h.s     # Sprite drawing, double-buffer management
-    physics.s                 # Gravity, friction, ground collision
-    input.s                   # Keyboard scan, key→action dispatch table
-    ai.s                      # AI gravity bounce behavior
+    physics.s / physics.h.s   # Gravity, friction, ground collision
+    input.s / input.h.s       # Keyboard scan, key→action dispatch table
+    ai.s / ai.h.s             # AI gravity bounce behavior
     collision.s / collision.h.s # AABB collision detection
     anim.s / anim.h.s         # Frame animation: descriptor-driven, updates e_sprite
-    system.s                  # Firmware disable
-    text.s / util.s           # Text drawing, math utilities
-    messages.s                # Message system
-  assets/sprites/         # Generated C files from PNG assets (monk, font, palette)
+    system.s / system.h.s     # Firmware disable
+    text.s / text.h.s         # Text drawing
+    util.s / util.h.s         # Math utilities
+    messages.s / messages.h.s # Message system
+  assets/sprites/         # Generated C files from PNG assets (monk, font, palette, small_numbers)
 ```
 
 ### Animation Descriptor Format (`src/sys/anim.h.s`)
@@ -150,7 +152,7 @@ my_next_state:
 
 ### Key Constants (in `src/common.h.s`)
 
-- `GROUND_LEVEL = 199`, `FRONT_BUFFER`, `BACK_BUFFER` — screen buffer addresses
+- `GROUND_LEVEL = 199` — defined in `common.h.s`; `FRONT_BUFFER`, `BACK_BUFFER` — screen buffer addresses defined in `sys/render.h.s`
 - `S_MONK_WIDTH = 5`, `S_MONK_HEIGHT = 16` (sprite dimensions in bytes/pixels)
 - `MAX_ENTITIES = 10`
 - `transparency_table` at `0x0100` — 256-byte aligned mask table for masked sprite drawing

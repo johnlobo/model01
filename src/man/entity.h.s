@@ -26,6 +26,10 @@ MAX_ENTITIES = 10
 .globl entities
 .globl entity_array
 .globl player_template
+.globl monk_walk_anim
+.globl monk_idle_anim
+.globl monk_walk_right_anim
+.globl monk_walk_left_anim
 
 ;;===============================================================================
 ;; PUBLIC METHODS

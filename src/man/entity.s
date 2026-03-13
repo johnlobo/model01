@@ -30,11 +30,40 @@
 .area _DATA
 
 entities::
-DefineArrayStructure entity, MAX_ENTITIES, sizeof_e     
+DefineArrayStructure entity, MAX_ENTITIES, sizeof_e
 .db 0   ;;ponemos este aqui como trampita para que siempre haya un tipo invalido al final
 
+monk_walk_anim::
+    .db 4               ;; 4 frames
+    .db 8               ;; 8 ticks per frame
+    .dw _s_monk_0
+    .dw _s_monk_1
+    .dw _s_monk_2
+    .dw _s_monk_3
+
+monk_idle_anim::
+    .db 1               ;; 1 frame
+    .db 0               ;; speed (unused with 1 frame)
+    .dw _s_monk_0
+
+monk_walk_right_anim::
+    .db 4               ;; 4 frames: 1-2-3-2
+    .db 8               ;; 8 ticks per frame
+    .dw _s_monk_1
+    .dw _s_monk_2
+    .dw _s_monk_3
+    .dw _s_monk_2
+
+monk_walk_left_anim::
+    .db 4               ;; 4 frames: 4-5-6-5
+    .db 8               ;; 8 ticks per frame
+    .dw _s_monk_4
+    .dw _s_monk_5
+    .dw _s_monk_6
+    .dw _s_monk_5
+
 player_template::
-DefineEntity c_cmp_invalid, 0, 10, 184, 0xE3CA, 0xE3CA, 0, 0, 0, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk
+DefineEntity c_cmp_invalid, 0, 10, 184, 0xE3CA, 0xE3CA, 0, 0, 0, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk_0
 .db 0   ;;ponemos este aqui como trampita para que siempre haya un tipo invalido al final
 
 ;;
@@ -70,26 +99,35 @@ man_entity_create_player_player::
     ld hl, #player_template             ;;
     call sys_array_create_element       ;;
     ld__ix_hl
-    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_input)
+    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_input | c_cmp_animated)
     ld e_moved(ix), #1                  ;; moved = 1 to be drawn
-    
+    ld hl, #monk_idle_anim
+    ld e_anim(ix), l
+    ld e_anim+1(ix), h
+
     ;; Player 2
     ld ix, #entities                    ;; create entity in entity array
     ld hl, #player_template             ;;
     call sys_array_create_element       ;;
     ld__ix_hl
-    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_ai)
+    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_ai | c_cmp_animated)
     ld e_x(ix), #30
     ld e_moved(ix), #1                  ;; moved = 1 to be drawn
+    ld hl, #monk_walk_anim
+    ld e_anim(ix), l
+    ld e_anim+1(ix), h
 
     ;; Player 3
     ld ix, #entities                    ;; create entity in entity array
     ld hl, #player_template             ;;
     call sys_array_create_element       ;;
     ld__ix_hl
-    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_ai)
+    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_ai | c_cmp_animated)
     ld e_x(ix), #50
     ld e_moved(ix), #1                  ;; moved = 1 to be drawn
+    ld hl, #monk_walk_anim
+    ld e_anim(ix), l
+    ld e_anim+1(ix), h
 
     ret
 

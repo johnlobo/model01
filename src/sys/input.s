@@ -210,6 +210,9 @@ sys_input_action::
 ;;
 sys_input_selected_left::
     ld e_speed_x(ix), #-2
+    ld hl, #monk_walk_left_anim
+    ld e_anim(ix), l
+    ld e_anim+1(ix), h
     ret
 
 ;;-----------------------------------------------------------------
@@ -222,6 +225,9 @@ sys_input_selected_left::
 ;;
 sys_input_selected_right::
     ld e_speed_x(ix), #2
+    ld hl, #monk_walk_right_anim
+    ld e_anim(ix), l
+    ld e_anim+1(ix), h
     ret
 
 ;;-----------------------------------------------------------------
@@ -267,7 +273,11 @@ first_key:
 ;;  Output:
 ;;  Modified: iy, bc
 ;;
-sys_input_update::   
+sys_input_update::
+    ;; Reset player to idle each frame; key handlers override if a direction is pressed
+    ld hl, #monk_idle_anim
+    ld e_anim(ix), l
+    ld e_anim+1(ix), h
     ld iy, #sys_input_key_actions
     call sys_input_generic_update
     ret
