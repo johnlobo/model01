@@ -157,6 +157,20 @@ my_next_state:
 - `MAX_ENTITIES = 10`
 - `transparency_table` at `0x0100` — 256-byte aligned mask table for masked sprite drawing
 
+### Map System (`src/sys/map.s`, `src/sys/map.h.s`)
+
+Draws a static 16×20 tile background using CPCtelera's ETM 4×8 engine (`cpct_etm_drawTilemap4x8_agf_asm`). The full tilemap is redrawn every frame (naturally erasing previous entity sprites), so no separate entity-erase step is needed.
+
+**Critical: ETM ASM register convention** — the `.asm` documentation header lists parameters in C order, but the ASM variant requires:
+- `cpct_etm_setDrawTilemap4x8_agf_asm`: `C` = map width, `B` = map height, `DE` = tilemap width, `HL` = tileset base pointer
+- `cpct_etm_drawTilemap4x8_agf_asm`: **`HL` = tilemap data pointer**, **`DE` = video memory pointer** (NOT HL=video, DE=tilemap — that's backwards and will silently corrupt both buffers)
+
+The ETM draw function uses self-modifying code and hijacks the Z80 stack pointer (saves/restores SP per row) to fast-copy tile data via `pop bc`. It destroys AF, BC, DE, HL, IX, IY — safe because `sys_array_execute_each_ix_matching` uses self-modifying code for its loop state, not IX/IY as persistent registers.
+
+**Tileset format:** Tiles are converted with `zgtiles` format in `cfg/image_conversion.mk`, which outputs bytes in gray-code row order (0,1,3,2,6,7,5,4) as required by the ETM engine. Generated arrays `s_tileset_00`…`s_tileset_NN` are `const u8[32]` in the same C translation unit — SDCC places them consecutively in `_CODE` with no padding, so `_s_tileset_00` serves as the flat tileset base. Tile 0 (`s_tileset_00`) is the blank tile; map data uses 0-based IDs.
+
+**Render flow:** `sys_render_update` calls `sys_map_draw` first, then `sys_render_entities`. Entities always draw every frame (no `e_moved` check) since the map redraw erases the previous frame.
+
 ### Assets
 
-PNG images in `assets/` are converted to C source files in `src/assets/sprites/` by the CPCtelera image conversion tools (`cfg/image_conversion.mk`). Do not edit the generated `.c`/`.h` files in `src/assets/sprites/` directly — regenerate from source images.
+PNG images in `assets/` are converted to C source files in `src/assets/sprites/` by the CPCtelera image conversion tools (`cfg/image_conversion.mk`). Tilemap `.tmx` files are converted via `cfg/tilemap_conversion.mk`. Do not edit the generated `.c`/`.h` files in `src/assets/sprites/` directly — regenerate from source images.

@@ -52,6 +52,9 @@ $(eval $(call IMG2SP, CONVERT_PALETTE , $(PALETTE0), g_palette0 ))
 $(eval $(call IMG2SP, CONVERT         , assets/font_chars_0.png , 4, 423, s_font_0, ,))
 $(eval $(call IMG2SP, CONVERT         , assets/small_numbers.png , 4, 5, s_small_numbers, ,))
 $(eval $(call IMG2SP, CONVERT         , assets/monk.png , 10, 16, s_monk, ,))
+$(eval $(call IMG2SP, SET_IMG_FORMAT  , zgtiles            ))
+$(eval $(call IMG2SP, CONVERT         , assets/map/tileset.png , 8, 8, s_tileset, ,))
+$(eval $(call IMG2SP, SET_IMG_FORMAT  , sprites            ))
 
 
 ##

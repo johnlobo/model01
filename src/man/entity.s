@@ -63,7 +63,7 @@ monk_walk_left_anim::
     .dw _s_monk_5
 
 player_template::
-DefineEntity c_cmp_invalid, 0, 10, 184, 0xE3CA, 0xE3CA, 0, 0, 0, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk_0
+DefineEntity c_cmp_invalid, 0, 10, 56, 0, 0, 0, 0, 1, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk_0
 .db 0   ;;ponemos este aqui como trampita para que siempre haya un tipo invalido al final
 
 ;;
@@ -94,40 +94,14 @@ man_entity_init::
 ;;  Modified: AF, HL
 ;;
 man_entity_create_player_player::
-    ;; Player 1
-    ld ix, #entities                    ;; create entity in entity array
-    ld hl, #player_template             ;;
-    call sys_array_create_element       ;;
+    ld ix, #entities
+    ld hl, #player_template
+    call sys_array_create_element
     ld__ix_hl
     ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_input | c_cmp_animated)
-    ld e_moved(ix), #1                  ;; moved = 1 to be drawn
+    ld e_moved(ix), #1
     ld hl, #monk_idle_anim
     ld e_anim(ix), l
     ld e_anim+1(ix), h
-
-    ;; Player 2
-    ld ix, #entities                    ;; create entity in entity array
-    ld hl, #player_template             ;;
-    call sys_array_create_element       ;;
-    ld__ix_hl
-    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_ai | c_cmp_animated)
-    ld e_x(ix), #30
-    ld e_moved(ix), #1                  ;; moved = 1 to be drawn
-    ld hl, #monk_walk_anim
-    ld e_anim(ix), l
-    ld e_anim+1(ix), h
-
-    ;; Player 3
-    ld ix, #entities                    ;; create entity in entity array
-    ld hl, #player_template             ;;
-    call sys_array_create_element       ;;
-    ld__ix_hl
-    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_ai | c_cmp_animated)
-    ld e_x(ix), #50
-    ld e_moved(ix), #1                  ;; moved = 1 to be drawn
-    ld hl, #monk_walk_anim
-    ld e_anim(ix), l
-    ld e_anim+1(ix), h
-
     ret
 

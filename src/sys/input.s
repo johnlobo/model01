@@ -195,7 +195,12 @@ sys_input_init::
 ;;  Modified: 
 ;;
 sys_input_action::
- 
+    ;; Jump only if on the ground
+    ld a, e_on_air(ix)
+    or a
+    ret nz                      ;; already airborne, ignore
+    ld e_speed_y(ix), #-8
+    ld e_on_air(ix), #1
     ret
 
 

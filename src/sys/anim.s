@@ -43,6 +43,15 @@ sys_anim_init::
 ;;
 sys_anim_update_one_entity::
 
+    ;; Skip if entity is idle (on ground and no horizontal speed)
+    ld a, e_speed_x(ix)
+    or a
+    jr nz, sauoe_check_anim     ;; has horizontal speed: animate
+    ld a, e_on_air(ix)
+    or a
+    ret z                       ;; speed_x=0 and on_air=0: idle, skip
+
+sauoe_check_anim:
     ;; Skip if no animation descriptor is set
     ld l, e_anim(ix)
     ld h, e_anim+1(ix)

@@ -41,6 +41,14 @@
 .globl _s_monk_5
 .globl _s_monk_6
 
+.globl _s_tileset_00
+.globl _g_map01
+
+MAP_WIDTH       = 16
+MAP_HEIGHT      = 20
+MAP_START_ROW   = 5
+MAP_PIXEL_START = MAP_START_ROW * 8
+
 .globl transparency_table
 
 ;;===============================================================================
@@ -72,6 +80,8 @@
 .globl cpct_pens2pixelPatternPairM0_asm
 .globl sys_render_drawSpriteMaskedAlignedColorizeM0_asm
 .globl cpct_getRandom_mxor_u8_asm
+.globl cpct_etm_setDrawTilemap4x8_agf_asm
+.globl cpct_etm_drawTilemap4x8_agf_asm
 .globl cpct_px2byteM0_asm
 
 ;;===============================================================================

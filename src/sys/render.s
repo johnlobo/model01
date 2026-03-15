@@ -15,6 +15,7 @@
 ;;-------------------------------------------------------------------------------
 
 .include "sys/render.h.s"
+.include "sys/map.h.s"
 .include "cpctelera.h.s"
 .include "common.h.s"
 .include "man/entity.h.s"
@@ -345,30 +346,45 @@ dms_restore_ix:
 ;;  Modified: AF, BC, DE, HL
 ;;
 sys_render_one_entity::
-   ;; Check if the entity has moved otherwise ret
+   ;; Skip if not moved
    ld a, e_moved(ix)
    or a
    ret z
 
-   ;; Erasing the entity
-   ld e, e_address(ix)
-   ld d, e_address+1(ix)
-   ld c, e_width(ix)
-   ld b, e_height(ix)
-   ld a, #0x00
-   call cpct_drawSolidBox_asm
+   ;; Restore map tiles at previous position (skip on first render: e_p_address == 0)
+   ld e, e_p_address(ix)
+   ld d, e_p_address+1(ix)
+   ld a, e
+   or d
+   jr z, sroe_draw             ;; p_address == 0: first render, skip restore
+   ld b, e_p_y(ix)             ;; B = previous y
+   ld c, e_p_x(ix)             ;; C = previous x
+   ld d, e_height(ix)          ;; D = height
+   ld e, e_width(ix)           ;; E = width
+   push ix                     ;; cpct_drawSprite_asm (inside restore) destroys IX
+   call sys_map_restore_tiles_at
+   pop ix                      ;; restore entity pointer
 
-   ;; Calculate a video-memory location for rendering the entity
+sroe_draw:
+   ;; Save current position for tile restore on next frame
+   ld a, e_x(ix)
+   ld e_p_x(ix), a
+   ld a, e_y(ix)
+   ld e_p_y(ix), a
+
+   ;; Compute new screen address
    ld de, #FRONT_BUFFER
    ld b, e_y(ix)
    ld c, e_x(ix)
-   call cpct_getScreenPtr_asm    ;; Calculate video memory location and return it in HL
-   ex de,hl
+   call cpct_getScreenPtr_asm  ;; HL = new screen address
 
-   ;; update current address
-   ld e_address(ix), e
-   ld e_address+1(ix), d
+   ;; Store new address and mark as drawn (p_address = non-zero sentinel)
+   ld e_address(ix), l
+   ld e_address+1(ix), h
+   ld e_p_address(ix), l
+   ld e_p_address+1(ix), h
 
+   ex de, hl                   ;; DE = screen address
    ld c, e_width(ix)
    ld b, e_height(ix)
    ld l, e_sprite(ix)

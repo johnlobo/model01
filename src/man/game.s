@@ -19,6 +19,7 @@
 .include "cpctelera.h.s"
 .include "common.h.s"
 .include "sys/render.h.s"
+.include "sys/map.h.s"
 .include "sys/ai.h.s"
 .include "sys/physics.h.s"
 .include "sys/input.h.s"
@@ -51,6 +52,8 @@ man_game_init::
     call man_entity_init
     call man_entity_create_player_player
     call sys_render_init
+    call sys_map_init
+    call sys_map_draw           ;; draw map once at startup
     ret
 
 ;;-----------------------------------------------------------------

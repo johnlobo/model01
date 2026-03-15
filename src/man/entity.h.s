@@ -46,8 +46,8 @@ MAX_ENTITIES = 10
     .db _status         ;; status
     .db _x              ;; x
     .db _y              ;; y
-    .dw _x              ;; x_coord
-    .dw _y              ;; y_coord
+    .dw 0               ;; p_x (set on first render)
+    .dw 0               ;; p_y (set on first render)
     .dw _a              ;; address
     .dw _pa             ;; previous address
     .dw _speed_x        ;; speed_x
@@ -70,8 +70,8 @@ Field e, cmps, 1
 Field e, status, 1
 Field e, x, 1
 Field e, y, 1
-Field e, coord_x, 2
-Field e, coord_y, 2
+Field e, p_x, 2     ;; previous draw x (for tile restore on next render)
+Field e, p_y, 2     ;; previous draw y (for tile restore on next render)
 Field e, address, 2
 Field e, p_address, 2
 Field e, speed_x, 2
