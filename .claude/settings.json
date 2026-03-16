@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make)",
+      "Bash(echo $CPCT_PATH)",
+      "Bash(git add src/sys/beh.s src/sys/beh.h.s src/sys/collision.s src/sys/physics.s src/man/entity.s src/man/entity.h.s src/man/game.s CLAUDE.md)",
+      "Bash(git commit:*)",
+      "Bash(git push)"
+    ]
+  }
+}
