@@ -5,6 +5,7 @@
 .include "sys/array.h.s"
 .include "common.h.s"
 .include "man/entity.h.s"
+.include "sys/map.h.s"
 
 ;;
 ;; Start of _DATA area
@@ -26,6 +27,33 @@ beh_bounce_go_left::
     SET_VX #-2
     WAIT 60, beh_bounce_behavior
     CONDITIONS_END
+
+;;-----------------------------------------------------------------
+;; beh_patrol_behavior
+;;
+;; Platform patrol: move right until the tile below the leading foot
+;; becomes passable (edge detected), then reverse direction and
+;; switch to the matching walk animation. Repeats indefinitely.
+;; Requires c_cmp_movable and c_cmp_animated on the entity.
+;;-----------------------------------------------------------------
+beh_patrol_behavior::
+    SET_ANIMATION monk_walk_right_anim
+beh_patrol_moving_right::
+    DRIVE_VX #1, #4
+    CONDITION edge_ahead, beh_patrol_turn_left
+    CONDITIONS_END
+
+beh_patrol_turn_left::
+    SET_ANIMATION monk_walk_left_anim
+    ;; fall through to beh_patrol_moving_left
+beh_patrol_moving_left::
+    DRIVE_VX #-1, #4
+    CONDITION edge_ahead, beh_patrol_turn_right
+    CONDITIONS_END
+
+beh_patrol_turn_right::
+    SET_ANIMATION monk_walk_right_anim
+    GOTO beh_patrol_moving_right
 
 ;;
 ;; Start of _CODE area
@@ -249,6 +277,51 @@ beh_action_set_vy::
     jp sys_beh_next
 
 ;;-----------------------------------------------------------------
+;; beh_action_drive_vx
+;;
+;;  Blocking: re-apply e_speed_x = inline byte arg every frame, then
+;;  check conditions. Because it is blocking, e_beh stays at this
+;;  instruction so the speed is restored on each tick.
+;;  This is the standard way for AI behaviors to move at a fixed speed:
+;;    DRIVE_VX #2  → entity moves at exactly 2 bytes/frame (right)
+;;    DRIVE_VX #-1 → entity moves at exactly 1 byte/frame  (left)
+;;
+beh_action_drive_vx::
+    ld a, (de)              ;; A = speed
+    inc de
+    ld c, a                 ;; C = speed (saved)
+    ld a, (de)              ;; A = stride (0/1 = every frame, N>1 = every N frames)
+    inc de                  ;; DE now points to condition table
+
+    ;; stride 0 or 1: move every frame
+    or a
+    jr z, bdvx_apply        ;; stride == 0
+    dec a
+    jr z, bdvx_apply        ;; stride == 1
+
+    ;; stride > 1: use e_beh_timer as countdown
+    ld b, a                 ;; B = stride - 1 (reload value)
+    ld a, e_beh_timer(ix)
+    or a
+    jr nz, bdvx_tick        ;; timer > 0: still counting down
+
+    ;; timer = 0: apply speed and reload
+    ld e_beh_timer(ix), b
+bdvx_apply:
+    ld e_speed_x(ix), c
+    ld e_anim_timer(ix), #0     ;; sync animation: advance frame this tick
+    jr bdvx_done
+
+bdvx_tick:
+    dec a
+    ld e_beh_timer(ix), a
+    ld e_speed_x(ix), #0    ;; hold this frame
+
+bdvx_done:
+    ld e_moved(ix), #1
+    jp sys_beh_check_conditions
+
+;;-----------------------------------------------------------------
 ;; beh_action_set_animation
 ;;
 ;;  Non-blocking: set e_anim = inline .dw arg (descriptor pointer).
@@ -315,4 +388,51 @@ beh_cond_not_on_ground::
 bcnog_false::
     ld a, #1            ;; Z=0 → false
     or a
+    ret
+
+;;-----------------------------------------------------------------
+;; beh_cond_edge_ahead — Z=1 when the tile below the leading foot
+;; is passable (i.e. entity is at a platform edge).
+;;
+;; Checks the tile at (e_y + e_height, leading_x):
+;;   Moving right: leading_x = e_x + e_width  (one byte past right edge)
+;;   Moving left:  leading_x = e_x - 1        (one byte past left edge)
+;;   Not moving:   always false (Z=0)
+;;
+;; sys_map_is_solid_at returns Z=1 for passable, which is exactly
+;; the "true" value we need (at edge → reverse).
+;;
+beh_cond_edge_ahead::
+    ld a, e_speed_x(ix)
+    or a
+    jr z, bcea_false        ;; not moving → never at edge
+
+    ld a, e_y(ix)
+    add a, e_height(ix)
+    ld b, a                 ;; B = one pixel below entity feet
+
+    bit 7, e_speed_x(ix)
+    jr nz, bcea_moving_left
+
+    ;; Moving right: check byte just past right edge
+    ld a, e_x(ix)
+    add a, e_width(ix)
+    ld c, a
+    jr bcea_check
+
+bcea_moving_left:
+    ;; Moving left: check byte just past left edge
+    ld a, e_x(ix)
+    dec a
+    ld c, a
+
+bcea_check:
+    push de                     ;; sys_map_is_solid_at destroys DE; preserve it
+    call sys_map_is_solid_at    ;; Z=1 if passable (at edge) → condition true
+    pop de                      ;; restore DE (pop does not affect flags on Z80)
+    ret
+
+bcea_false:
+    ld a, #1
+    or a                        ;; Z=0 → false
     ret

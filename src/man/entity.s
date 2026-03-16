@@ -20,6 +20,7 @@
 .include "common.h.s"
 .include "sys/array.h.s"
 .include "sys/util.h.s"
+.include "sys/beh.h.s"
 
 ;;
 ;; Start of _DATA area 
@@ -66,6 +67,11 @@ player_template::
 DefineEntity c_cmp_invalid, 0, 10, 56, 0, 0, 0, 0, 1, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk_0
 .db 0   ;;ponemos este aqui como trampita para que siempre haya un tipo invalido al final
 
+;; Top platform: map row 5, tile cols 8-13 → pixel y=80, left edge byte=32.
+;; Entity stands on top: y = 80 - S_MONK_HEIGHT = 64, x = 32.
+patrol_enemy_template::
+DefineEntity c_cmp_invalid, 0, 32, 64, 0, 0, 0, 0, 0, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk_1
+
 ;;
 ;; Start of _CODE area
 ;; 
@@ -103,5 +109,30 @@ man_entity_create_player_player::
     ld hl, #monk_idle_anim
     ld e_anim(ix), l
     ld e_anim+1(ix), h
+    ret
+
+;;-----------------------------------------------------------------
+;;
+;; man_entity_create_patrol_enemy
+;;
+;;  Creates a patrol enemy on the top platform.
+;;  Uses the monk sprite and animations. Runs beh_patrol_behavior.
+;;  Input:
+;;  Output:
+;;  Modified: AF, HL, IX
+;;
+man_entity_create_patrol_enemy::
+    ld ix, #entities
+    ld hl, #patrol_enemy_template
+    call sys_array_create_element
+    ld__ix_hl
+    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_ai | c_cmp_animated | c_cmp_collisionable)
+    ld e_moved(ix), #1
+    ld hl, #monk_walk_right_anim
+    ld e_anim(ix), l
+    ld e_anim+1(ix), h
+    ld hl, #beh_patrol_behavior
+    ld e_beh(ix), l
+    ld e_beh+1(ix), h
     ret
 

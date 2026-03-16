@@ -33,7 +33,7 @@ VSCode tasks for `make`, `clean`, `cleanall`, and `run` are configured in [.vsco
 Entry point is `_main::`. Initialization sequence:
 1. Disable CPC firmware (`sys_system_disable_firmware`)
 2. Set video mode 0
-3. Call `man_game_init` → initializes entities, creates players, inits render
+3. Call `man_game_init` → initializes entities, creates players, inits render, inits map and draws it once
 4. Loop forever calling `man_game_update`
 
 `man_game_update` (in `src/man/game.s`) runs each frame:
@@ -60,7 +60,7 @@ Entities are stored in a flat array (`entities` in `src/man/entity.s`). Each ent
 | `c_cmp_collider` | 0x20 | Active collider (outer loop, initiates checks) |
 | `c_cmp_collisionable` | 0x40 | Passive collision target (inner loop, receives checks) |
 
-The entity struct (`e`) is defined via `BeginStruct`/`Field`/`EndStruct` macros in `src/man/entity.h.s`. Fields (in order): `e_cmps`, `e_status`, `e_x`, `e_y`, `e_coord_x` (2B), `e_coord_y` (2B), `e_address` (2B), `e_p_address` (2B), `e_speed_x` (2B), `e_speed_y` (2B), `e_on_air`, `e_width`, `e_height`, `e_color`, `e_sprite` (2B), `e_moved`, `e_anim` (2B, pointer to animation descriptor or null), `e_anim_frame`, `e_anim_timer`.
+The entity struct (`e`) is defined via `BeginStruct`/`Field`/`EndStruct` macros in `src/man/entity.h.s`. Fields (in order): `e_cmps`, `e_status`, `e_x`, `e_y`, `e_p_x` (2B, previous draw x for tile restore), `e_p_y` (2B, previous draw y), `e_address` (2B), `e_p_address` (2B), `e_speed_x` (2B), `e_speed_y` (2B), `e_on_air`, `e_width`, `e_height`, `e_color`, `e_sprite` (2B), `e_moved`, `e_anim` (2B, pointer to animation descriptor or null), `e_anim_frame`, `e_anim_timer`.
 
 ### Array System (`src/sys/array.s`, `src/sys/array.h.s`)
 

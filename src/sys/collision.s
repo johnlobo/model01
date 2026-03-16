@@ -42,6 +42,7 @@ sys_collision_init::
 ;;  Modified:
 ;;
 sys_collision_on_hit::
+    cpctm_setBorder_asm HW_RED
     ret
 
 ;;-----------------------------------------------------------------

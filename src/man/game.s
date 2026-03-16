@@ -51,6 +51,7 @@
 man_game_init::
     call man_entity_init
     call man_entity_create_player_player
+    call man_entity_create_patrol_enemy
     call sys_render_init
     call sys_map_init
     call sys_map_draw           ;; draw map once at startup
@@ -71,6 +72,7 @@ man_game_update::
     call sys_input_update
     call sys_ai_update
     call sys_beh_update
+    cpctm_setBorder_asm HW_BLACK
     call sys_collision_update
     call sys_anim_update
     call cpct_waitVSYNC_asm

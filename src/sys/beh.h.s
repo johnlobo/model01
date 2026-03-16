@@ -43,6 +43,7 @@ DESTROY_ENTITY = 0x0000   ;; mark entity invalid (remove from active set)
 ;; SHARED BEHAVIORS
 ;;===============================================================================
 .globl beh_bounce_behavior      ;; simple left-right patrol
+.globl beh_patrol_behavior      ;; platform patrol with edge detection
 
 ;;===============================================================================
 ;; ACTIONS
@@ -54,6 +55,7 @@ DESTROY_ENTITY = 0x0000   ;; mark entity invalid (remove from active set)
 .globl beh_action_set_vy        ;; arg: .db speed_y  (writes low byte only)
 .globl beh_action_set_animation ;; arg: .dw anim_descriptor_ptr
 .globl beh_action_set_moved     ;; mark entity dirty for renderer (no args)
+.globl beh_action_drive_vx     ;; blocking — re-apply speed each frame; arg: .db speed_x
 
 ;;===============================================================================
 ;; CONDITIONS
@@ -62,6 +64,7 @@ DESTROY_ENTITY = 0x0000   ;; mark entity invalid (remove from active set)
 .globl beh_cond_timeout         ;; true when e_beh_timer == 0
 .globl beh_cond_on_ground       ;; true when e_on_air == 0
 .globl beh_cond_not_on_ground   ;; true when e_on_air != 0
+.globl beh_cond_edge_ahead      ;; true when tile below leading foot is passable
 
 ;;===============================================================================
 ;; DSL MACROS
@@ -122,4 +125,13 @@ DESTROY_ENTITY = 0x0000   ;; mark entity invalid (remove from active set)
 .macro SET_ANIMATION _anim_addr
     .dw beh_action_set_animation
     .dw _anim_addr
+.endm
+
+;; DRIVE_VX vx, stride — blocking: drive entity at 'vx' bytes every 'stride' frames.
+;;   stride 0 or 1: move every frame (e.g. DRIVE_VX #2, #1 = 2 bytes/frame)
+;;   stride N>1:    move 1 step every N frames via e_beh_timer countdown
+;;                  (e.g. DRIVE_VX #1, #4 = 1 byte every 4 frames = ~12 bytes/sec)
+.macro DRIVE_VX _vx, _stride
+    .dw beh_action_drive_vx
+    .db _vx, _stride
 .endm

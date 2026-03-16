@@ -65,10 +65,12 @@ sys_physics_update_one_entity::
     or a                            ;; check if horizontal speed is zero
     jr z, spuoe_vertical_movement   ;; jump if horizontal speed is zero
 
-    ;; Friction application
+    ;; Friction: only apply for player-controlled entities (c_cmp_input = 0x04)
+    bit 2, e_cmps(ix)
+    jr z, spuoe_h_no_friction       ;; AI/physics-driven: skip friction
     call sys_utiL_reduce_a          ;; apply friction to horizontal speed
     ld e_speed_x(ix), a             ;; update horizontal speed
-
+spuoe_h_no_friction:
     add a, e_x(ix)                  ;; A = new_x
 
     ;; Horizontal tile collision

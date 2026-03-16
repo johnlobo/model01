@@ -36,6 +36,7 @@ MAX_ENTITIES = 10
 ;;===============================================================================
 .globl man_entity_init
 .globl man_entity_create_player_player
+.globl man_entity_create_patrol_enemy
 
 ;;===============================================================================
 ;; DATA ARRAY STRUCTURE CREATION
