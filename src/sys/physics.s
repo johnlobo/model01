@@ -27,8 +27,8 @@
 ;; Start of _DATA area 
 ;;
 GRAVITY = 1
-JUMP_SPEED = -16
 MAX_FALL_SPEED = 8
+;; Jump speed constants are in sys/input.s (JUMP_SPEED_MIN / JUMP_SPEED_MAX)
 
 .area _DATA
 
@@ -200,10 +200,10 @@ spuoe_check_speed_y:
     bit 7, e_speed_y(ix)
     jr z, spuoe_tile_check_fall ;; speed_y >= 0: moving down, check floor
 
-    ;; Moving up: clamp to map top boundary
-    cp #MAP_PIXEL_START
-    jr nc, spuoe_ceiling_check  ;; new_y >= MAP_PIXEL_START: proceed
-    ld a, #MAP_PIXEL_START      ;; clamp to top of map
+    ;; Moving up: clamp to world top (y=0 = map top)
+    bit 7, a                    ;; test sign: bit7=1 means A went negative (above map)
+    jr z, spuoe_ceiling_check   ;; bit7=0 → A >= 0 → still inside map, proceed
+    xor a                       ;; clamp to world y=0
     ld e_speed_y(ix), #0
     jr spuoe_update_y
 
@@ -227,12 +227,11 @@ spuoe_ceiling_check:
     jr spuoe_ground_check
 
 spuoe_tile_ceiling:
-    ;; Clamp entity below the tile it hit: new_y = tile_bottom
-    ;; tile_bottom = ((B - MAP_PIXEL_START) & 0xF8) + MAP_PIXEL_START + 8
+    ;; Clamp entity below the tile it hit (world coords: no MAP_PIXEL_START offset)
+    ;; tile_bottom = (B & 0xF8) + 8
     ld a, b
-    sub #MAP_PIXEL_START
     and #0xF8
-    add a, #MAP_PIXEL_START + 8 ;; A = first pixel row below the tile
+    add a, #8                   ;; A = first world pixel row below the tile
     ld e_speed_y(ix), #0        ;; stop vertical movement
     pop de                      ;; discard saved new_y (balance push af)
     jr spuoe_update_y
@@ -265,8 +264,10 @@ spuoe_ground_check:
     ld a, b                     ;; restore new y in a
     jr nc, spuoe_not_ground     ;; max_y >= new_y: still airborne
 
-    ;; ground hit: clamp, stop, land
-    ld a, #184
+    ;; ground hit: clamp y so entity feet land exactly at GROUND_LEVEL
+    ld a, #GROUND_LEVEL
+    sub e_height(ix)
+    inc a                       ;; A = y where e_y + height - 1 = GROUND_LEVEL
     ld e_speed_y(ix), #0
     ld e_on_air(ix), #0
     ld e_y(ix), a
@@ -274,13 +275,11 @@ spuoe_ground_check:
     ret
 
 spuoe_tile_land:
-    ;; Clamp entity to top of the tile just entered
-    ;; B = bottom_pixel; tile_top = ((B - MAP_PIXEL_START) & 0xF8) + MAP_PIXEL_START
+    ;; Clamp entity to top of the tile just entered (world coords)
+    ;; B = bottom_pixel; tile_top = B & 0xF8
     ld a, b
-    sub #MAP_PIXEL_START
     and #0xF8
-    add a, #MAP_PIXEL_START
-    sub e_height(ix)            ;; A = clamped new_y
+    sub e_height(ix)            ;; A = clamped new_y = tile_top - height
     pop de                      ;; discard saved new_y (balance push af)
     ld e_y(ix), a
     ld e_speed_y(ix), #0

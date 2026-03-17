@@ -11,6 +11,11 @@
 ;;
 .area _DATA
 
+;; Map draw origin: screen position of map tile (0,0).
+;; Moving these moves the entire map and all entities together.
+map_origin_x:: .db 0              ;; screen x of map left edge (bytes)
+map_origin_y:: .db MAP_PIXEL_START ;; screen y of map top edge (pixels)
+
 ;; Working storage for sys_map_restore_tiles_at
 smrsa_x_left:   .db 0
 smrsa_x_right:  .db 0
@@ -70,8 +75,14 @@ sys_map_init::
 ;;  Modified: AF, BC, DE, HL, IX, IY
 ;;
 sys_map_draw::
-    ld hl, #_g_map01                        ;; HL = tilemap data (ASM variant: HL=tilemap)
-    ld de, #(FRONT_BUFFER + MAP_START_ROW * 80) ;; DE = video memory offset by MAP_START_ROW character rows
+    ld a, (map_origin_y)                    ;; B = screen y of map top
+    ld b, a
+    ld a, (map_origin_x)                    ;; C = screen x of map left (bytes)
+    ld c, a
+    ld de, #FRONT_BUFFER
+    call cpct_getScreenPtr_asm              ;; HL = screen ptr at map origin
+    ex de, hl                               ;; DE = video ptr (ETM requires DE=video, HL=tilemap)
+    ld hl, #_g_map01
     call cpct_etm_drawTilemap4x8_agf_asm
     ret
 
@@ -103,17 +114,14 @@ sys_map_is_landable_at::
 ;; Internal: look up tile type at (B=pixel_y, C=pixel_x)
 ;;  Returns: A = tile_solid_table value (0/1/2), or A=0,Z via smisa_passable
 smisa_get_type:
+    ;; B = world pixel_y (0 = map top), C = world pixel_x (bytes, 0 = map left)
     ld a, b
-    cp #MAP_PIXEL_START
-    jr c, smisa_passable        ;; above map top: passable
-
-    sub #MAP_PIXEL_START
     rrca
     rrca
     rrca
-    and #0x1F                   ;; tile_row (0..31)
+    and #0x1F                   ;; tile_row = world_y >> 3
     cp #MAP_HEIGHT
-    jr nc, smisa_passable       ;; below map: passable
+    jr nc, smisa_passable       ;; >= MAP_HEIGHT: below or outside map
 
     ld l, a
     ld h, #0
@@ -127,7 +135,7 @@ smisa_get_type:
     ld a, c
     rrca
     rrca
-    and #0x3F
+    and #0x3F                   ;; tile_col = world_x_bytes >> 2
     cp #MAP_WIDTH
     jr nc, smisa_passable       ;; out of horizontal bounds
 
@@ -177,20 +185,18 @@ sys_map_restore_tiles_at::
     and #0x3F
     ld (smrsa_x_right), a
 
-    ;; tile_row_top = (B - MAP_PIXEL_START) >> 3
+    ;; tile_row_top = B >> 3  (B = world pixel_y, 0 = map top)
     ld a, b
-    sub #MAP_PIXEL_START
     rrca
     rrca
     rrca
     and #0x1F
     ld (smrsa_y_top), a
 
-    ;; tile_row_bottom = (B + D - 1 - MAP_PIXEL_START) >> 3
+    ;; tile_row_bottom = (B + D - 1) >> 3
     ld a, b
     add a, d
     dec a
-    sub #MAP_PIXEL_START
     rrca
     rrca
     rrca
@@ -280,19 +286,24 @@ smrsa_draw_one_tile:
 
     push hl                 ;; save sprite ptr
 
-    ;; pixel_y = tile_row * 8 + MAP_PIXEL_START
+    ;; screen_y = tile_row * 8 + map_origin_y
     ld a, b
     sla a
     sla a
     sla a                   ;; A = tile_row * 8
-    add a, #MAP_PIXEL_START
     ld b, a
+    ld a, (map_origin_y)
+    add a, b
+    ld b, a                 ;; B = screen pixel_y
 
-    ;; pixel_x_bytes = tile_col * 4
+    ;; screen_x = tile_col * 4 + map_origin_x
     ld a, c
     sla a
     sla a                   ;; A = tile_col * 4
     ld c, a
+    ld a, (map_origin_x)
+    add a, c
+    ld c, a                 ;; C = screen x_bytes
 
     ;; get screen address for this tile
     ld de, #FRONT_BUFFER

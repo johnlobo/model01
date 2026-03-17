@@ -43,6 +43,8 @@
 
 .globl _s_tileset_00
 .globl _g_map01
+.globl map_origin_x    ;; map draw origin x on screen (bytes)
+.globl map_origin_y    ;; map draw origin y on screen (pixels)
 
 MAP_WIDTH       = 16
 MAP_HEIGHT      = 20
@@ -127,7 +129,8 @@ FONT_WIDTH = 2
 FONT_HEIGHT = 9
 
 ;; GAME_CONSTANTS
-GROUND_LEVEL = 199
+;; GROUND_LEVEL is in world coordinates (0 = map top): MAP_HEIGHT*8 - 1 = 159
+GROUND_LEVEL = MAP_HEIGHT * 8 - 1
 
 
 ;;===============================================================================

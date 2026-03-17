@@ -63,14 +63,15 @@ monk_walk_left_anim::
     .dw _s_monk_6
     .dw _s_monk_5
 
+;; World coords: (0,0) = map top-left. screen_y = e_y + map_origin_y.
 player_template::
-DefineEntity c_cmp_invalid, 0, 10, 56, 0, 0, 0, 0, 1, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk_0
+DefineEntity c_cmp_invalid, 0, 10, 16, 0, 0, 0, 0, 1, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk_0
 .db 0   ;;ponemos este aqui como trampita para que siempre haya un tipo invalido al final
 
-;; Top platform: map row 5, tile cols 8-13 → pixel y=80, left edge byte=32.
-;; Entity stands on top: y = 80 - S_MONK_HEIGHT = 64, x = 32.
+;; Top platform: map tile row 5, tile cols 8-13.
+;; World pixel_y of platform top = 5*8 = 40; entity stands on top: 40 - S_MONK_HEIGHT = 24.
 patrol_enemy_template::
-DefineEntity c_cmp_invalid, 0, 32, 64, 0, 0, 0, 0, 0, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk_1
+DefineEntity c_cmp_invalid, 0, 32, 24, 0, 0, 0, 0, 0, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk_1
 
 ;;
 ;; Start of _CODE area

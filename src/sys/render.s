@@ -34,7 +34,7 @@
 .area _DATA
 
 FONT_NUMBERS: .dw #0000
-_welcome_string: .asciz "WELCOME - V.009"   ;;
+_welcome_string: .asciz "WELCOME - V.014"   ;;
 
 
 sys_render_front_buffer: .db 0xc0
@@ -121,8 +121,7 @@ sys_render_init::
    ld hl, #_g_palette0                     ;; Set palette
    ld de, #16                              ;;
    call cpct_setPalette_asm                ;;
-   ;;cpctm_setBorder_asm HW_BLACK            ;; Set Border
-    cpctm_setBorder_asm HW_WHITE            ;; Set Border
+    cpctm_setBorder_asm HW_MAUVE            ;; Set Border gray
 
     ;;call sys_render_clear_back_buffer
     call sys_render_clear_front_buffer
@@ -371,37 +370,8 @@ sys_render_restore_one_entity::
    call sys_map_restore_tiles_at
    pop ix
 
-   ;; If the entity was (partially) above the tile area, clear those
-   ;; screen rows to black — sys_map_restore_tiles_at only covers the
-   ;; tile grid (y >= MAP_PIXEL_START) and cannot erase sprite pixels
-   ;; that were drawn above it.
-   ld a, e_p_y(ix)
-   cp #MAP_PIXEL_START
-   ret nc                      ;; p_y >= MAP_PIXEL_START: nothing above map, done
-
-   ;; clear_height = min(MAP_PIXEL_START - p_y, e_height)
-   ld b, a                     ;; B = p_y
-   ld a, #MAP_PIXEL_START
-   sub b                       ;; A = rows above tile area
-   ld b, e_height(ix)
-   cp b
-   jr c, srroe_got_clear_h     ;; A < height: entity partially above → use A
-   ld a, b                     ;; A = height: entity fully above
-srroe_got_clear_h:
-   ld b, a                     ;; B = clear_height
-   ld c, e_width(ix)           ;; C = width
-
-   push ix
-   push bc                     ;; save clear_height / width across getScreenPtr call
-   ld de, #FRONT_BUFFER
-   ld b, e_p_y(ix)             ;; B = previous y (IX still valid after push)
-   ld c, e_p_x(ix)             ;; C = previous x
-   call cpct_getScreenPtr_asm  ;; HL = screen address
-   ex de, hl                   ;; DE = screen address (drawSolidBox takes DE)
-   pop bc                      ;; B = clear_height, C = width
-   xor a                       ;; A = 0 (pen 0 = black fill pattern)
-   call cpct_drawSolidBox_asm
-   pop ix
+   ;; In world coords, entities are always within y=[0..GROUND_LEVEL].
+   ;; Nothing can be above the map area; this block is unreachable.
    ret
 
 ;;-----------------------------------------------------------------
@@ -422,10 +392,18 @@ sys_render_one_entity::
    ld a, e_y(ix)
    ld e_p_y(ix), a
 
-   ;; Compute new screen address
+   ;; Compute screen address: world pos + map origin
    ld de, #FRONT_BUFFER
-   ld b, e_y(ix)
-   ld c, e_x(ix)
+   ld a, e_y(ix)
+   ld b, a
+   ld a, (map_origin_y)
+   add a, b
+   ld b, a                     ;; B = screen_y = e_y + map_origin_y
+   ld a, e_x(ix)
+   ld c, a
+   ld a, (map_origin_x)
+   add a, c
+   ld c, a                     ;; C = screen_x = e_x + map_origin_x
    call cpct_getScreenPtr_asm  ;; HL = new screen address
 
    ;; Store new address and mark as drawn (p_address = non-zero sentinel)

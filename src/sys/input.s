@@ -48,6 +48,8 @@ sys_input_key_actions::
     ;;.dw Joy0_Fire1, _score_fire
     .dw 0
 
+jump_boost_left:: .db 0     ;; boost frames remaining (counts down while Space held)
+
 ;;
 ;; Start of _CODE area
 ;; 
@@ -174,23 +176,62 @@ sys_input_init::
 ;;-----------------------------------------------------------------
 
 
+JUMP_SPEED_MIN    = -6  ;; speed on tap (1 frame)
+JUMP_SPEED_MAX    = -12 ;; maximum boosted speed
+JUMP_BOOST_FRAMES = 6   ;; how many boost frames a full hold gives
+
 ;;-----------------------------------------------------------------
 ;;
 ;; sys_input_action
 ;;
-;;  Jump action: sets upward speed and marks entity as airborne.
-;;  Ignored if the entity is already in the air.
+;;  Variable-height jump with a fixed boost window.
+;;  - On ground: starts jump at JUMP_SPEED_MIN, arms boost counter.
+;;  - In air, rising, counter > 0: decrements speed_y by 1 each frame
+;;    the button is held and consumes one boost frame. Capped at
+;;    JUMP_SPEED_MAX. A tap uses 0-1 boost frames (small hop); a
+;;    full hold uses all JUMP_BOOST_FRAMES (max jump). Once the
+;;    counter is exhausted the player cannot boost further even if
+;;    Space is still held.
+;;  - In air but falling, counter zero, or at max speed: does nothing.
 ;;  Input:  IX = player entity
 ;;  Output:
 ;;  Modified: AF
 ;;
 sys_input_action::
-    ;; Jump only if on the ground
     ld a, e_on_air(ix)
     or a
-    ret nz                      ;; already airborne, ignore
-    ld e_speed_y(ix), #-8
+    jr nz, sia_boost            ;; airborne: try to boost
+
+    ;; On ground: start jump at minimum speed and arm boost counter
+    ld e_speed_y(ix), #JUMP_SPEED_MIN
     ld e_on_air(ix), #1
+    ld a, #JUMP_BOOST_FRAMES
+    ld (jump_boost_left), a
+    ret
+
+sia_boost:
+    ;; Boost only while still rising (speed_y negative = bit 7 set)
+    ld a, e_speed_y(ix)
+    bit 7, a
+    ret z                       ;; falling or stopped: no boost
+
+    ;; Boost only if frames remain in the boost window
+    ld a, (jump_boost_left)
+    or a
+    ret z                       ;; boost window exhausted
+
+    ;; Boost only if cap not yet reached
+    ld a, e_speed_y(ix)
+    cp #JUMP_SPEED_MAX          ;; carry if A < MAX (more negative than cap)
+    ret c
+    ret z                       ;; at cap: stop
+
+    dec a                       ;; speed_y -= 1 (faster upward)
+    ld e_speed_y(ix), a
+
+    ld a, (jump_boost_left)
+    dec a                       ;; consume one boost frame
+    ld (jump_boost_left), a
     ret
 
 
