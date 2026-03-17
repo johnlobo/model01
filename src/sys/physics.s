@@ -27,7 +27,8 @@
 ;; Start of _DATA area 
 ;;
 GRAVITY = 1
-JUMP_SPEED = -8
+JUMP_SPEED = -16
+MAX_FALL_SPEED = 8
 
 .area _DATA
 
@@ -39,12 +40,12 @@ JUMP_SPEED = -8
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_physics_init
+;; sys_physics_init
 ;;
-;;  Initilizes the game
-;;  Input: 
-;;  Output: 
-;;  Modified: AF, HL
+;;  Initializes the physics system.
+;;  Input:
+;;  Output:
+;;  Modified:
 ;;
 sys_physics_init::
 
@@ -52,18 +53,19 @@ sys_physics_init::
 
 ;;-----------------------------------------------------------------
 ;;
-;; sys_physics_entities
+;; sys_physics_update_one_entity
 ;;
-;;  Render all the entities
-;;  Input: 
-;;  Output: 
+;;  Applies horizontal movement, friction, tile collision, gravity and
+;;  floor/ceiling collision to one entity.
+;;  Input:  IX = entity pointer
+;;  Output:
 ;;  Modified: AF, BC, DE, HL
 ;;
 sys_physics_update_one_entity::
     ;; Horizontal movement
     ld a, e_speed_x(ix)             ;; load horizontal speed
     or a                            ;; check if horizontal speed is zero
-    jr z, spuoe_vertical_movement   ;; jump if horizontal speed is zero
+    jp z, spuoe_vertical_movement   ;; jump if horizontal speed is zero
 
     ;; Friction: only apply for player-controlled entities (c_cmp_input = 0x04)
     bit 2, e_cmps(ix)
@@ -81,15 +83,15 @@ spuoe_h_no_friction:
     push af                         ;; save new_x
     add a, e_width(ix)
     dec a                           ;; A = right_edge
-    ld c, a                         ;; C = right_edge (preserved by sys_map_is_solid_at)
+    ld c, a                         ;; C = right_edge
     ld b, e_y(ix)
-    call sys_map_is_solid_at
+    call sys_map_is_landable_at
     jr nz, spuoe_h_clamp_right
     ld a, e_y(ix)
     add a, e_height(ix)
     dec a
     ld b, a
-    call sys_map_is_solid_at
+    call sys_map_is_landable_at
     jr nz, spuoe_h_clamp_right
     pop af                          ;; no collision: restore new_x
     jr spuoe_h_done
@@ -107,13 +109,13 @@ spuoe_h_left:
     push af                         ;; save new_x
     ld c, a                         ;; C = left_edge = new_x
     ld b, e_y(ix)
-    call sys_map_is_solid_at
+    call sys_map_is_landable_at
     jr nz, spuoe_h_clamp_left
     ld a, e_y(ix)
     add a, e_height(ix)
     dec a
     ld b, a
-    call sys_map_is_solid_at
+    call sys_map_is_landable_at
     jr nz, spuoe_h_clamp_left
     pop af                          ;; no collision: restore new_x
     jr spuoe_h_done
@@ -126,6 +128,23 @@ spuoe_h_clamp_left:
     pop de                          ;; clean stack
 
 spuoe_h_done:
+    ;; Clamp x within map horizontal bounds [0, MAP_WIDTH*4 - e_width]
+    bit 7, a                    ;; x went negative (wrapped)?
+    jr z, spuoe_h_right_bound
+    xor a                       ;; clamp to 0
+    ld e_speed_x(ix), #0
+spuoe_h_right_bound:
+    ld c, a                     ;; C = x
+    add a, e_width(ix)
+    cp #MAP_WIDTH*4 + 1         ;; x+width > 64?
+    jr c, spuoe_h_write         ;; carry: x+width <= 64, in bounds
+    ld a, #MAP_WIDTH*4
+    sub e_width(ix)             ;; A = 64 - width
+    ld e_speed_x(ix), #0
+    jr spuoe_h_write2
+spuoe_h_write:
+    ld a, c                     ;; restore x
+spuoe_h_write2:
     ld e_x(ix), a
     ld e_moved(ix), #1
 
@@ -146,21 +165,28 @@ spuoe_vertical_movement:
     ld b, a                             ;; B preserved by sys_map_is_solid_at
 
     ld c, e_x(ix)                       ;; check below left foot
-    call sys_map_is_solid_at
-    jr nz, spuoe_check_speed_y          ;; solid below left: stay on ground
+    call sys_map_is_landable_at
+    jr nz, spuoe_check_speed_y          ;; solid/jumpable below left: stay on ground
 
     ld a, e_x(ix)
     add a, e_width(ix)
     dec a
     ld c, a                             ;; check below right foot
-    call sys_map_is_solid_at
-    jr nz, spuoe_check_speed_y          ;; solid below right: stay on ground
+    call sys_map_is_landable_at
+    jr nz, spuoe_check_speed_y          ;; solid/jumpable below right: stay on ground
 
     ld e_on_air(ix), #1                 ;; no solid below: start falling
 
 spuoe_apply_gravity:
     ld a, e_speed_y(ix)
     add a, #GRAVITY
+    ;; Cap positive speed_y at MAX_FALL_SPEED to prevent tunneling through tiles
+    bit 7, a                    ;; is new speed negative (moving up)?
+    jr nz, spuoe_no_cap         ;; negative: don't cap
+    cp #MAX_FALL_SPEED + 1      ;; A >= MAX_FALL_SPEED+1?
+    jr c, spuoe_no_cap          ;; A < MAX_FALL_SPEED+1: no cap needed
+    ld a, #MAX_FALL_SPEED       ;; cap at MAX_FALL_SPEED
+spuoe_no_cap:
     ld e_speed_y(ix), a
 
 spuoe_check_speed_y:
@@ -170,24 +196,62 @@ spuoe_check_speed_y:
 
     add a, e_y(ix)              ;; A = new_y
 
-    ;; Tile collision: only when moving downward (speed_y > 0, bit7 = 0)
+    ;; Tile collision: check ceiling when moving up, floor when moving down
     bit 7, e_speed_y(ix)
-    jr nz, spuoe_ground_check   ;; moving up: skip tile check
+    jr z, spuoe_tile_check_fall ;; speed_y >= 0: moving down, check floor
 
+    ;; Moving up: clamp to map top boundary
+    cp #MAP_PIXEL_START
+    jr nc, spuoe_ceiling_check  ;; new_y >= MAP_PIXEL_START: proceed
+    ld a, #MAP_PIXEL_START      ;; clamp to top of map
+    ld e_speed_y(ix), #0
+    jr spuoe_update_y
+
+spuoe_ceiling_check:
+    ;; Moving up: check if new top edge enters a solid tile (ceiling collision)
+    push af                     ;; save new_y
+    ld b, a                     ;; B = new_y (top edge)
+
+    ld c, e_x(ix)               ;; check top-left corner
+    call sys_map_is_solid_at
+    jr nz, spuoe_tile_ceiling
+
+    ld a, e_x(ix)               ;; check top-right corner
+    add a, e_width(ix)
+    dec a
+    ld c, a                     ;; C = right edge; B still = new_y (preserved by sys_map_is_solid_at)
+    call sys_map_is_solid_at
+    jr nz, spuoe_tile_ceiling
+
+    pop af                      ;; no ceiling: restore new_y
+    jr spuoe_ground_check
+
+spuoe_tile_ceiling:
+    ;; Clamp entity below the tile it hit: new_y = tile_bottom
+    ;; tile_bottom = ((B - MAP_PIXEL_START) & 0xF8) + MAP_PIXEL_START + 8
+    ld a, b
+    sub #MAP_PIXEL_START
+    and #0xF8
+    add a, #MAP_PIXEL_START + 8 ;; A = first pixel row below the tile
+    ld e_speed_y(ix), #0        ;; stop vertical movement
+    pop de                      ;; discard saved new_y (balance push af)
+    jr spuoe_update_y
+
+spuoe_tile_check_fall:
     push af                     ;; save new_y
     add a, e_height(ix)
     dec a                       ;; A = bottom_pixel = new_y + height - 1
     ld b, a                     ;; B = bottom_pixel (preserved by sys_map_is_solid_at)
 
     ld c, e_x(ix)               ;; check left foot
-    call sys_map_is_solid_at
+    call sys_map_is_landable_at
     jr nz, spuoe_tile_land
 
     ld a, e_x(ix)               ;; check right foot
     add a, e_width(ix)
     dec a
     ld c, a
-    call sys_map_is_solid_at
+    call sys_map_is_landable_at
     jr nz, spuoe_tile_land
 
     pop af                      ;; restore new_y
@@ -226,18 +290,19 @@ spuoe_tile_land:
 
 spuoe_not_ground:
     ld e_on_air(ix), #1         ;; mark as airborne
+spuoe_update_y:
     ld e_y(ix), a
     ld e_moved(ix), #1
     ret
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_physics_update
+;; sys_physics_update
 ;;
-;;  Initilizes the game
-;;  Input: 
-;;  Output: 
-;;  Modified: AF, HL
+;;  Iterates all movable entities (c_cmp_movable) and updates their physics.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX
 ;;
 sys_physics_update::
     ld ix, #entities

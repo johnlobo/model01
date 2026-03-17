@@ -88,21 +88,15 @@ _siw_loop:
     jr z, _siw_loop
     ret
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; DESCRIPTION
-;; Gets the ID of the FIRST key pressed found on the key
-;; buffer
-;; ----------------------------------------------------
-;; PARAMS
-;; ----------------------------------------------------
-;; RETURNS
-;; HL: Key pressed if anyone pressed. If not returns 0
-;; ----------------------------------------------------
-;; DESTROYS
-;; AF, HL
-;; ----------------------------------------------------
+;;-----------------------------------------------------------------
 ;;
-;; Routine taken from Promotion from Bite Studios
+;; sys_input_getKeyPressed
+;;
+;;  Returns the first key currently pressed in the keyboard buffer.
+;;  Routine taken from Promotion by Bite Studios.
+;;  Input:
+;;  Output: HL = key code if pressed, HL = 0 if no key pressed
+;;  Modified: AF, HL
 ;;
 sys_input_getKeyPressed::
     ld hl, #_cpct_keyboardStatusBuffer
@@ -136,21 +130,15 @@ _kp_endLoop:
 _key_released:
     .db #0
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; DESCRIPTION
-;; Does not return the key pressed until one is pressed.
-;; WARNING: This blocks the execution until done
-;; ----------------------------------------------------
-;; PARAMS
-;; ----------------------------------------------------
-;; RETURNS
-;; HL: Key pressed
-;; ----------------------------------------------------
-;; DESTROYS
-;; AF, HL
-;; ----------------------------------------------------
+;;-----------------------------------------------------------------
 ;;
-;; Routine taken from Promotion from Bite Studios
+;; sys_input_waitKeyPressed
+;;
+;;  Blocks until a key is pressed, then returns its code.
+;;  WARNING: This is a blocking call. Routine taken from Promotion by Bite Studios.
+;;  Input:
+;;  Output: HL = key code of the key pressed
+;;  Modified: AF, HL
 ;;
 sys_input_waitKeyPressed::
     call sys_input_getKeyPressed
@@ -188,11 +176,13 @@ sys_input_init::
 
 ;;-----------------------------------------------------------------
 ;;
-;;  sys_input_action
+;; sys_input_action
 ;;
-;;  Shows deck on scree
+;;  Jump action: sets upward speed and marks entity as airborne.
+;;  Ignored if the entity is already in the air.
+;;  Input:  IX = player entity
 ;;  Output:
-;;  Modified: 
+;;  Modified: AF
 ;;
 sys_input_action::
     ;; Jump only if on the ground
@@ -207,11 +197,12 @@ sys_input_action::
 
 ;;-----------------------------------------------------------------
 ;;
-;;  sys_input_selected_left
+;; sys_input_selected_left
 ;;
-;;  move selected card to the left
+;;  Sets entity speed to move left and switches to walk-left animation.
+;;  Input:  IX = player entity
 ;;  Output:
-;;  Modified: AF, HL, IX
+;;  Modified: AF, HL
 ;;
 sys_input_selected_left::
     ld e_speed_x(ix), #-2
@@ -222,11 +213,12 @@ sys_input_selected_left::
 
 ;;-----------------------------------------------------------------
 ;;
-;;  sys_input_selected_right
+;; sys_input_selected_right
 ;;
-;;  move selected card to the right
+;;  Sets entity speed to move right and switches to walk-right animation.
+;;  Input:  IX = player entity
 ;;  Output:
-;;  Modified: 
+;;  Modified: AF, HL
 ;;
 sys_input_selected_right::
     ld e_speed_x(ix), #2
@@ -273,10 +265,11 @@ first_key:
 ;;
 ;; sys_input_update
 ;;
-;;   Initializes input
-;;  Input: 
+;;  Resets the player to idle animation, then scans the key action
+;;  table and calls the handler for each key currently pressed.
+;;  Input:  IX = active player entity
 ;;  Output:
-;;  Modified: iy, bc
+;;  Modified: AF, BC, IY
 ;;
 sys_input_update::
     ;; Reset player to idle each frame; key handlers override if a direction is pressed

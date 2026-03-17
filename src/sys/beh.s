@@ -427,8 +427,8 @@ bcea_moving_left:
     ld c, a
 
 bcea_check:
-    push de                     ;; sys_map_is_solid_at destroys DE; preserve it
-    call sys_map_is_solid_at    ;; Z=1 if passable (at edge) → condition true
+    push de                     ;; sys_map_is_landable_at destroys DE; preserve it
+    call sys_map_is_landable_at ;; Z=1 if passable (at edge) → condition true
     pop de                      ;; restore DE (pop does not affect flags on Z80)
     ret
 

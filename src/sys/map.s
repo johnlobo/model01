@@ -16,10 +16,11 @@ smrsa_x_left:   .db 0
 smrsa_x_right:  .db 0
 smrsa_y_top:    .db 0
 smrsa_y_bottom: .db 0
+smrsa_save_sp:  .dw 0   ;; SP saved during gray-code tile draw
 
 tile_solid_table:
     .db 0   ;; tile  0: passable (blank)
-    .db 1   ;; tile  1: solid
+    .db 2   ;; tile  1: jumpable (one-way platform)
     .db 1   ;; tile  2: solid
     .db 1   ;; tile  3: solid
     .db 1   ;; tile  4: solid
@@ -32,7 +33,7 @@ tile_solid_table:
     .db 0   ;; tile 11: passable (decoration)
     .db 1   ;; tile 12: solid
     .db 0   ;; tile 13: passable
-    .db 1   ;; tile 14: solid
+    .db 2   ;; tile 14: jumpable (one-way platform)
     .db 0   ;; tile 15: passable
 
 ;;
@@ -76,62 +77,75 @@ sys_map_draw::
 
 ;;-----------------------------------------------------------------
 ;;
-;; sys_map_is_solid_at
+;; sys_map_is_solid_at / sys_map_is_landable_at
 ;;
-;;  Returns whether the tile at the given screen position is solid.
+;;  Returns whether the tile at the given screen position blocks movement.
+;;  sys_map_is_solid_at:    NZ if fully solid (value=1). Jumpable tiles (value=2)
+;;                          are passable — use for ceiling and horizontal checks.
+;;  sys_map_is_landable_at: NZ if solid (1) or jumpable (2). Use for floor checks
+;;                          so entities can land on one-way platforms.
 ;;  Input: B = pixel_y, C = pixel_x (in bytes, 0..79)
-;;  Output: NZ if solid tile, Z if passable or out of bounds
+;;  Output: NZ if blocked, Z if passable or out of bounds
 ;;  Modified: AF, DE, HL
 ;;
 sys_map_is_solid_at::
-    ;; Check within map vertical bounds
+    call smisa_get_type         ;; A = tile type, Z set if 0 (passable/OOB)
+    ret z                       ;; passable: return Z
+    cp #1                       ;; Z if exactly solid (1), NZ if jumpable (2)
+    jr nz, smisa_passable       ;; not exactly solid: treat as passable
+    or a                        ;; A=1, set NZ
+    ret
+
+sys_map_is_landable_at::
+    call smisa_get_type         ;; A = tile type: 0→Z, 1 or 2→NZ
+    ret                         ;; return flags as-is
+
+;; Internal: look up tile type at (B=pixel_y, C=pixel_x)
+;;  Returns: A = tile_solid_table value (0/1/2), or A=0,Z via smisa_passable
+smisa_get_type:
     ld a, b
     cp #MAP_PIXEL_START
-    jr c, smisa_passable            ;; above map top: passable
+    jr c, smisa_passable        ;; above map top: passable
 
-    ;; tile_row = (B - MAP_PIXEL_START) / 8
     sub #MAP_PIXEL_START
     rrca
     rrca
     rrca
-    and #0x1F                       ;; tile_row (0..31)
+    and #0x1F                   ;; tile_row (0..31)
     cp #MAP_HEIGHT
-    jr nc, smisa_passable           ;; below map: passable
+    jr nc, smisa_passable       ;; below map: passable
 
-    ;; HL = &g_map01[tile_row * MAP_WIDTH]
     ld l, a
     ld h, #0
-    add hl, hl                      ;; *2
-    add hl, hl                      ;; *4
-    add hl, hl                      ;; *8
-    add hl, hl                      ;; *16 = MAP_WIDTH
+    add hl, hl                  ;; *2
+    add hl, hl                  ;; *4
+    add hl, hl                  ;; *8
+    add hl, hl                  ;; *16 = MAP_WIDTH
     ld de, #_g_map01
     add hl, de
 
-    ;; tile_col = C / 4  (each tile is 4 bytes wide in mode 0)
     ld a, c
     rrca
     rrca
     and #0x3F
     cp #MAP_WIDTH
-    jr nc, smisa_passable           ;; out of horizontal bounds
+    jr nc, smisa_passable       ;; out of horizontal bounds
 
     ld e, a
     ld d, #0
     add hl, de
 
-    ;; Look up tile in solid table
-    ld a, (hl)                      ;; A = tile_id
+    ld a, (hl)                  ;; A = tile_id
     ld hl, #tile_solid_table
     ld e, a
     ld d, #0
     add hl, de
-    ld a, (hl)
-    or a                            ;; NZ if solid (1), Z if passable (0)
+    ld a, (hl)                  ;; A = tile type (0/1/2)
+    or a                        ;; Z if 0 (passable), NZ if 1 or 2
     ret
 
 smisa_passable:
-    xor a                           ;; Z=1 (passable)
+    xor a                       ;; A=0, Z=1 (passable)
     ret
 
 ;;-----------------------------------------------------------------
@@ -284,9 +298,119 @@ smrsa_draw_one_tile:
     ld de, #FRONT_BUFFER
     call cpct_getScreenPtr_asm  ;; HL = screen ptr
 
-    ex de, hl               ;; DE = screen ptr
-    pop hl                  ;; HL = sprite data
-    ld c, #4                ;; tile width: 4 bytes
-    ld b, #8                ;; tile height: 8 pixels
-    call cpct_drawSprite_asm
+    pop ix                  ;; IX = sprite data ptr
+
+    ;; Draw tile using the same SP trick as the ETM engine.
+    ;; Tile data is in gray-code row order (0,1,3,2,6,7,5,4) which matches
+    ;; the sequential SP reads below. H-bit manipulation navigates CPC scanlines.
+    ;; Rows alternate left-to-right (inc L) / right-to-left (dec L) for zig-zag.
+    ;; SP is hijacked to read tile data via POP — interrupts must be disabled.
+    di
+    push hl                 ;; save screen ptr temporarily
+    ld hl, #2
+    add hl, sp              ;; HL = real SP (before the push above)
+    ld (smrsa_save_sp), hl  ;; save real SP
+    pop hl                  ;; restore screen ptr
+    ld sp, ix               ;; SP = tile sprite data (ld sp,ix = DD F9, valid Z80)
+
+    ;; Row 0 [left→right]
+    pop bc
+    ld (hl), c
+    inc l
+    ld (hl), b
+    inc l
+    pop bc
+    ld (hl), c
+    inc l
+    ld (hl), b              ;; L = col+3
+    set 3, h                ;; → scanline 1
+
+    ;; Row 1 [right→left]
+    pop bc
+    ld (hl), c
+    dec l
+    ld (hl), b
+    dec l
+    pop bc
+    ld (hl), c
+    dec l
+    ld (hl), b              ;; L = col
+    set 4, h                ;; → scanline 3
+
+    ;; Row 3 [left→right]
+    pop bc
+    ld (hl), c
+    inc l
+    ld (hl), b
+    inc l
+    pop bc
+    ld (hl), c
+    inc l
+    ld (hl), b              ;; L = col+3
+    res 3, h                ;; → scanline 2
+
+    ;; Row 2 [right→left]
+    pop bc
+    ld (hl), c
+    dec l
+    ld (hl), b
+    dec l
+    pop bc
+    ld (hl), c
+    dec l
+    ld (hl), b              ;; L = col
+    set 5, h                ;; → scanline 6
+
+    ;; Row 6 [left→right]
+    pop bc
+    ld (hl), c
+    inc l
+    ld (hl), b
+    inc l
+    pop bc
+    ld (hl), c
+    inc l
+    ld (hl), b              ;; L = col+3
+    set 3, h                ;; → scanline 7
+
+    ;; Row 7 [right→left]
+    pop bc
+    ld (hl), c
+    dec l
+    ld (hl), b
+    dec l
+    pop bc
+    ld (hl), c
+    dec l
+    ld (hl), b              ;; L = col
+    res 4, h                ;; → scanline 5
+
+    ;; Row 5 [left→right]
+    pop bc
+    ld (hl), c
+    inc l
+    ld (hl), b
+    inc l
+    pop bc
+    ld (hl), c
+    inc l
+    ld (hl), b              ;; L = col+3
+    res 3, h                ;; → scanline 4
+
+    ;; Row 4 [right→left]
+    pop bc
+    ld (hl), c
+    dec l
+    ld (hl), b
+    dec l
+    pop bc
+    ld (hl), c
+    dec l
+    ld (hl), b              ;; L = col
+    res 5, h                ;; H restored to scanline 0
+
+    ;; Restore SP and re-enable interrupts
+    ld hl, (smrsa_save_sp)
+    ld sp, hl
+    ei
     ret

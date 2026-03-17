@@ -170,13 +170,13 @@ ret
 
 ;;-----------------------------------------------------------------
 ;;
-;; sys_array_get_element
+;; sys_array_get_address_from_pointer
 ;;
-;;  Retrieves in hl the element in position a
-;;  Input:  a: number of element to return
-;;          ix: pointer array structure
-;;  Output: hl: pointer to the element
-;;  Modified: AF, BC, DE, HL
+;;  Retrieves element A from the array, then dereferences its p_p
+;;  field and returns the pointed-to address in HL.
+;;  Input:  A = element index, IX = array structure
+;;  Output: HL = dereferenced pointer from p_p field
+;;  Modified: AF, BC, DE, HL, IX
 ;;
 sys_array_get_address_from_pointer::
     call sys_array_get_element          ;; call the function to get in hl the element "a"

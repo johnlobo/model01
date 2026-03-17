@@ -34,7 +34,7 @@
 .area _DATA
 
 FONT_NUMBERS: .dw #0000
-_welcome_string: .asciz "WELCOME - V.001"   ;;
+_welcome_string: .asciz "WELCOME - V.009"   ;;
 
 
 sys_render_front_buffer: .db 0xc0
@@ -50,15 +50,16 @@ _y_coord_base: .db #0
 ;; 
 .area _CODE
 
-;;====================================================
-;; sys_render_init_back_buffer
-;;  Initialize screen buffers
-;;  Entrada: hl : buffer
-;;  Salida:
-;;  Destruye: BC, DE, HL
+;;-----------------------------------------------------------------
 ;;
-;; Code taken form Miss Input 
-;;====================================================
+;; sys_render_clear_buffer
+;;
+;;  Fills a 16K video buffer with zeros (black).
+;;  Code taken from Miss Input.
+;;  Input:  HL = base address of buffer to clear
+;;  Output:
+;;  Modified: BC, DE, HL
+;;
 sys_render_clear_buffer::
     ld (hl), #0
     ld d, h
@@ -69,15 +70,16 @@ sys_render_clear_buffer::
     ldir
 ret
 
-;;====================================================
-;; sys_render_init_back_buffer
-;;  Initialize screen buffers
-;;  Entrada:
-;;  Salida:
-;;  Destruye: BC, DE, HL
+;;-----------------------------------------------------------------
 ;;
-;; Code taken form Miss Input 
-;;====================================================
+;; sys_render_clear_back_buffer
+;;
+;;  Clears the back buffer to black (all zeros).
+;;  Code taken from Miss Input.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL
+;;
 sys_render_clear_back_buffer::
     ld a, (sys_render_back_buffer)
     ld h, a
@@ -85,15 +87,16 @@ sys_render_clear_back_buffer::
     call sys_render_clear_buffer
     ret
 
-;;====================================================
-;; sys_render_init_back_buffer
-;;  Initialize screen buffers
-;;  Entrada:
-;;  Salida:
-;;  Destruye: BC, DE, HL
+;;-----------------------------------------------------------------
 ;;
-;; Code taken form Miss Input 
-;;====================================================
+;; sys_render_clear_front_buffer
+;;
+;;  Clears the front buffer to black (all zeros).
+;;  Code taken from Miss Input.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL
+;;
 sys_render_clear_front_buffer::
     ld a, (sys_render_front_buffer)
     ld h, a
@@ -338,34 +341,81 @@ dms_restore_ix:
 
 ;;-----------------------------------------------------------------
 ;;
-;; sys_render_one_entity
+;; sys_render_restore_one_entity
 ;;
-;;  Render one entity
-;;  Input: ix : pointer to the structure of the entity
-;;  Output: 
-;;  Modified: AF, BC, DE, HL
+;;  Pass 1: restore map tiles at this entity's previous position.
+;;  Must run for ALL entities before any entity is redrawn, so that
+;;  one entity's tile restore cannot overwrite another entity's
+;;  freshly-drawn sprite.
 ;;
-sys_render_one_entity::
-   ;; Skip if not moved
+;;  Input:  IX = entity
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX
+;;
+sys_render_restore_one_entity::
    ld a, e_moved(ix)
    or a
-   ret z
+   ret z                       ;; not dirty: nothing to restore
 
-   ;; Restore map tiles at previous position (skip on first render: e_p_address == 0)
    ld e, e_p_address(ix)
    ld d, e_p_address+1(ix)
    ld a, e
    or d
-   jr z, sroe_draw             ;; p_address == 0: first render, skip restore
+   ret z                       ;; p_address == 0: first render, no previous position
+
    ld b, e_p_y(ix)             ;; B = previous y
    ld c, e_p_x(ix)             ;; C = previous x
    ld d, e_height(ix)          ;; D = height
    ld e, e_width(ix)           ;; E = width
-   push ix                     ;; cpct_drawSprite_asm (inside restore) destroys IX
+   push ix
    call sys_map_restore_tiles_at
-   pop ix                      ;; restore entity pointer
+   pop ix
 
-sroe_draw:
+   ;; If the entity was (partially) above the tile area, clear those
+   ;; screen rows to black — sys_map_restore_tiles_at only covers the
+   ;; tile grid (y >= MAP_PIXEL_START) and cannot erase sprite pixels
+   ;; that were drawn above it.
+   ld a, e_p_y(ix)
+   cp #MAP_PIXEL_START
+   ret nc                      ;; p_y >= MAP_PIXEL_START: nothing above map, done
+
+   ;; clear_height = min(MAP_PIXEL_START - p_y, e_height)
+   ld b, a                     ;; B = p_y
+   ld a, #MAP_PIXEL_START
+   sub b                       ;; A = rows above tile area
+   ld b, e_height(ix)
+   cp b
+   jr c, srroe_got_clear_h     ;; A < height: entity partially above → use A
+   ld a, b                     ;; A = height: entity fully above
+srroe_got_clear_h:
+   ld b, a                     ;; B = clear_height
+   ld c, e_width(ix)           ;; C = width
+
+   push ix
+   push bc                     ;; save clear_height / width across getScreenPtr call
+   ld de, #FRONT_BUFFER
+   ld b, e_p_y(ix)             ;; B = previous y (IX still valid after push)
+   ld c, e_p_x(ix)             ;; C = previous x
+   call cpct_getScreenPtr_asm  ;; HL = screen address
+   ex de, hl                   ;; DE = screen address (drawSolidBox takes DE)
+   pop bc                      ;; B = clear_height, C = width
+   xor a                       ;; A = 0 (pen 0 = black fill pattern)
+   call cpct_drawSolidBox_asm
+   pop ix
+   ret
+
+;;-----------------------------------------------------------------
+;;
+;; sys_render_one_entity
+;;
+;;  Draws entity at current position (masked, pen 0 = transparent).
+;;  Called for every entity every frame (Pass 2 in sys_render_entities).
+;;
+;;  Input:  IX = entity
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX
+;;
+sys_render_one_entity::
    ;; Save current position for tile restore on next frame
    ld a, e_x(ix)
    ld e_p_x(ix), a
@@ -384,12 +434,31 @@ sroe_draw:
    ld e_p_address(ix), l
    ld e_p_address+1(ix), h
 
+   ;; cpct_drawSpriteMaskedAlignedTable_asm parameters:
+   ;;   BC = sprite pointer
+   ;;   DE = video memory address
+   ;;   IXH = height, IXL = width
+   ;;   HL = aligned mask table (transparency_table)
+
    ex de, hl                   ;; DE = screen address
-   ld c, e_width(ix)
-   ld b, e_height(ix)
-   ld l, e_sprite(ix)
-   ld h, e_sprite+1(ix)
-   call cpct_drawSprite_asm
+
+   ;; Load sprite pointer into BC (while IX still = entity pointer)
+   ld c, e_sprite(ix)
+   ld b, e_sprite+1(ix)        ;; BC = sprite data
+
+   ;; Pack height into H and width into L, then swap into IX via stack
+   ld a, e_height(ix)
+   ld h, a                     ;; H = height
+   ld a, e_width(ix)
+   ld l, a                     ;; L = width
+   push ix                     ;; save entity pointer
+   push hl                     ;; push (height, width) pair
+   pop ix                      ;; IX = (height<<8 | width): IXH=height, IXL=width
+
+   ld hl, #transparency_table  ;; HL = 256-byte aligned mask table
+   call cpct_drawSpriteMaskedAlignedTable_asm
+
+   pop ix                      ;; restore entity pointer
 
    xor a
    ld e_moved(ix), a
@@ -400,11 +469,20 @@ sroe_draw:
 ;; sys_render_entities
 ;;
 ;;  Render all the entities
-;;  Input: 
-;;  Output: 
+;;  Input:
+;;  Output:
 ;;  Modified: AF, BC, DE, HL
 ;;
 sys_render_entities::
+   ;; Pass 1: restore tiles at all entities' previous positions.
+   ;; Only runs for entities with e_moved=1, so static entities are untouched.
+   ld ix, #entities
+   ld b, #c_cmp_render
+   ld hl, #sys_render_restore_one_entity
+   call sys_array_execute_each_ix_matching
+
+   ;; Pass 2: draw all entities at their current positions.
+   ;; Always draws every entity so that any sprite erased by Pass 1 is redrawn.
    ld ix, #entities
    ld b, #c_cmp_render
    ld hl, #sys_render_one_entity

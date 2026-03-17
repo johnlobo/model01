@@ -34,12 +34,12 @@
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_ai_init
+;; sys_ai_init
 ;;
-;;  Initilizes the game
-;;  Input: 
-;;  Output: 
-;;  Modified: AF, HL
+;;  Initializes the AI system.
+;;  Input:
+;;  Output:
+;;  Modified:
 ;;
 sys_ai_init::
 
@@ -47,12 +47,14 @@ sys_ai_init::
 
 ;;-----------------------------------------------------------------
 ;;
-;; sys_ai_entities
+;; sys_ai_update_one_entity
 ;;
-;;  Render all the entities
-;;  Input: 
-;;  Output: 
-;;  Modified: AF, BC, DE, HL
+;;  Legacy AI: applies gravity and bounces the entity off the ground.
+;;  Skipped for entities that have a behavior program (e_beh != 0),
+;;  which are handled by sys_beh_update instead.
+;;  Input:  IX = entity pointer
+;;  Output:
+;;  Modified: AF
 ;;
 sys_ai_update_one_entity::
     ;; Skip entities that have a behavior program — sys_beh_update handles those
@@ -81,12 +83,13 @@ sys_ai_update_one_entity::
 
 ;;-----------------------------------------------------------------
 ;;
-;; man_ai_update
+;; sys_ai_update
 ;;
-;;  Initilizes the game
-;;  Input: 
-;;  Output: 
-;;  Modified: AF, HL
+;;  Iterates all AI entities (c_cmp_ai) and runs the legacy bounce behavior
+;;  for those without a behavior program.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX
 ;;
 sys_ai_update::
     ld ix, #entities

@@ -44,7 +44,7 @@ Entry point is `_main::`. Initialization sequence:
 5. `sys_collision_update` — AABB collision detection between collider/collisionable entities
 6. `sys_anim_update` — advance animation frames for animated entities
 7. `cpct_waitVSYNC_asm` — wait for vertical sync
-8. `sys_render_update` — draw all dirty entities
+8. `sys_render_update` — per-tile restore of dirty areas, then draw all entities
 
 ### Entity Component System
 
@@ -60,7 +60,7 @@ Entities are stored in a flat array (`entities` in `src/man/entity.s`). Each ent
 | `c_cmp_collider` | 0x20 | Active collider (outer loop, initiates checks) |
 | `c_cmp_collisionable` | 0x40 | Passive collision target (inner loop, receives checks) |
 
-The entity struct (`e`) is defined via `BeginStruct`/`Field`/`EndStruct` macros in `src/man/entity.h.s`. Fields (in order): `e_cmps`, `e_status`, `e_x`, `e_y`, `e_p_x` (2B, previous draw x for tile restore), `e_p_y` (2B, previous draw y), `e_address` (2B), `e_p_address` (2B), `e_speed_x` (2B), `e_speed_y` (2B), `e_on_air`, `e_width`, `e_height`, `e_color`, `e_sprite` (2B), `e_moved`, `e_anim` (2B, pointer to animation descriptor or null), `e_anim_frame`, `e_anim_timer`.
+The entity struct (`e`) is defined via `BeginStruct`/`Field`/`EndStruct` macros in `src/man/entity.h.s`. Fields (in order): `e_cmps`, `e_status`, `e_x`, `e_y`, `e_p_x` (2B, saved draw x — written each frame but unused since map redraws handle erase), `e_p_y` (2B, saved draw y), `e_address` (2B), `e_p_address` (2B), `e_speed_x` (2B), `e_speed_y` (2B), `e_on_air`, `e_width`, `e_height`, `e_color`, `e_sprite` (2B), `e_moved`, `e_anim` (2B, pointer to animation descriptor or null), `e_anim_frame`, `e_anim_timer`.
 
 ### Array System (`src/sys/array.s`, `src/sys/array.h.s`)
 
@@ -167,9 +167,27 @@ Draws a static 16×20 tile background using CPCtelera's ETM 4×8 engine (`cpct_e
 
 The ETM draw function uses self-modifying code and hijacks the Z80 stack pointer (saves/restores SP per row) to fast-copy tile data via `pop bc`. It destroys AF, BC, DE, HL, IX, IY — safe because `sys_array_execute_each_ix_matching` uses self-modifying code for its loop state, not IX/IY as persistent registers.
 
-**Tileset format:** Tiles are converted with `zgtiles` format in `cfg/image_conversion.mk`, which outputs bytes in gray-code row order (0,1,3,2,6,7,5,4) as required by the ETM engine. Generated arrays `s_tileset_00`…`s_tileset_NN` are `const u8[32]` in the same C translation unit — SDCC places them consecutively in `_CODE` with no padding, so `_s_tileset_00` serves as the flat tileset base. Tile 0 (`s_tileset_00`) is the blank tile; map data uses 0-based IDs.
+**Tileset format:** Tiles are converted with `zgtiles` format in `cfg/image_conversion.mk`, which outputs bytes in gray-code row order (0,1,3,2,6,7,5,4) as required by the ETM engine. Generated arrays `s_tileset_00`…`s_tileset_NN` are `const u8[32]` in the same C translation unit — SDCC places them consecutively in `_CODE` with no padding, so `_s_tileset_00` serves as the flat tileset base. Tile 0 (`s_tileset_00`) is the blank tile; map data uses 0-based IDs. **Important:** tile sprite data is in ETM gray-code row order and is NOT compatible with `cpct_drawSprite_asm` (which expects linear row order); drawing individual tiles with `cpct_drawSprite_asm` will scramble rows 2–7. Always use `sys_map_draw` (ETM) to redraw tiles.
 
-**Render flow:** `sys_render_update` calls `sys_map_draw` first, then `sys_render_entities`. Entities always draw every frame (no `e_moved` check) since the map redraw erases the previous frame.
+**Render flow:** `sys_render_update` calls `sys_render_entities` which runs two passes:
+- **Pass 1 (restore):** for each `c_cmp_render` entity with `e_moved=1`, calls `sys_map_restore_tiles_at` to redraw the tiles under the entity's previous bounding box using `smrsa_draw_one_tile`.
+- **Pass 2 (draw):** draws every `c_cmp_render` entity every frame (no `e_moved` check), so any sprite erased by Pass 1 is always redrawn.
+
+`smrsa_draw_one_tile` uses the same SP-trick as the ETM engine: `di`, save SP, set `SP = tile_data`, draw 8 rows via `pop bc` + `ld (hl), c/b` with zig-zag (`inc/dec l`) and H-bit manipulation (`set/res 3/4/5, h`) to target CPC scanlines in gray-code order (0,1,3,2,6,7,5,4), restore SP, `ei`. This correctly handles the gray-code tile format without redrawing the full map.
+
+**Tile collision types** (`tile_solid_table` in `map.s`):
+
+| Value | Meaning | Tiles |
+|-------|---------|-------|
+| `0` | Passable | 0, 10, 11, 13, 15 |
+| `1` | Fully solid — blocks all directions | 2–9, 12 |
+| `2` | Jumpable (one-way platform) — blocks floor/sides, passable from below | 1, 14 |
+
+Two collision query functions:
+- `sys_map_is_solid_at` (B=pixel_y, C=pixel_x) — NZ only for value==1. Used for **ceiling** checks (jumping up through jumpable tiles is allowed) and was previously used for horizontal, but horizontal now uses `sys_map_is_landable_at`.
+- `sys_map_is_landable_at` (B=pixel_y, C=pixel_x) — NZ for value==1 or 2. Used for **floor** checks, **horizontal** checks, and the "still standing" ground test. Both functions share the internal `smisa_get_type` lookup routine.
+
+Physics constants in `src/sys/physics.s`: `GRAVITY = 1`, `JUMP_SPEED = -8`, `MAX_FALL_SPEED = 8`. The fall speed cap prevents tunneling through tiles (speed can never exceed tile height of 8px).
 
 ### Assets
 

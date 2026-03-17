@@ -36,11 +36,14 @@ nInterrupt:: .db 0
 
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;DESCRIPTION
-;; Called every interruption
+;;-----------------------------------------------------------------
 ;;
-;;DESTROYS: AF, BC, DE
+;; set_int_handler
+;;
+;;  Installs int_handler1 at RST 38h and resets the interrupt counter.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL
 ;;
 set_int_handler:
 	ld hl, #0x38
@@ -55,11 +58,15 @@ set_int_handler:
 	ret
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;DESCRIPTION
-;; Called on the first interruption
+;;-----------------------------------------------------------------
 ;;
-;;DESTROYS: AF, BC, DE
+;; int_handler1
+;;
+;;  First interrupt handler in the 6-interrupt cycle. Increments the
+;;  interrupt counter and chains to int_handler2.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL
 ;;
 int_handler1:
    ;;cpctm_setBorder_asm HW_WHITE
@@ -68,11 +75,14 @@ int_handler1:
  	call cpct_setInterruptHandler_asm	
 	ret
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;DESCRIPTION
-;; Called every interruption
+;;-----------------------------------------------------------------
 ;;
-;;DESTROYS: AF, BC, DE
+;; int_handler2
+;;
+;;  Second interrupt handler. Scans the keyboard and chains to int_handler3.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL
 ;;
 int_handler2:
    ;;cpctm_setBorder_asm HW_RED
@@ -86,11 +96,14 @@ int_handler2:
    call cpct_setInterruptHandler_asm
 	ret
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;DESCRIPTION
-;; Called every interruption
+;;-----------------------------------------------------------------
 ;;
-;;DESTROYS: AF, BC, DE
+;; int_handler3
+;;
+;;  Third interrupt handler. Increments the interrupt counter and chains to int_handler4.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL
 ;;
 int_handler3:
    ;;cpctm_setBorder_asm HW_GREEN
@@ -101,11 +114,14 @@ int_handler3:
    call cpct_setInterruptHandler_asm
 	ret
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;DESCRIPTION
-;; Called every interruption
+;;-----------------------------------------------------------------
 ;;
-;;DESTROYS: AF, BC, DE
+;; int_handler4
+;;
+;;  Fourth interrupt handler. Increments the interrupt counter and chains to int_handler5.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL
 ;;
 int_handler4:
    ;;cpctm_setBorder_asm HW_BLUE
@@ -116,11 +132,15 @@ int_handler4:
    call cpct_setInterruptHandler_asm
 	ret
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;DESCRIPTION
-;; Called every interruption
+;;-----------------------------------------------------------------
 ;;
-;;DESTROYS: AF, BC, DE
+;; int_handler5
+;;
+;;  Fifth interrupt handler. Placeholder for music playback (currently disabled).
+;;  Chains to int_handler6.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL
 ;;
 int_handler5:
    ;;cpctm_setBorder_asm HW_ORANGE
@@ -148,11 +168,15 @@ int_handler5_exit:
    call cpct_setInterruptHandler_asm
 	ret
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;DESCRIPTION
-;; Called every interruption
+;;-----------------------------------------------------------------
 ;;
-;;DESTROYS: AF, BC, DE
+;; int_handler6
+;;
+;;  Sixth and final interrupt handler. Resets the interrupt counter
+;;  and wraps the cycle back to int_handler1.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL
 ;;
 int_handler6:
    ;;cpctm_setBorder_asm HW_PURPLE
@@ -168,10 +192,13 @@ int_handler6:
 ;;-----------------------------------------------------------------
 ;;
 ;; sys_system_disable_firmware
-;; Disable firmware
-;;  Input:  
-;;  Output: 
-;;  Destroyed: af, bc,de, hl
+;;
+;;  Disables the CPC firmware and installs the custom 6-interrupt
+;;  handler chain (int_handler1..6). Must be called once at startup
+;;  before any game code runs.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL
 ;;
 sys_system_disable_firmware::
    call cpct_disableFirmware_asm

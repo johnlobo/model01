@@ -86,18 +86,14 @@ sys_util_h_times_e::
   add hl,de
   ret
 
-;;-----------------------------------------------------------------;; 
-;;  sys_util_h_times_e
+;;-----------------------------------------------------------------
 ;;
-;;Inputs:
-;;     HL is the numerator
-;;     C is the denominator
-;;Outputs:
-;;     A is the remainder
-;;     B is 0
-;;     C is not changed
-;;     DE is not changed
-;;     HL is the quotient
+;; sys_util_hl_div_c
+;;
+;;  Divides HL by C using 16-step binary long division.
+;;  Input:  HL = numerator, C = denominator
+;;  Output: HL = quotient, A = remainder, B = 0, C unchanged, DE unchanged
+;;  Modified: AF, B, HL
 ;;
 sys_util_hl_div_c::
        ld b,#16
@@ -234,10 +230,11 @@ sys_util_delay::
 ;;
 ;; CRTC_V_auto
 ;;
-;;  
-;;  Input:  
-;;  Output: 
-;;  Destroyed: 
+;;  Writes DE to CRTC register V_LINES, controlling the number of
+;;  visible character rows (used for fade effects).
+;;  Input:  DE = value to write to V_LINES register
+;;  Output:
+;;  Modified: AF, BC, HL
 ;;
 CRTC_V_auto:
 	ld bc, #0xBC00 + V_LINES
@@ -253,10 +250,11 @@ CRTC_V_auto:
 ;;
 ;; CRTC_H_auto
 ;;
-;;  
-;;  Input:  
-;;  Output: 
-;;  Destroyed: 
+;;  Writes DE to CRTC register H_ADJUST, shifting the horizontal
+;;  display position (used for screen-shake effects).
+;;  Input:  DE = value to write to H_ADJUST register
+;;  Output:
+;;  Modified: AF, BC, HL
 ;;
 CRTC_H_auto:
 	ld bc, #0xBC00 + H_ADJUST
@@ -272,10 +270,11 @@ CRTC_H_auto:
 ;;
 ;; sys_util_fadeOut
 ;;
-;;  
-;;  Input:  
-;;  Output: 
-;;  Destroyed: 
+;;  Animates a vertical wipe-out by shrinking the visible screen
+;;  height from 25 rows down to 0 via CRTC V_LINES.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL
 ;;
 sys_util_fadeOut::
 	ld de, #25
@@ -292,10 +291,11 @@ height_out:
 ;;
 ;; sys_util_fadeIn
 ;;
-;;  
-;;  Input:  
-;;  Output: 
-;;  Destroyed: 
+;;  Animates a vertical reveal by expanding the visible screen
+;;  height from 0 up to 25 rows via CRTC V_LINES.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL
 ;;
 sys_util_fadeIn::
 	ld de, #0
@@ -313,10 +313,11 @@ height_in:
 ;;
 ;; sys_util_temblor
 ;;
-;;  
-;;  Input:  
-;;  Output: 
-;;  Destroyed: 
+;;  Screen-shake effect: rapidly shifts the horizontal display
+;;  position left and right via CRTC H_ADJUST.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL
 ;;
 sys_util_temblor::
 	ld de, #47
@@ -335,10 +336,10 @@ sys_util_temblor::
 ;;
 ;; crt_delay
 ;;
-;;  
-;;  Input:  
-;;  Output: 
-;;  Destroyed: 
+;;  Busy-waits for A frames using HALT, then returns.
+;;  Input:  A = number of frames to wait
+;;  Output:
+;;  Modified: AF
 ;;
 crt_delay:
 	halt
@@ -377,12 +378,13 @@ NEXT_BIT:
 
 ;;-----------------------------------------------------------------
 ;;
-;; crt_delay
+;; sys_utiL_reduce_a
 ;;
-;;  
-;;  Input: El valor a modificar está en el registro A
-;;  Output: El registro A con su magnitud reducida en 1
-;;  Destroyed: 
+;;  Moves A one step toward zero: decrements if positive, increments
+;;  if negative, does nothing if zero. Used to apply friction.
+;;  Input:  A = signed speed value
+;;  Output: A = speed value with magnitude reduced by 1
+;;  Modified: AF
 ;;
 sys_utiL_reduce_a:
   or a            ; 1. Actualiza las banderas (S y Z) sin cambiar el valor de A.
