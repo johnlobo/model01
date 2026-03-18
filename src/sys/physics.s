@@ -200,10 +200,15 @@ spuoe_check_speed_y:
     bit 7, e_speed_y(ix)
     jr z, spuoe_tile_check_fall ;; speed_y >= 0: moving down, check floor
 
-    ;; Moving up: clamp to world top (y=0 = map top)
-    bit 7, a                    ;; test sign: bit7=1 means A went negative (above map)
-    jr z, spuoe_ceiling_check   ;; bit7=0 → A >= 0 → still inside map, proceed
-    xor a                       ;; clamp to world y=0
+    ;; Moving up: clamp to world top (y=0 = map top).
+    ;; Use carry from the ADD above: carry=1 means e_y + speed_y >= 256, i.e.
+    ;; the true signed result is >= 0 (valid). carry=0 means the result wrapped
+    ;; below 0.  bit7 of A is NOT reliable here — e.g. e_y=144, speed_y=-16
+    ;; gives A=128 (bit7=1) which is a perfectly valid world_y.
+    ;; BIT instruction does not modify carry, so it is still valid after the
+    ;; direction check above.
+    jr c, spuoe_ceiling_check   ;; carry set: new_y >= 0, still in map, proceed
+    xor a                       ;; carry clear: new_y < 0, clamp to world y=0
     ld e_speed_y(ix), #0
     jr spuoe_update_y
 
@@ -227,7 +232,7 @@ spuoe_ceiling_check:
     jr spuoe_ground_check
 
 spuoe_tile_ceiling:
-    ;; Clamp entity below the tile it hit (world coords: no MAP_PIXEL_START offset)
+    ;; Clamp entity below the tile it hit (world coords)
     ;; tile_bottom = (B & 0xF8) + 8
     ld a, b
     and #0xF8

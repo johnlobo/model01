@@ -43,13 +43,12 @@
 
 .globl _s_tileset_00
 .globl _g_map01
+.globl _g_map02
 .globl map_origin_x    ;; map draw origin x on screen (bytes)
 .globl map_origin_y    ;; map draw origin y on screen (pixels)
 
 MAP_WIDTH       = 16
 MAP_HEIGHT      = 20
-MAP_START_ROW   = 5
-MAP_PIXEL_START = MAP_START_ROW * 8
 
 .globl transparency_table
 

@@ -13,8 +13,17 @@
 
 ;; Map draw origin: screen position of map tile (0,0).
 ;; Moving these moves the entire map and all entities together.
-map_origin_x:: .db 0              ;; screen x of map left edge (bytes)
-map_origin_y:: .db MAP_PIXEL_START ;; screen y of map top edge (pixels)
+map_origin_x:: .db 8              ;; screen x of map left edge (bytes): (80-64)/2 = 8
+;; IMPORTANT: map_origin_y MUST be a multiple of 8 (character-row boundary).
+;; smrsa_draw_one_tile uses an SP-trick that manipulates H bits 3-5 to navigate
+;; CPC scanlines. It only works correctly when the tile starts at scanline 0 of a
+;; character row, i.e. screen_y % 8 == 0.  Values 16 and 24 are the two nearest
+;; multiples of 8 to the ideal (200-160)/2 = 20 centering point.
+map_origin_y:: .db 16             ;; screen y of map top edge (pixels): nearest mult of 8 to (200-160)/2
+
+;; Pointer to the active tilemap data array (g_map01 or g_map02).
+;; Change with sys_map_set to switch maps.
+current_map_data:: .dw _g_map01
 
 ;; Working storage for sys_map_restore_tiles_at
 smrsa_x_left:   .db 0
@@ -38,8 +47,11 @@ tile_solid_table:
     .db 0   ;; tile 11: passable (decoration)
     .db 1   ;; tile 12: solid
     .db 0   ;; tile 13: passable
-    .db 2   ;; tile 14: jumpable (one-way platform)
+    .db 0   ;; tile 14: passable
     .db 0   ;; tile 15: passable
+    .db 0   ;; tile 16: passable (decoration)
+    .db 0   ;; tile 17: passable (decoration)
+    .db 0   ;; tile 18: passable (decoration)
 
 ;;
 ;; Start of _CODE area
@@ -66,6 +78,19 @@ sys_map_init::
 
 ;;-----------------------------------------------------------------
 ;;
+;; sys_map_set
+;;
+;;  Sets the active tilemap and redraws it immediately.
+;;  Input:  HL = pointer to tilemap data array (e.g. _g_map01 or _g_map02)
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX, IY
+;;
+sys_map_set::
+    ld (current_map_data), hl
+    jp sys_map_draw
+
+;;-----------------------------------------------------------------
+;;
 ;; sys_map_draw
 ;;
 ;;  Draws the full tilemap to FRONT_BUFFER.
@@ -82,7 +107,7 @@ sys_map_draw::
     ld de, #FRONT_BUFFER
     call cpct_getScreenPtr_asm              ;; HL = screen ptr at map origin
     ex de, hl                               ;; DE = video ptr (ETM requires DE=video, HL=tilemap)
-    ld hl, #_g_map01
+    ld hl, (current_map_data)
     call cpct_etm_drawTilemap4x8_agf_asm
     ret
 
@@ -129,7 +154,7 @@ smisa_get_type:
     add hl, hl                  ;; *4
     add hl, hl                  ;; *8
     add hl, hl                  ;; *16 = MAP_WIDTH
-    ld de, #_g_map01
+    ld de, (current_map_data)
     add hl, de
 
     ld a, c
@@ -269,7 +294,7 @@ smrsa_draw_one_tile:
     ld e, c
     ld d, #0
     add hl, de              ;; HL = tile_row * MAP_WIDTH + tile_col
-    ld de, #_g_map01
+    ld de, (current_map_data)
     add hl, de
     ld a, (hl)              ;; A = tile_id
 

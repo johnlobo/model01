@@ -51,5 +51,17 @@ extern const u8 s_tileset_14[4 * 8];
 #define S_TILESET_15_W 4
 #define S_TILESET_15_H 8
 extern const u8 s_tileset_15[4 * 8];
+#define S_TILESET_16_W 4
+#define S_TILESET_16_H 8
+extern const u8 s_tileset_16[4 * 8];
+#define S_TILESET_17_W 4
+#define S_TILESET_17_H 8
+extern const u8 s_tileset_17[4 * 8];
+#define S_TILESET_18_W 4
+#define S_TILESET_18_H 8
+extern const u8 s_tileset_18[4 * 8];
+#define S_TILESET_19_W 4
+#define S_TILESET_19_H 8
+extern const u8 s_tileset_19[4 * 8];
 
 #endif
