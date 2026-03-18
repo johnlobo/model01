@@ -7,6 +7,22 @@
     "expandedProjectPaths": [
     ],
     "fileStates": {
+        "map01.tmx": {
+            "scale": 4,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 66,
+                "y": 97.875
+            }
+        },
+        "map02.tmx": {
+            "scale": 5.2784375,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 64.03410100053283,
+                "y": 104.8605766384465
+            }
+        },
         "tileset.tsx": {
             "scaleInDock": 8
         }
