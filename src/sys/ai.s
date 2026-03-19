@@ -57,6 +57,10 @@ sys_ai_init::
 ;;  Modified: AF
 ;;
 sys_ai_update_one_entity::
+    ld a, (current_room)
+    cp e_room(ix)
+    ret nz                      ;; wrong room: skip
+
     ;; Skip entities that have a behavior program — sys_beh_update handles those
     ld e, e_beh(ix)
     ld d, e_beh+1(ix)

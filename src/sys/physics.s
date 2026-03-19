@@ -62,6 +62,10 @@ sys_physics_init::
 ;;  Modified: AF, BC, DE, HL
 ;;
 sys_physics_update_one_entity::
+    ld a, (current_room)
+    cp e_room(ix)
+    ret nz                          ;; wrong room: skip
+
     ;; Horizontal movement
     ld a, e_speed_x(ix)             ;; load horizontal speed
     or a                            ;; check if horizontal speed is zero

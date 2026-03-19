@@ -42,7 +42,7 @@ MAX_ENTITIES = 10
 ;; DATA ARRAY STRUCTURE CREATION
 ;;===============================================================================
 .mdelete DefineEntity
-.macro DefineEntity _cpms, _status, _x, _y, _a, _pa, _speed_x, _speed_y, _on_air, _width, _height, _color, _sprite
+.macro DefineEntity _cpms, _status, _x, _y, _a, _pa, _speed_x, _speed_y, _on_air, _width, _height, _color, _sprite, _room
     .db _cpms           ;; cpms
     .db _status         ;; status
     .db _x              ;; x
@@ -64,6 +64,7 @@ MAX_ENTITIES = 10
     .db 0               ;; anim_timer (0 = expired, update on first tick)
     .dw 0               ;; beh (null = no behavior program)
     .db 0               ;; beh_timer
+    .db _room           ;; room (0 = map01, 1 = map02, ...)
     .endm
 
 BeginStruct e
@@ -88,4 +89,5 @@ Field e, anim_frame, 1
 Field e, anim_timer, 1
 Field e, beh, 2
 Field e, beh_timer, 1
+Field e, room, 1    ;; room ID (0 = map01, 1 = map02, ...)
 EndStruct e

@@ -25,6 +25,11 @@ map_origin_y:: .db 16             ;; screen y of map top edge (pixels): nearest 
 ;; Change with sys_map_set to switch maps.
 current_map_data:: .dw _g_map01
 
+;; Current room index (0 = map01, 1 = map02, ...).
+;; Updated by sys_map_set. Entities with e_room != current_room are skipped
+;; by all systems (render, physics, ai, anim, beh, collision).
+current_room:: .db 0
+
 ;; Working storage for sys_map_restore_tiles_at
 smrsa_x_left:   .db 0
 smrsa_x_right:  .db 0

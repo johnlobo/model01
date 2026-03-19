@@ -15,3 +15,4 @@
 .globl map_origin_x    ;; map draw origin x on screen (bytes, default 0)
 .globl map_origin_y    ;; map draw origin y on screen (pixels)
 .globl current_map_data ;; 2-byte pointer to active tilemap data (_g_map01 or _g_map02)
+.globl current_room     ;; current room index (0=map01, 1=map02); entities with e_room!=current_room are skipped

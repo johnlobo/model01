@@ -42,6 +42,9 @@ sys_anim_init::
 ;;  Modified: AF, B, C, DE, HL, IY
 ;;
 sys_anim_update_one_entity::
+    ld a, (current_room)
+    cp e_room(ix)
+    ret nz                      ;; wrong room: skip
 
     ;; Skip if entity is idle (on ground and no horizontal speed)
     ld a, e_speed_x(ix)

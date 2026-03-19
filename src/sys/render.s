@@ -34,7 +34,7 @@
 .area _DATA
 
 FONT_NUMBERS: .dw #0000
-_welcome_string: .asciz "WELCOME - V.015"   ;;
+_welcome_string: .asciz "WELCOME - V.016"   ;;
 
 
 sys_render_front_buffer: .db 0xc0
@@ -352,6 +352,10 @@ dms_restore_ix:
 ;;  Modified: AF, BC, DE, HL, IX
 ;;
 sys_render_restore_one_entity::
+   ld a, (current_room)
+   cp e_room(ix)
+   ret nz                      ;; wrong room: skip
+
    ld a, e_moved(ix)
    or a
    ret z                       ;; not dirty: nothing to restore
@@ -386,6 +390,10 @@ sys_render_restore_one_entity::
 ;;  Modified: AF, BC, DE, HL, IX
 ;;
 sys_render_one_entity::
+   ld a, (current_room)
+   cp e_room(ix)
+   ret nz                      ;; wrong room: skip
+
    ;; Save current position for tile restore on next frame
    ld a, e_x(ix)
    ld e_p_x(ix), a

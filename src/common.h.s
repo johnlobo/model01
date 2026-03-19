@@ -46,6 +46,7 @@
 .globl _g_map02
 .globl map_origin_x    ;; map draw origin x on screen (bytes)
 .globl map_origin_y    ;; map draw origin y on screen (pixels)
+.globl current_room    ;; current room index (0=map01, 1=map02)
 
 MAP_WIDTH       = 16
 MAP_HEIGHT      = 20

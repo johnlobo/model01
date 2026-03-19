@@ -96,6 +96,10 @@ sys_beh_call_hl::
 ;;  Modified: AF, DE, HL
 ;;
 sys_beh_update_one_entity::
+    ld a, (current_room)
+    cp e_room(ix)
+    ret nz              ;; wrong room: skip
+
     ld e, e_beh(ix)
     ld d, e_beh+1(ix)
     ld a, d

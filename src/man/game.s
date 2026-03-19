@@ -114,8 +114,11 @@ man_game_check_transition::
 
     ld hl, #_g_map02
     call sys_map_set            ;; redraws map02, destroys IX
+    ld a, #1
+    ld (current_room), a        ;; now in room 1
     ld ix, #entity_array
     ld e_x(ix), #1              ;; one step from left edge (avoids instant left re-trigger)
+    ld e_room(ix), #1           ;; player moves to room 1
     ld e_speed_x(ix), #0
     ld e_moved(ix), #1
     ld e_p_address(ix), #0
@@ -137,11 +140,14 @@ mgct_check_map02:
 
     ld hl, #_g_map01
     call sys_map_set            ;; redraws map01, destroys IX
+    ld a, #0
+    ld (current_room), a        ;; now in room 0
     ld ix, #entity_array
     ld a, #MAP_WIDTH*4
     sub e_width(ix)
     dec a                       ;; A = MAP_WIDTH*4 - width - 1 (one step from right edge)
     ld e_x(ix), a
+    ld e_room(ix), #0           ;; player moves to room 0
     ld e_speed_x(ix), #0
     ld e_moved(ix), #1
     ld e_p_address(ix), #0

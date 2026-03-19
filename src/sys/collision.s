@@ -108,6 +108,9 @@ sys_collision_check_pair::
 ;;  Modified: AF, B, DE, HL, IY
 ;;
 sys_collision_check_one_collider::
+    ld a, (current_room)
+    cp e_room(ix)
+    ret nz              ;; collider not in current room: skip
 
     ld iy, #entities
     ld a, a_count(iy)       ;; number of entities in array
@@ -145,6 +148,10 @@ sccoc_loop:
     jr z, sccoc_next
 
 sccoc_check:
+    ld a, (current_room)
+    cp e_room(iy)
+    jr nz, sccoc_next   ;; collisionable not in current room: skip
+
     call sys_collision_check_pair
 
 sccoc_next:
