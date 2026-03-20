@@ -30,6 +30,16 @@ current_map_data:: .dw _g_map01
 ;; by all systems (render, physics, ai, anim, beh, collision).
 current_room:: .db 0
 
+;; Room connection table.
+;; Each entry is a room_info struct: four 2-byte pointers (N, S, E, W).
+;; 0x0000 = no connection in that direction.
+;; Index by: room_connections + room_index * sizeof_room_info + room_info_[n|s|e|w]
+room_connections::
+    ;;                   N     N_id   S     S_id   E        E_id   W        W_id
+    DefineRoomConnections 0, 0xff, 0, 0xff, _g_map02, 1,    0,        0xff  ;; room 0 (map01)
+    DefineRoomConnections 0, 0xff, 0, 0xff, _g_map03, 2,    _g_map01, 0     ;; room 1 (map02)
+    DefineRoomConnections 0, 0xff, 0, 0xff, 0,        0xff,  _g_map02, 1    ;; room 2 (map03)
+
 ;; Working storage for sys_map_restore_tiles_at
 smrsa_x_left:   .db 0
 smrsa_x_right:  .db 0

@@ -38,13 +38,14 @@ Entry point is `_main::`. Initialization sequence:
 
 `man_game_update` (in `src/man/game.s`) runs each frame:
 1. `sys_physics_update` — apply gravity/friction/movement
-2. `sys_input_update` — read keyboard, dispatch to handlers (IX = active entity)
-3. `sys_ai_update` — AI bounce/gravity for AI-controlled entities
-4. `sys_beh_update` — bytecode behavior state machine for `c_cmp_ai` entities with `e_beh != 0`
-5. `sys_collision_update` — AABB collision detection between collider/collisionable entities
-6. `sys_anim_update` — advance animation frames for animated entities
-7. `cpct_waitVSYNC_asm` — wait for vertical sync
-8. `sys_render_update` — two-pass tile restore + redraw of all entities
+2. `man_game_check_transition` — check if player has reached a map edge and transition to adjacent room
+3. `sys_input_update` — read keyboard, dispatch to handlers (IX = active entity)
+4. `sys_ai_update` — AI bounce/gravity for AI-controlled entities
+5. `sys_beh_update` — bytecode behavior state machine for `c_cmp_ai` entities with `e_beh != 0`
+6. `sys_collision_update` — AABB collision detection between collider/collisionable entities
+7. `sys_anim_update` — advance animation frames for animated entities
+8. `cpct_waitVSYNC_asm` — wait for vertical sync
+9. `sys_render_update` — two-pass tile restore + redraw of all entities
 
 ### Coordinate System
 
@@ -58,7 +59,7 @@ screen_x = e_x + map_origin_x
 screen_y = e_y + map_origin_y
 ```
 
-`map_origin_x` and `map_origin_y` are exported variables in `map.s` (default 0 and `MAP_PIXEL_START` respectively). All map collision functions (`sys_map_is_solid_at`, `sys_map_is_landable_at`, `sys_map_restore_tiles_at`) take world coordinates as input and add the origin internally. `GROUND_LEVEL = 199` acts as a hard floor fallback in world space below the visible map (tile collision handles landing before this is reached in normal play).
+`map_origin_x` and `map_origin_y` are exported variables in `map.s` (default 0 and `MAP_PIXEL_START` respectively). All map collision functions (`sys_map_is_solid_at`, `sys_map_is_landable_at`, `sys_map_restore_tiles_at`) take world coordinates as input and add the origin internally. `GROUND_LEVEL = MAP_HEIGHT * 8 - 1 = 159` acts as a hard floor fallback in world space (tile collision handles landing before this is reached in normal play).
 
 ### Entity Component System
 
@@ -74,7 +75,7 @@ Entities are stored in a flat array (`entities` in `src/man/entity.s`). Each ent
 | `c_cmp_collider` | 0x20 | Active collider (outer loop, initiates checks) |
 | `c_cmp_collisionable` | 0x40 | Passive collision target (inner loop, receives checks) |
 
-The entity struct (`e`) is defined via `BeginStruct`/`Field`/`EndStruct` macros in `src/man/entity.h.s`. Fields (in order): `e_cmps`, `e_status`, `e_x`, `e_y`, `e_p_x` (2B — world x at last draw, used by tile restore), `e_p_y` (2B — world y at last draw), `e_address` (2B), `e_p_address` (2B — non-zero sentinel once drawn), `e_speed_x` (2B), `e_speed_y` (2B), `e_on_air`, `e_width`, `e_height`, `e_color`, `e_sprite` (2B), `e_moved`, `e_anim` (2B, pointer to animation descriptor or null), `e_anim_frame`, `e_anim_timer`, `e_beh` (2B), `e_beh_timer`.
+The entity struct (`e`) is defined via `BeginStruct`/`Field`/`EndStruct` macros in `src/man/entity.h.s`. Fields (in order): `e_cmps`, `e_status`, `e_x`, `e_y`, `e_p_x` (2B — world x at last draw, used by tile restore), `e_p_y` (2B — world y at last draw), `e_address` (2B), `e_p_address` (2B — non-zero sentinel once drawn), `e_speed_x` (2B), `e_speed_y` (2B), `e_on_air`, `e_width`, `e_height`, `e_color`, `e_sprite` (2B), `e_moved`, `e_anim` (2B, pointer to animation descriptor or null), `e_anim_frame`, `e_anim_timer`, `e_beh` (2B), `e_beh_timer`, `e_room` (room ID — entity is only rendered/restored when `e_room == current_room`).
 
 ### Array System (`src/sys/array.s`, `src/sys/array.h.s`)
 
@@ -150,7 +151,7 @@ sys_beh_update_one_entity → sys_beh_run → jp(action)
 
 ### Key Constants (in `src/common.h.s`)
 
-- `GROUND_LEVEL = 199` — hard floor in world space (fallback below map)
+- `GROUND_LEVEL = MAP_HEIGHT * 8 - 1` (= 159) — hard floor in world space (fallback below map)
 - `FRONT_BUFFER`, `BACK_BUFFER` — screen buffer addresses defined in `sys/render.h.s`
 - `S_MONK_WIDTH = 5`, `S_MONK_HEIGHT = 16` (sprite dimensions in bytes/pixels)
 - `MAP_WIDTH = 16`, `MAP_HEIGHT = 20`, `MAP_START_ROW = 5`, `MAP_PIXEL_START = 40`
@@ -160,6 +161,8 @@ sys_beh_update_one_entity → sys_beh_run → jp(action)
 ### Map System (`src/sys/map.s`, `src/sys/map.h.s`)
 
 Draws a static 16×20 tile background using CPCtelera's ETM 4×8 engine. **The map is drawn once at init** (`man_game_init` calls `sys_map_draw`). During gameplay, only the tiles under moved entities are redrawn — never the full map.
+
+The game has three rooms (`_g_map01`, `_g_map02`, `_g_map03`) arranged left-to-right. `current_room` (0/1/2) and `current_map_data` (pointer to active tilemap) are exported from `map.s`. `sys_map_set` (input: HL = tilemap pointer) switches the active map, redraws it fully, and updates `current_map_data`. Render pass 1 and 2 both skip entities whose `e_room != current_room`. Map transitions are handled by `man_game_check_transition` in `game.s`: when the player walks off a left/right edge, it calls `sys_map_set`, updates `current_room`, repositions the player one step from the opposite edge (to prevent immediate re-trigger), and resets `e_p_address` to force a clean first-draw.
 
 **Critical: ETM ASM register convention** — the `.asm` documentation header lists parameters in C order, but the ASM variant requires:
 - `cpct_etm_setDrawTilemap4x8_agf_asm`: `C` = map width, `B` = map height, `DE` = tilemap width, `HL` = tileset base pointer

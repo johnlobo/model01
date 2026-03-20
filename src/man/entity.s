@@ -73,6 +73,20 @@ DefineEntity c_cmp_invalid, 0, 10, 16, 0, 0, 0, 0, 1, S_MONK_WIDTH, S_MONK_HEIGH
 patrol_enemy_template::
 DefineEntity c_cmp_invalid, 0, 32, 24, 0, 0, 0, 0, 0, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk_1, 0
 
+;; Static interactable object (collectible, key, obstacle, etc.)
+;; Position and room are set by man_entity_create_object at runtime.
+object_template::
+DefineEntity c_cmp_invalid, 0, 0, 0, 0, 0, 0, 0, 0, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk_0, 0
+
+;; Portal: static gateway to another room/location.
+;; Destination is stored in repurposed fields (portals have no physics or AI):
+;;   e_beh(ix)   low byte  = dest_room
+;;   e_beh+1(ix) high byte = dest_x
+;;   e_beh_timer(ix)       = dest_y
+;; Set these after calling man_entity_create_portal.
+portal_template::
+DefineEntity c_cmp_invalid, 0, 0, 0, 0, 0, 0, 0, 0, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk_6, 0
+
 ;;
 ;; Start of _CODE area
 ;; 
@@ -135,5 +149,51 @@ man_entity_create_patrol_enemy::
     ld hl, #beh_patrol_behavior
     ld e_beh(ix), l
     ld e_beh+1(ix), h
+    ret
+
+;;-----------------------------------------------------------------
+;;
+;; man_entity_create_object
+;;
+;;  Creates a static interactable object at the given position.
+;;  Input:  B = world x (bytes), C = world y (pixels), D = room id
+;;  Output: IX = pointer to new entity
+;;  Modified: AF, HL, IX
+;;
+man_entity_create_object::
+    ld ix, #entities
+    ld hl, #object_template
+    call sys_array_create_element
+    ld__ix_hl
+    ld e_cmps(ix), #(c_cmp_render | c_cmp_collisionable)
+    ld e_x(ix), b
+    ld e_y(ix), c
+    ld e_room(ix), d
+    ld e_moved(ix), #1
+    ret
+
+;;-----------------------------------------------------------------
+;;
+;; man_entity_create_portal
+;;
+;;  Creates a static portal entity at the given position.
+;;  After creation, the caller sets the destination:
+;;    ld e_beh(ix),       #dest_room
+;;    ld e_beh+1(ix),     #dest_x
+;;    ld e_beh_timer(ix), #dest_y
+;;  Input:  B = world x (bytes), C = world y (pixels), D = room id
+;;  Output: IX = pointer to new entity
+;;  Modified: AF, HL, IX
+;;
+man_entity_create_portal::
+    ld ix, #entities
+    ld hl, #portal_template
+    call sys_array_create_element
+    ld__ix_hl
+    ld e_cmps(ix), #(c_cmp_render | c_cmp_collisionable)
+    ld e_x(ix), b
+    ld e_y(ix), c
+    ld e_room(ix), d
+    ld e_moved(ix), #1
     ret
 
