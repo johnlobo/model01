@@ -137,11 +137,15 @@ sys_beh_update_one_entity → sys_beh_run → jp(action)
     CONDITIONS_END    → ret (entity stays at this blocking action next frame)
 ```
 
-**DSL macros** (defined in `beh.h.s`): `IDLE`, `WAIT ticks, target`, `SET_TIMER n`, `SET_VX vx`, `SET_VY vy`, `SET_ANIMATION addr`, `GOTO target`, `CONDITION cond, target`, `CONDITIONS_END`.
+**DSL macros** (defined in `beh.h.s`): `IDLE`, `WAIT ticks, target`, `SET_TIMER n`, `SET_VX vx`, `SET_VY vy`, `DRIVE_VX accel, max_speed`, `SET_ANIMATION addr`, `GOTO target`, `CONDITION cond, target`, `CONDITIONS_END`.
 
-**Condition convention:** return `Z=1` for true, `Z=0` for false. Built-in: `beh_cond_true`, `beh_cond_timeout`, `beh_cond_on_ground`, `beh_cond_not_on_ground`.
+**Condition convention:** return `Z=1` for true, `Z=0` for false. Built-in: `beh_cond_true`, `beh_cond_timeout`, `beh_cond_on_ground`, `beh_cond_not_on_ground`, `edge_ahead` (no ground tile under the leading foot — use for platform patrol).
 
 **`DESTROY_ENTITY` (= 0x0000):** use as the target of a `CONDITION` to remove the entity.
+
+**Built-in behavior programs** (in `src/sys/beh.s`):
+- `beh_bounce_behavior` — simple timed patrol: move right for ~60 frames, then left, repeat
+- `beh_patrol_behavior` — edge-detecting platform patrol: walks right/left, reverses on `edge_ahead`, switches walk animation to match direction. Requires `c_cmp_movable | c_cmp_animated`.
 
 ### File Naming Convention
 
@@ -191,6 +195,45 @@ Two collision query functions (both take **world coordinates**: B=world_y, C=wor
 Both share the internal `smisa_get_type` routine and return Z if out of bounds. The SP-hijack tile draw also bounds-checks (tile_row ≥ MAP_HEIGHT or tile_col ≥ MAP_WIDTH → skip, safely handling entities near or above the map edge).
 
 Physics constants in `src/sys/physics.s`: `GRAVITY = 1`, `MAX_FALL_SPEED = 8`. Fall speed is capped to prevent tunneling through tiles (speed can never exceed tile height of 8px).
+
+### Entity Factory Functions (`src/man/entity.s`, `src/man/entity.h.s`)
+
+`man_game_init` creates the player and the patrol enemy. To add more entities, call these from `man_game_init` before `sys_map_draw`:
+
+| Function | Input | Output | Notes |
+|----------|-------|--------|-------|
+| `man_entity_create_player_player` | — | IX = entity | Single player; `c_cmp_input | c_cmp_movable | c_cmp_render | c_cmp_collider | c_cmp_animated` |
+| `man_entity_create_patrol_enemy` | — | IX = entity | Uses `beh_patrol_behavior`; room 0 |
+| `man_entity_create_object` | B=world_x, C=world_y, D=room_id | IX = entity | Static collisionable object |
+| `man_entity_create_portal` | B=world_x, C=world_y, D=room_id | IX = entity | See portal destination below |
+
+**Portal destination encoding** — portals have no physics/AI so their behavior fields are repurposed:
+```asm
+man_entity_create_portal     ; B=x, C=y, D=room_id
+ld e_beh(ix),      #dest_room
+ld e_beh+1(ix),    #dest_x
+ld e_beh_timer(ix),#dest_y
+```
+
+### Messages System (`src/sys/messages.s`, `src/sys/messages.h.s`)
+
+Draws centered dialog boxes directly to the front buffer. Main entry point:
+
+```
+sys_messages_show
+  Input:  HL = pointer to null-terminated message string
+          A  = wait_for_key flag (1 = wait for keypress, 2 = auto-dismiss after delay)
+          A' = background color pattern
+          DE = y coordinate (D=y, E=unused)
+          BC = window height (B=h, C=unused — width is auto-calculated from string length)
+  Output: HL = number of wait loops (when wait_for_key=1)
+```
+
+The function saves the background behind the window, draws the box, draws the string, optionally shows "PRESS ANY KEY", waits if requested, then restores the background. `sys_messages_restore_message_background` can be called separately to erase the window.
+
+### Version String
+
+`_welcome_string` in `src/sys/render.s` (e.g. `"WELCOME - V.017"`) is the build version displayed at startup. **Bump this string after every significant change.**
 
 ### Assets
 
