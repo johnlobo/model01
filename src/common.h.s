@@ -45,9 +45,11 @@
 .globl _g_map01
 .globl _g_map02
 .globl _g_map03
+.globl _g_map04
+.globl _g_inside01
 .globl map_origin_x    ;; map draw origin x on screen (bytes)
 .globl map_origin_y    ;; map draw origin y on screen (pixels)
-.globl current_room    ;; current room index (0=map01, 1=map02, 2=map03)
+.globl current_room    ;; current room index (0=map01..3=map04, 4=inside01)
 
 MAP_WIDTH       = 16
 MAP_HEIGHT      = 20
@@ -92,6 +94,10 @@ MAP_HEIGHT      = 20
 ;;===============================================================================
 
 null_ptr = 0x0000
+
+;; entity status types
+STATUS_NORMAL = 0x00   ;; default entity status
+STATUS_PORTAL = 0x01   ;; portal entity — triggers room transition on AABB collision
 
 ;; game status
 g_status_fight              = 0x00

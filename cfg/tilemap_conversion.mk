@@ -58,6 +58,8 @@
 $(eval $(call TMX2C,assets/map/map01.tmx,g_map01,src/assets/sprites/,))
 $(eval $(call TMX2C,assets/map/map02.tmx,g_map02,src/assets/sprites/,))
 $(eval $(call TMX2C,assets/map/map03.tmx,g_map03,src/assets/sprites/,))
+$(eval $(call TMX2C,assets/map/map04.tmx,g_map04,src/assets/sprites/,))
+$(eval $(call TMX2C,assets/map/inside01.tmx,g_inside01,src/assets/sprites/,))
 
 ## Convert img/level0b.tmx to src/levels/level0b.c and src/levels/level0b.h
 ##		This file contains another tilemap created with Tiled. This macro 

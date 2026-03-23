@@ -33,7 +33,8 @@
 ;;
 .area _DATA
 
-mgct_new_pos: .db 0  ;; new player coordinate (e_x or e_y) during a room transition
+mgct_new_pos:        .db 0  ;; new player coordinate (e_x or e_y) during a room transition
+mgct_portal_dest_y:  .db 0  ;; saved portal destination y coordinate
 
 ;;
 ;; Start of _CODE area
@@ -53,6 +54,22 @@ man_game_init::
     call man_entity_init
     call man_entity_create_player_player
     call man_entity_create_patrol_enemy
+
+    ;; Portal in map03 (room 2): tile col 8, rows 12-13
+    ;; World: x = 8*4 = 32 bytes, y = 12*8 = 96 pixels; 1 tile wide (4B), 2 tiles tall (16px)
+    ;; Destination: inside01 (room 4) at tile (0,19) → world x=0, y=19*8=152
+    ld b, #32           ;; world x (bytes)
+    ld c, #96           ;; world y (pixels)
+    ld d, #2            ;; source room (map03)
+    call man_entity_create_portal
+    ld hl, #_g_inside01
+    ld e_beh(ix), l
+    ld e_beh+1(ix), h   ;; dest map ptr = _g_inside01
+    ld e_beh_timer(ix), #4    ;; dest room id = 4 (inside01)
+    ld e_speed_x(ix), #0      ;; dest x = 0 bytes (tile col 0)
+    ld e_speed_x+1(ix), #152  ;; dest y = 152 pixels (tile row 19 * 8)
+    ld e_on_air(ix), #1       ;; active
+
     call sys_render_init
     call sys_map_init
     call sys_map_draw           ;; draw map once at startup
@@ -213,7 +230,8 @@ mgct_load_connection:
 ;;  Modified: AF, BC, DE, HL, IX
 ;;
 mgct_do_horizontal:
-    ld (mgct_new_pos), c    ;; preserve across sys_map_set (clobbers BC)
+    ld a, c
+    ld (mgct_new_pos), a    ;; preserve across sys_map_set (clobbers BC; only A can store direct)
     ld a, b
     ld (current_room), a
     ex de, hl               ;; HL = new map ptr
@@ -242,7 +260,8 @@ mgct_do_horizontal:
 ;;  Modified: AF, BC, DE, HL, IX
 ;;
 mgct_do_vertical:
-    ld (mgct_new_pos), c    ;; preserve across sys_map_set (clobbers BC)
+    ld a, c
+    ld (mgct_new_pos), a    ;; preserve across sys_map_set (clobbers BC; only A can store direct)
     ld a, b
     ld (current_room), a
     ex de, hl
@@ -253,6 +272,54 @@ mgct_do_vertical:
     ld a, (mgct_new_pos)
     ld e_y(ix), a
     xor a
+    ld e_speed_y(ix), a
+    ld e_speed_y+1(ix), a
+    ld e_moved(ix), #1
+    ld e_p_address(ix), a
+    ld e_p_address+1(ix), a
+    ret
+
+;;-----------------------------------------------------------------
+;;
+;; man_game_do_portal_transition
+;;
+;;  Teleports the player to the destination encoded in a portal entity.
+;;  Called from sys_collision_on_hit when the player touches an active portal.
+;;  Portal field layout (repurposed — portals have no physics or AI):
+;;    e_beh (2B)      = dest map pointer (_g_inside01, etc.)
+;;    e_beh_timer     = dest room id
+;;    e_speed_x (lo)  = dest x in world bytes
+;;    e_speed_x+1(hi) = dest y in world pixels
+;;  Input:  IY = portal entity (collisionable)
+;;          IX = player entity [clobbered by sys_map_set; reloaded from entity_array]
+;;  Output: --
+;;  Modified: AF, BC, DE, HL, IX
+;;
+man_game_do_portal_transition::
+    ;; Save destination coords before sys_map_set clobbers registers
+    ld a, e_speed_x(iy)         ;; dest x (world bytes)
+    ld (mgct_new_pos), a
+    ld a, e_speed_x+1(iy)       ;; dest y (world pixels)
+    ld (mgct_portal_dest_y), a
+
+    ;; Switch room and draw destination map
+    ld a, e_beh_timer(iy)       ;; dest room id
+    ld (current_room), a
+    ld l, e_beh(iy)
+    ld h, e_beh+1(iy)           ;; HL = dest map ptr
+    call sys_map_set             ;; draw new map (clobbers IX, BC, DE)
+
+    ;; Reposition player at destination
+    ld ix, #entity_array
+    ld a, (current_room)
+    ld e_room(ix), a
+    ld a, (mgct_new_pos)
+    ld e_x(ix), a
+    ld a, (mgct_portal_dest_y)
+    ld e_y(ix), a
+    xor a
+    ld e_speed_x(ix), a
+    ld e_speed_x+1(ix), a
     ld e_speed_y(ix), a
     ld e_speed_y+1(ix), a
     ld e_moved(ix), #1

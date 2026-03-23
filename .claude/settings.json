@@ -10,7 +10,17 @@
       "Bash(npx vite build)",
       "Read(//etc/**)",
       "Bash(npx --yes vite build)",
-      "Bash(CPCT_PATH=/config/workspace/cpctelera/cpctelera make)"
+      "Bash(CPCT_PATH=/config/workspace/cpctelera/cpctelera make)",
+      "Bash(wc -l /config/workspace/webtile/src/components/*.jsx)",
+      "Bash(npm run build)",
+      "Bash(grep -n \"fontSize: ''1[3-6]px''\" src/components/NewMapModal.jsx src/components/NewSpriteModal.jsx src/components/LoadProjectModal.jsx src/components/NewProjectModal.jsx)",
+      "Bash(grep -n \"fontSize: ''1[3-6]px''\" src/components/NewMapModal.jsx src/components/NewSpriteModal.jsx src/components/LoadProjectModal.jsx)",
+      "Bash(grep -n \"fontSize: ''16px''\" src/components/NewMapModal.jsx)",
+      "Bash(grep -n \"fontSize: ''8px'', color: ''var\\(--text\\)'',\" src/components/LoadProjectModal.jsx)",
+      "WebFetch(domain:demos.creative-tim.com)",
+      "WebFetch(domain:www.creative-tim.com)",
+      "WebSearch",
+      "Bash(CPCT_PATH=/config/workspace/cpctelera make)"
     ]
   }
 }

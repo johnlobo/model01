@@ -27,3 +27,4 @@
 ;;===============================================================================
 .globl man_game_init
 .globl man_game_update
+.globl man_game_do_portal_transition  ;; IY=portal entity → teleport player to portal destination

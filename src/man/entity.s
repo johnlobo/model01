@@ -79,10 +79,13 @@ object_template::
 DefineEntity c_cmp_invalid, 0, 0, 0, 0, 0, 0, 0, 0, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk_0, 0
 
 ;; Portal: static gateway to another room/location.
-;; Destination is stored in repurposed fields (portals have no physics or AI):
-;;   e_beh(ix)   low byte  = dest_room
-;;   e_beh+1(ix) high byte = dest_x
-;;   e_beh_timer(ix)       = dest_y
+;; Unused fields repurposed for destination data (portals have no physics or AI):
+;;   e_status(ix)        = STATUS_PORTAL (set automatically by factory)
+;;   e_on_air(ix)        = active flag (1=active, 0=inactive; default 0)
+;;   e_beh(ix)   (2B)    = dest map pointer (e.g. _g_inside01)
+;;   e_beh_timer(ix)     = dest room id
+;;   e_speed_x(ix)   lo  = dest x (world bytes)
+;;   e_speed_x+1(ix) hi  = dest y (world pixels)
 ;; Set these after calling man_entity_create_portal.
 portal_template::
 DefineEntity c_cmp_invalid, 0, 0, 0, 0, 0, 0, 0, 0, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk_6, 0
@@ -191,8 +194,11 @@ man_entity_create_portal::
     call sys_array_create_element
     ld__ix_hl
     ld e_cmps(ix), #(c_cmp_render | c_cmp_collisionable)
+    ld e_status(ix), #STATUS_PORTAL
     ld e_x(ix), b
     ld e_y(ix), c
+    ld e_width(ix), #4      ;; 1 tile wide (4 bytes in mode 0)
+    ld e_height(ix), #16    ;; 2 tiles tall
     ld e_room(ix), d
     ld e_moved(ix), #1
     ret

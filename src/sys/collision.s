@@ -6,6 +6,7 @@
 .include "common.h.s"
 .include "sys/collision.h.s"
 .include "man/entity.h.s"
+.include "man/game.h.s"
 
 ;;
 ;; Start of _DATA area
@@ -42,6 +43,20 @@ sys_collision_init::
 ;;  Modified:
 ;;
 sys_collision_on_hit::
+    ;; If collisionable is a portal, handle teleportation
+    ld a, e_status(iy)
+    cp #STATUS_PORTAL
+    jr nz, scon_default_hit
+
+    ;; Portal: only teleport if active
+    ld a, e_on_air(iy)      ;; repurposed as active flag
+    or a
+    ret z                   ;; inactive portal → ignore
+
+    call man_game_do_portal_transition
+    ret
+
+scon_default_hit:
     cpctm_setBorder_asm HW_RED
     ret
 

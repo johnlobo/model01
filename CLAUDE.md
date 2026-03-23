@@ -59,7 +59,7 @@ screen_x = e_x + map_origin_x
 screen_y = e_y + map_origin_y
 ```
 
-`map_origin_x` and `map_origin_y` are exported variables in `map.s` (default 0 and `MAP_PIXEL_START` respectively). All map collision functions (`sys_map_is_solid_at`, `sys_map_is_landable_at`, `sys_map_restore_tiles_at`) take world coordinates as input and add the origin internally. `GROUND_LEVEL = MAP_HEIGHT * 8 - 1 = 159` acts as a hard floor fallback in world space (tile collision handles landing before this is reached in normal play).
+`map_origin_x` and `map_origin_y` are exported variables in `map.s` (current defaults: `map_origin_x=8`, `map_origin_y=16`). **`map_origin_y` must be a multiple of 8** — the SP-hijack tile draw manipulates H bits 3–5 to navigate CPC scanlines and only works correctly when the tile starts at scanline 0 of a character row. All map collision functions (`sys_map_is_solid_at`, `sys_map_is_landable_at`, `sys_map_restore_tiles_at`) take world coordinates as input and add the origin internally. `GROUND_LEVEL = MAP_HEIGHT * 8 - 1 = 159` acts as a hard floor fallback in world space (tile collision handles landing before this is reached in normal play).
 
 ### Entity Component System
 
@@ -137,7 +137,11 @@ sys_beh_update_one_entity → sys_beh_run → jp(action)
     CONDITIONS_END    → ret (entity stays at this blocking action next frame)
 ```
 
-**DSL macros** (defined in `beh.h.s`): `IDLE`, `WAIT ticks, target`, `SET_TIMER n`, `SET_VX vx`, `SET_VY vy`, `DRIVE_VX accel, max_speed`, `SET_ANIMATION addr`, `GOTO target`, `CONDITION cond, target`, `CONDITIONS_END`.
+**DSL macros** (defined in `beh.h.s`):
+- Non-blocking (chain immediately): `SET_TIMER n`, `SET_VX vx`, `SET_VY vy`, `SET_ANIMATION addr`
+- Blocking (check conditions each frame): `IDLE`, `WAIT ticks, target`, `DRIVE_VX vx, stride`
+  - `DRIVE_VX vx, stride` — drives entity at `vx` bytes; `stride=1` moves every frame, `stride=N>1` moves 1 step every N frames via `e_beh_timer`
+- Control flow: `GOTO target`, `CONDITION cond, target`, `CONDITIONS_END`
 
 **Condition convention:** return `Z=1` for true, `Z=0` for false. Built-in: `beh_cond_true`, `beh_cond_timeout`, `beh_cond_on_ground`, `beh_cond_not_on_ground`, `edge_ahead` (no ground tile under the leading foot — use for platform patrol).
 
@@ -156,9 +160,9 @@ sys_beh_update_one_entity → sys_beh_run → jp(action)
 ### Key Constants (in `src/common.h.s`)
 
 - `GROUND_LEVEL = MAP_HEIGHT * 8 - 1` (= 159) — hard floor in world space (fallback below map)
-- `FRONT_BUFFER`, `BACK_BUFFER` — screen buffer addresses defined in `sys/render.h.s`
+- `FRONT_BUFFER = 0xc000` — screen buffer address defined in `sys/render.h.s`
 - `S_MONK_WIDTH = 5`, `S_MONK_HEIGHT = 16` (sprite dimensions in bytes/pixels)
-- `MAP_WIDTH = 16`, `MAP_HEIGHT = 20`, `MAP_START_ROW = 5`, `MAP_PIXEL_START = 40`
+- `MAP_WIDTH = 16`, `MAP_HEIGHT = 20`
 - `MAX_ENTITIES = 10`
 - `transparency_table` at `0x0100` — 256-byte aligned mask table for masked sprite drawing
 
@@ -166,7 +170,17 @@ sys_beh_update_one_entity → sys_beh_run → jp(action)
 
 Draws a static 16×20 tile background using CPCtelera's ETM 4×8 engine. **The map is drawn once at init** (`man_game_init` calls `sys_map_draw`). During gameplay, only the tiles under moved entities are redrawn — never the full map.
 
-The game has three rooms (`_g_map01`, `_g_map02`, `_g_map03`) arranged left-to-right. `current_room` (0/1/2) and `current_map_data` (pointer to active tilemap) are exported from `map.s`. `sys_map_set` (input: HL = tilemap pointer) switches the active map, redraws it fully, and updates `current_map_data`. Render pass 1 and 2 both skip entities whose `e_room != current_room`. Map transitions are handled by `man_game_check_transition` in `game.s`: when the player walks off a left/right edge, it calls `sys_map_set`, updates `current_room`, repositions the player one step from the opposite edge (to prevent immediate re-trigger), and resets `e_p_address` to force a clean first-draw.
+The game has five rooms: `_g_map01`–`_g_map04` arranged left-to-right (rooms 0–3), plus `_g_inside01` (room 4) accessible only via portal. `current_room` (0–4) and `current_map_data` (pointer to active tilemap) are exported from `map.s`. `sys_map_set` (input: HL = tilemap pointer) switches the active map, redraws it fully, and updates `current_map_data`. **All systems (render, physics, ai, anim, beh, collision) skip entities whose `e_room != current_room`** — set `e_room` correctly when creating entities. Map transitions are handled by `man_game_check_transition` in `game.s`: when the player walks off a left/right edge, it calls `sys_map_set`, updates `current_room`, repositions the player one step from the opposite edge (to prevent immediate re-trigger), and resets `e_p_address` to force a clean first-draw.
+
+**Room connection table** — defines which rooms are reachable from each room in each cardinal direction. Defined in `map.s` using `DefineRoomConnections`:
+```asm
+room_connections::
+    ;;                   N    N_id   S    S_id   E           E_id  W           W_id
+    DefineRoomConnections 0, 0xff, 0, 0xff, _g_map02,   1,   0,         0xff  ;; room 0
+    DefineRoomConnections 0, 0xff, 0, 0xff, _g_map03,   2,   _g_map01,  0     ;; room 1
+    ...
+```
+Each entry is a `room_info` struct (12 bytes): four direction slots of `(.dw tilemap_ptr, .db room_id)`. Use `0` for tilemap_ptr and `0xff` for room_id to indicate no connection. **To add a new room:** append a `DefineRoomConnections` row and update the neighboring room's entry (e.g., if new room 5 is East of room 3, set room 3's E entry and room 5's W entry).
 
 **Critical: ETM ASM register convention** — the `.asm` documentation header lists parameters in C order, but the ASM variant requires:
 - `cpct_etm_setDrawTilemap4x8_agf_asm`: `C` = map width, `B` = map height, `DE` = tilemap width, `HL` = tileset base pointer
@@ -184,15 +198,17 @@ The game has three rooms (`_g_map01`, `_g_map02`, `_g_map03`) arranged left-to-r
 
 | Value | Meaning | Tiles |
 |-------|---------|-------|
-| `0` | Passable | 0, 10, 11, 13, 15 |
+| `0` | Passable | 0, 10, 11, 13, 14, 15, 16, 17, 18 |
 | `1` | Fully solid — blocks all directions | 2–9, 12 |
-| `2` | Jumpable (one-way platform) — blocks floor/sides, passable from below | 1, 14 |
+| `2` | Jumpable (one-way platform) — blocks floor/sides, passable from below | 1 |
 
 Two collision query functions (both take **world coordinates**: B=world_y, C=world_x_bytes):
 - `sys_map_is_solid_at` — NZ only for type==1. Used for **ceiling** checks (entities can jump through type-2 platforms).
 - `sys_map_is_landable_at` — NZ for type==1 or 2. Used for **floor**, **horizontal**, and ground-standing checks.
 
 Both share the internal `smisa_get_type` routine and return Z if out of bounds. The SP-hijack tile draw also bounds-checks (tile_row ≥ MAP_HEIGHT or tile_col ≥ MAP_WIDTH → skip, safely handling entities near or above the map edge).
+
+**AABB collision response** — `sys_collision_on_hit` in `collision.s` (IX=collider, IY=collisionable) is the extension point for entity-vs-entity collision logic. Currently handles portal teleportation (when `e_status(iy) == STATUS_PORTAL` and `e_on_air(iy) == 1`) and defaults to a red border flash. Add new `e_status` values and branches here for game-specific hit responses.
 
 Physics constants in `src/sys/physics.s`: `GRAVITY = 1`, `MAX_FALL_SPEED = 8`. Fall speed is capped to prevent tunneling through tiles (speed can never exceed tile height of 8px).
 
@@ -207,13 +223,18 @@ Physics constants in `src/sys/physics.s`: `GRAVITY = 1`, `MAX_FALL_SPEED = 8`. F
 | `man_entity_create_object` | B=world_x, C=world_y, D=room_id | IX = entity | Static collisionable object |
 | `man_entity_create_portal` | B=world_x, C=world_y, D=room_id | IX = entity | See portal destination below |
 
-**Portal destination encoding** — portals have no physics/AI so their behavior fields are repurposed:
+**Portal destination encoding** — portals have no physics/AI so several fields are repurposed. `e_status` is automatically set to `STATUS_PORTAL` by the factory. After creation, set the remaining fields:
 ```asm
-man_entity_create_portal     ; B=x, C=y, D=room_id
-ld e_beh(ix),      #dest_room
-ld e_beh+1(ix),    #dest_x
-ld e_beh_timer(ix),#dest_y
+man_entity_create_portal       ; B=x, C=y, D=room_id → IX=entity
+ld hl, #_g_inside01
+ld e_beh(ix), l
+ld e_beh+1(ix), h              ; dest map pointer (2B)
+ld e_beh_timer(ix), #dest_room ; dest room id
+ld e_speed_x(ix),   #dest_x   ; dest x (world bytes)
+ld e_speed_x+1(ix), #dest_y   ; dest y (world pixels)
+ld e_on_air(ix), #1            ; 1=active, 0=inactive
 ```
+Collision with an active portal (`e_status == STATUS_PORTAL`, `e_on_air == 1`) triggers `man_game_do_portal_transition` which switches the map and repositions the player. Inactive portals are ignored by the collision handler. Portals are always physically passable (no solid blocking).
 
 ### Messages System (`src/sys/messages.s`, `src/sys/messages.h.s`)
 

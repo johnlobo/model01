@@ -39,10 +39,12 @@ MAX_ENTITIES = 10
 .globl man_entity_create_patrol_enemy
 .globl man_entity_create_object      ;; B=x, C=y, D=room_id → IX=new entity
 .globl man_entity_create_portal      ;; B=x, C=y, D=room_id → IX=new entity
-                                     ;; after creation set destination:
-                                     ;;   e_beh(ix)   low  = dest_room
-                                     ;;   e_beh+1(ix) high = dest_x
-                                     ;;   e_beh_timer(ix)  = dest_y
+                                     ;; after creation set destination fields:
+                                     ;;   e_beh (2B)       = dest map ptr
+                                     ;;   e_beh_timer      = dest room id
+                                     ;;   e_speed_x lo     = dest x (world bytes)
+                                     ;;   e_speed_x+1 hi   = dest y (world pixels)
+                                     ;;   e_on_air         = active (1=active, 0=inactive)
 
 ;;===============================================================================
 ;; DATA ARRAY STRUCTURE CREATION
