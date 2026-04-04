@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add CLAUDE.md .claude/settings.json assets/map/tileset.png assets/map/inside01.tmx assets/map/map04.tmx cfg/tilemap_conversion.mk src/assets/sprites/map01.c src/assets/sprites/map01.h src/assets/sprites/map02.c src/assets/sprites/map02.h src/assets/sprites/map03.c src/assets/sprites/map03.h src/assets/sprites/tileset.c src/assets/sprites/inside01.c src/assets/sprites/inside01.h src/assets/sprites/map04.c src/assets/sprites/map04.h src/common.h.s src/man/entity.h.s src/man/entity.s src/man/game.h.s src/man/game.s src/sys/collision.s src/sys/map.s src/sys/render.s)"
+    ]
+  }
+}
