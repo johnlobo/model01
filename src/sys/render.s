@@ -34,7 +34,7 @@
 .area _DATA
 
 FONT_NUMBERS: .dw #0000
-_welcome_string: .asciz "BISECT3 MEM"   ;;
+_welcome_string: .asciz "WELCOME - V.023"   ;;
 
 
 sys_render_front_buffer: .db 0xc0
