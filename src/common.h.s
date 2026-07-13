@@ -41,6 +41,10 @@
 .globl _s_monk_5
 .globl _s_monk_6
 
+.globl _s_obj_0
+.globl _s_obj_1    ;; player bullet sprite
+.globl _s_obj_2    ;; enemy bullet sprite
+
 .globl _s_tileset_00
 .globl _g_map01
 .globl _g_map02
@@ -113,6 +117,7 @@ c_cmp_ai = 0x08         ;;entidad controlable con ia
 c_cmp_animated = 0x10   ;;entidad animada
 c_cmp_collider = 0x20       ;;entidad que puede colisionar (activo, inicia la comprobacion)
 c_cmp_collisionable = 0x40  ;;entidad que puede ser colisionada (pasivo, receptor)
+c_cmp_projectile = 0x80     ;;bala: movida en linea recta por sys_shoot_update (sin gravedad ni fisica)
 c_cmp_default = c_cmp_render | c_cmp_movable | c_cmp_collider  ;;componente por defecto
 
 x_cmps = 0
@@ -130,6 +135,9 @@ S_SMALL_NUMBERS_HEIGHT = 5
 
 S_MONK_WIDTH = 5
 S_MONK_HEIGHT = 16
+
+S_BULLET_WIDTH = 4    ;; bytes (8px, mode 0 = 2px/byte)
+S_BULLET_HEIGHT = 8   ;; px
 
 ;; Font constants
 FONT_WIDTH = 2

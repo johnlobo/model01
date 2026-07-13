@@ -34,7 +34,7 @@
 .area _DATA
 
 FONT_NUMBERS: .dw #0000
-_welcome_string: .asciz "BISECT1 ARRAY"   ;;
+_welcome_string: .asciz "BISECT2 SHOOT"   ;;
 
 
 sys_render_front_buffer: .db 0xc0

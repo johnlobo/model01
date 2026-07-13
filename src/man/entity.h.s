@@ -26,6 +26,8 @@ MAX_ENTITIES = 10
 .globl entities
 .globl entity_array
 .globl player_template
+.globl player_bullet_template
+.globl enemy_bullet_template
 .globl monk_walk_anim
 .globl monk_idle_anim
 .globl monk_walk_right_anim
@@ -45,6 +47,11 @@ MAX_ENTITIES = 10
                                      ;;   e_speed_x lo     = dest x (world bytes)
                                      ;;   e_speed_x+1 hi   = dest y (world pixels)
                                      ;;   e_on_air         = active (1=active, 0=inactive)
+.globl man_entity_create_player_bullet  ;; B=x, C=y, D=room_id, E=signed speed_x → IX=new entity
+.globl man_entity_create_enemy_bullet   ;; B=x, C=y, D=room_id, E=signed speed_x → IX=new entity
+                                     ;; Both bullet factories leave the array pointer (HL) unchanged
+                                     ;; if the entity pool is full — check a_count(#entities) <
+                                     ;; a_max_count(#entities) before calling if you need certainty.
 
 ;;===============================================================================
 ;; DATA ARRAY STRUCTURE CREATION

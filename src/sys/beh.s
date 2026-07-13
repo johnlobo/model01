@@ -45,6 +45,7 @@ beh_patrol_moving_right::
 
 beh_patrol_turn_left::
     SET_ANIMATION monk_walk_left_anim
+    SHOOT #-3                  ;; fire an enemy bullet toward the new direction
     ;; fall through to beh_patrol_moving_left
 beh_patrol_moving_left::
     DRIVE_VX #-1, #4
@@ -53,7 +54,15 @@ beh_patrol_moving_left::
 
 beh_patrol_turn_right::
     SET_ANIMATION monk_walk_right_anim
+    SHOOT #3                   ;; fire an enemy bullet toward the new direction
     GOTO beh_patrol_moving_right
+
+;;-----------------------------------------------------------------
+;; beh_shoot_speed — scratch byte: inline arg of the SHOOT action,
+;; stashed here so it survives the entity-creation call (which
+;; clobbers registers) before being read back as E for the factory.
+;;-----------------------------------------------------------------
+beh_shoot_speed:: .db 0
 
 ;;
 ;; Start of _CODE area
@@ -324,6 +333,45 @@ bdvx_tick:
 bdvx_done:
     ld e_moved(ix), #1
     jp sys_beh_check_conditions
+
+;;-----------------------------------------------------------------
+;; beh_action_shoot
+;;
+;;  Non-blocking: spawns an enemy bullet at the entity's current
+;;  position, moving at the inline signed speed argument. Skipped
+;;  silently if the entity pool is full (checked against
+;;  a_max_count, same bound sys_array_create_element enforces).
+;;
+;;  IX must be restored to the calling (shooter) entity before
+;;  chaining to sys_beh_next, since the bullet factory clobbers IX.
+;;
+beh_action_shoot::
+    ld a, (de)                  ;; A = inline signed speed
+    ld (beh_shoot_speed), a
+    inc de                      ;; DE -> next action (preserve across factory call)
+    push de                     ;; save behavior program pointer
+    push ix                     ;; save shooter entity pointer
+
+    ld ix, #entities
+    ld a, a_count(ix)
+    cp a_max_count(ix)
+    jr nc, bas_skip              ;; pool full: skip spawn
+
+    pop ix                       ;; ix = shooter (read fields below)
+    push ix                      ;; keep saved for restore after the factory call
+
+    ld b, e_x(ix)
+    ld c, e_y(ix)
+    ld a, e_room(ix)
+    ld d, a
+    ld a, (beh_shoot_speed)
+    ld e, a
+    call man_entity_create_enemy_bullet   ;; clobbers ix -> new bullet
+
+bas_skip:
+    pop ix                       ;; restore shooter entity pointer
+    pop de                       ;; restore behavior program pointer
+    jp sys_beh_next
 
 ;;-----------------------------------------------------------------
 ;; beh_action_set_animation

@@ -56,6 +56,7 @@ DESTROY_ENTITY = 0x0000   ;; mark entity invalid (remove from active set)
 .globl beh_action_set_animation ;; arg: .dw anim_descriptor_ptr
 .globl beh_action_set_moved     ;; mark entity dirty for renderer (no args)
 .globl beh_action_drive_vx     ;; blocking — re-apply speed each frame; arg: .db speed_x
+.globl beh_action_shoot        ;; non-blocking — fire an enemy bullet; arg: .db signed speed_x
 
 ;;===============================================================================
 ;; CONDITIONS
@@ -134,4 +135,13 @@ DESTROY_ENTITY = 0x0000   ;; mark entity invalid (remove from active set)
 .macro DRIVE_VX _vx, _stride
     .dw beh_action_drive_vx
     .db _vx, _stride
+.endm
+
+;; SHOOT speed — non-blocking: fire an enemy bullet from the entity's
+;; current position at 'speed' bytes/frame (+right, -left). The bullet is
+;; a separate entity moved by sys_shoot_update (see man/entity.h.s).
+;; Skipped silently if the entity pool (MAX_ENTITIES) is full.
+.macro SHOOT _speed
+    .dw beh_action_shoot
+    .db _speed
 .endm

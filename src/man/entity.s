@@ -90,6 +90,15 @@ DefineEntity c_cmp_invalid, 0, 0, 0, 0, 0, 0, 0, 0, S_MONK_WIDTH, S_MONK_HEIGHT,
 portal_template::
 DefineEntity c_cmp_invalid, 0, 0, 0, 0, 0, 0, 0, 0, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk_6, 0
 
+;; Bullets: straight-flying projectiles (c_cmp_projectile), moved by
+;; sys_shoot_update — NOT by sys_physics_update (no gravity, no tile
+;; collision). Position/room/speed are set by the create_*_bullet factory.
+player_bullet_template::
+DefineEntity c_cmp_invalid, 0, 0, 0, 0, 0, 0, 0, 0, S_BULLET_WIDTH, S_BULLET_HEIGHT, 15, _s_obj_1, 0
+
+enemy_bullet_template::
+DefineEntity c_cmp_invalid, 0, 0, 0, 0, 0, 0, 0, 0, S_BULLET_WIDTH, S_BULLET_HEIGHT, 15, _s_obj_2, 0
+
 ;;
 ;; Start of _CODE area
 ;; 
@@ -200,6 +209,51 @@ man_entity_create_portal::
     ld e_width(ix), #4      ;; 1 tile wide (4 bytes in mode 0)
     ld e_height(ix), #16    ;; 2 tiles tall
     ld e_room(ix), d
+    ld e_moved(ix), #1
+    ret
+
+;;-----------------------------------------------------------------
+;;
+;; man_entity_create_player_bullet
+;;
+;;  Creates a player bullet flying in a straight line. Moved each
+;;  frame by sys_shoot_update, not sys_physics_update.
+;;  Input:  B = world x (bytes), C = world y (pixels), D = room id,
+;;          E = signed speed in bytes/frame (+ = right, - = left)
+;;  Output: IX = pointer to new entity
+;;  Modified: AF, HL, IX
+;;
+man_entity_create_player_bullet::
+    ld ix, #entities
+    ld hl, #player_bullet_template
+    call sys_array_create_element
+    ld__ix_hl
+    ld e_cmps(ix), #(c_cmp_render | c_cmp_projectile)
+    ld e_x(ix), b
+    ld e_y(ix), c
+    ld e_room(ix), d
+    ld e_speed_x(ix), e
+    ld e_moved(ix), #1
+    ret
+
+;;-----------------------------------------------------------------
+;;
+;; man_entity_create_enemy_bullet
+;;
+;;  Same as man_entity_create_player_bullet but uses the enemy bullet
+;;  sprite. Typically spawned via the SHOOT behavior action.
+;;  Input/Output/Modified: same as man_entity_create_player_bullet
+;;
+man_entity_create_enemy_bullet::
+    ld ix, #entities
+    ld hl, #enemy_bullet_template
+    call sys_array_create_element
+    ld__ix_hl
+    ld e_cmps(ix), #(c_cmp_render | c_cmp_projectile)
+    ld e_x(ix), b
+    ld e_y(ix), c
+    ld e_room(ix), d
+    ld e_speed_x(ix), e
     ld e_moved(ix), #1
     ret
 

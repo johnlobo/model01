@@ -26,6 +26,7 @@
 .include "sys/collision.h.s"
 .include "sys/anim.h.s"
 .include "sys/beh.h.s"
+.include "sys/shoot.h.s"
 .include "man/entity.h.s"
 
 ;;
@@ -72,6 +73,7 @@ man_game_init::
 
     call sys_render_init
     call sys_map_init
+    call sys_shoot_init
     call sys_map_draw           ;; draw map once at startup
     ret
 
@@ -86,6 +88,7 @@ man_game_init::
 ;;
 man_game_update::
     call sys_physics_update
+    call sys_shoot_update
     call man_game_check_transition
     ld ix, #entity_array
     call sys_input_update

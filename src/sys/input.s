@@ -38,7 +38,7 @@ sys_input_key_actions::
     .dw Key_P,      sys_input_selected_right
     ;;.dw Key_D,      sys_input_show_deck
     .dw Key_Space,  sys_input_action
-    ;;.dw Key_Q,      sys_input_add_card
+    .dw Key_Q,      sys_input_shoot
     ;;.dw Key_A,      sys_input_remove_card
     ;;.dw Key_Esc,    _score_cancel_entry
     ;;.dw Joy0_Left,  _score_move_left
@@ -48,7 +48,13 @@ sys_input_key_actions::
     ;;.dw Joy0_Fire1, _score_fire
     .dw 0
 
-jump_boost_left:: .db 0     ;; boost frames remaining (counts down while Space held)
+jump_boost_left:: .db 0             ;; boost frames remaining (counts down while Space held)
+
+player_facing:: .db 0                ;; 0 = right, 1 = left; updated by left/right handlers
+player_shoot_cooldown:: .db 0        ;; frames remaining before next shot; ticked in sys_input_update
+
+PLAYER_BULLET_SPEED = 3              ;; bytes/frame
+PLAYER_SHOOT_COOLDOWN = 10           ;; frames between shots
 
 ;;
 ;; Start of _CODE area
@@ -247,6 +253,8 @@ sia_boost:
 ;;
 sys_input_selected_left::
     ld e_speed_x(ix), #-2
+    ld a, #1
+    ld (player_facing), a
     ld hl, #monk_walk_left_anim
     ld e_anim(ix), l
     ld e_anim+1(ix), h
@@ -263,9 +271,71 @@ sys_input_selected_left::
 ;;
 sys_input_selected_right::
     ld e_speed_x(ix), #2
+    xor a
+    ld (player_facing), a
     ld hl, #monk_walk_right_anim
     ld e_anim(ix), l
     ld e_anim+1(ix), h
+    ret
+
+;;-----------------------------------------------------------------
+;;
+;; sys_input_shoot
+;;
+;;  Fires a player bullet from the leading edge of the player, in the
+;;  direction of player_facing, subject to PLAYER_SHOOT_COOLDOWN.
+;;  Skipped silently if the entity pool is full. IX is always restored
+;;  to the player entity before returning — sys_input_generic_update
+;;  keeps IX loaded across all key handlers in the same frame.
+;;  Input:  IX = player entity
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX (restored to player on return)
+;;
+sys_input_shoot::
+    ld a, (player_shoot_cooldown)
+    or a
+    ret nz                       ;; still cooling down
+
+    push ix                      ;; save player entity pointer
+    ld ix, #entities
+    ld a, a_count(ix)
+    cp a_max_count(ix)
+    jr nc, sis_skip               ;; pool full: skip shot
+
+    pop ix                        ;; ix = player (read fields below)
+    push ix                       ;; keep saved for restore after the factory call
+
+    ld a, #PLAYER_SHOOT_COOLDOWN
+    ld (player_shoot_cooldown), a
+
+    ld a, e_y(ix)
+    add a, #((S_MONK_HEIGHT - S_BULLET_HEIGHT) / 2)
+    ld c, a                       ;; C = spawn y, centered on the player sprite
+
+    ld a, e_room(ix)
+    ld d, a                       ;; D = room
+
+    ld a, (player_facing)
+    or a
+    jr nz, sis_left
+
+    ld a, e_x(ix)
+    add a, e_width(ix)
+    ld b, a                       ;; B = spawn x (right edge)
+    ld e, #PLAYER_BULLET_SPEED
+    jr sis_create
+
+sis_left:
+    ld a, e_x(ix)
+    sub #S_BULLET_WIDTH
+    ld b, a                       ;; B = spawn x (left edge)
+    ld e, #-PLAYER_BULLET_SPEED
+
+sis_create:
+    call man_entity_create_player_bullet   ;; clobbers ix -> new bullet
+
+sis_skip:
+    pop ix                        ;; restore player entity pointer
     ret
 
 ;;-----------------------------------------------------------------
@@ -313,6 +383,14 @@ first_key:
 ;;  Modified: AF, BC, IY
 ;;
 sys_input_update::
+    ;; Tick down the shot cooldown once per frame
+    ld a, (player_shoot_cooldown)
+    or a
+    jr z, siu_no_cooldown
+    dec a
+    ld (player_shoot_cooldown), a
+siu_no_cooldown:
+
     ;; Reset player to idle each frame; key handlers override if a direction is pressed
     ld hl, #monk_idle_anim
     ld e_anim(ix), l
