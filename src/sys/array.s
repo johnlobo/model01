@@ -64,12 +64,17 @@ sys_array_init::
 ;; sys_array_create_element
 ;;
 ;;  Create a element from the model pointed by HL
-;;  Input:  ix: pointer to the array 
+;;  Input:  ix: pointer to the array
 ;;          hl: pointer to the entity to add to the array
-;;  Output: hl: points to the new created entity
+;;  Output: hl: points to the new created entity, or unchanged (same as
+;;              input hl) if the array is full
 ;;  Modified: AF, BC, DE, HL
 ;;
 sys_array_create_element::
+    ld a, a_count(ix)               ;; refuse to add past the array capacity
+    cp a_max_count(ix)
+    ret nc                          ;; count >= max_count: array full
+
     ld b, #0                        ;; bc = component size
     ld a, a_component_size(ix)      ;;
     ld c, a                         ;;    

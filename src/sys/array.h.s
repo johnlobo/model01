@@ -43,7 +43,7 @@
 
 .macro DefineArrayStructure _Tname, _N, _ComponentSize
       _Tname'_count::               .db 0
-      _Tname'_delta::               .db 0
+      _Tname'_max_count::           .db _N
       _Tname'_component_size::      .db _ComponentSize
       _Tname'_pend::                .dw _Tname'_array 
       _Tname'_selected::            .db 0
@@ -57,7 +57,7 @@
 ;;===============================================================================
 BeginStruct a
 Field a, count , 1
-Field a, delta , 1
+Field a, max_count , 1
 Field a, component_size , 1
 Field a, pend , 2
 Field a, selected , 1

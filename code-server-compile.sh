@@ -1,1 +1,2 @@
-make recode && cp -f ./model01.dsk ../../www/gamez
+make clean
+make  && cp -f ./model01.dsk ../../www/gamez
