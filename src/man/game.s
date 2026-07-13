@@ -26,6 +26,7 @@
 .include "sys/collision.h.s"
 .include "sys/anim.h.s"
 .include "sys/beh.h.s"
+.include "sys/mem.h.s"
 .include "sys/shoot.h.s"
 .include "man/entity.h.s"
 
@@ -52,6 +53,7 @@ mgct_portal_dest_y:  .db 0  ;; saved portal destination y coordinate
 ;;  Modified: AF, HL
 ;;
 man_game_init::
+    call sys_mem_init               ;; detect 128K RAM and install banking stub
     call man_entity_init
     call man_entity_create_player_player
     call man_entity_create_patrol_enemy
