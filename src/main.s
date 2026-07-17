@@ -31,11 +31,20 @@
 ;;
 .area _DATA
 
-_game_loaded_string: .asciz " GAME LOADED - V.023"      ;;27 chars, 54 bytes
+_game_loaded_string: .asciz " GAME LOADED - V.025"      ;;27 chars, 54 bytes
 
-.area _ABS   (ABS)
-.org 0x100
-transparency_table::
+;; The transparency table must be 256-byte aligned at runtime, but it is NOT
+;; emitted as an absolute area any more. Doing that made &0100 the binary's
+;; lowest record, so hex2bin padded everything from there up to Z80CODELOC
+;; (&4000) with zeros — 15.9K of the 29K binary was padding.
+;;
+;; Instead the bytes live in _CODE as ordinary data and _main LDIRs them to
+;; &0100 at startup. The binary now spans only &4000..&741C.
+transparency_table = 0x0100         ;; runtime address (256-byte aligned, free RAM)
+
+.area _CODE
+
+transparency_table_src:
         .db 0xFF, 0xAA, 0x55, 0x00, 0xAA, 0xAA, 0x00, 0x00
         .db 0x55, 0x00, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00
         .db 0xAA, 0xAA, 0x00, 0x00, 0xAA, 0xAA, 0x00, 0x00
@@ -95,6 +104,13 @@ _main::
    ;; Disable firmware to prevent it from interfering with string drawing
    ;;call cpct_disableFirmware_asm
    call sys_system_disable_firmware
+
+   ;; Install the 256-byte aligned transparency table at &0100. Every masked
+   ;; sprite draw reads it from there; see the note next to transparency_table.
+   ld hl, #transparency_table_src
+   ld de, #transparency_table
+   ld bc, #256
+   ldir
 
    ;; Set mode 0
    ld c,#0 
