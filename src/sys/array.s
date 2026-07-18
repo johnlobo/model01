@@ -74,8 +74,8 @@ sys_array_init::
 ;;
 ;;  Input:  ix: pointer to the array
 ;;          hl: pointer to the entity to add to the array
-;;  Output: hl: points to the new created entity, or unchanged (same as
-;;              input hl) if the array is full
+;;  Output: hl: points to the new created entity
+;;          carry clear on success; carry set if the array is full
 ;;  Modified: AF, BC, DE, HL
 ;;
 sys_array_create_element::
@@ -111,12 +111,17 @@ sace_reuse:
     push de                         ;; save slot for return value
     ldir                            ;; overwrite the dead slot with the template
     pop hl                          ;; hl = reused slot
+    or a                            ;; carry clear: success
     ret
 
 sace_append:
     ld a, a_count(ix)               ;; refuse to add past the array capacity
     cp a_max_count(ix)
-    ret nc                          ;; count >= max_count: array full
+    jr c, sace_has_capacity
+    scf                             ;; carry set: no dead slot and no capacity
+    ret
+
+sace_has_capacity:
 
     ld a, c                         ;; component size
     ld (_create_size), a            ;; self modifying code to move the size of the entity to bc
@@ -140,7 +145,8 @@ _create_size = .+1
     ld   a_pend+1(ix), h            ;;
 
     pop hl                          ;; restore the new element address in hl
-ret
+    or a                            ;; carry clear: success
+    ret
 
 
 

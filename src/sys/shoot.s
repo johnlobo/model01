@@ -72,6 +72,7 @@ sys_shoot_update_one_bullet::
     ret
 ssuob_step:
     ld a, e_speed_x+1(ix)
+    dec a
     ld e_beh_timer(ix), a
 
     ld a, e_x(ix)

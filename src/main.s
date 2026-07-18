@@ -31,7 +31,7 @@
 ;;
 .area _DATA
 
-_game_loaded_string: .asciz " GAME LOADED - V.030"      ;;27 chars, 54 bytes
+_game_loaded_string: .asciz " GAME LOADED - V.032"      ;;27 chars, 54 bytes
 
 ;; The transparency table must be 256-byte aligned at runtime, but it is NOT
 ;; emitted as an absolute area any more. Doing that made &0100 the binary's
@@ -124,7 +124,7 @@ _main::
 
    ;; Calculate a video-memory location for printing a string
    ld   de, #CPCT_VMEM_START_ASM ;; DE = Pointer to start of the screen
-   ld    b, #24                  ;; B = y coordinate (24 = 0x18)
+   ld    b, #22                  ;; B = y coordinate
    ld    c, #16                  ;; C = x coordinate (16 = 0x10)
 
    call cpct_getScreenPtr_asm    ;; Calculate video memory location and return it in HL

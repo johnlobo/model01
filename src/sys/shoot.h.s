@@ -36,7 +36,7 @@
 ;;    e_beh_timer             — countdown to the next step; projectiles never
 ;;                              run a behavior program, so this is unused
 ;;  sys_shoot_update_one_bullet (shoot.s) holds position while the countdown
-;;  is nonzero, and reloads it from e_speed_x+1 each time a step happens.
+;;  is nonzero, and reloads it with stride-1 each time a step happens.
 ;;===============================================================================
 PLAYER_BULLET_STRIDE = 2   ;; frames between steps
 ENEMY_BULLET_STRIDE  = 2   ;; frames between steps

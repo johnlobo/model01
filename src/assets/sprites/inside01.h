@@ -1,5 +1,5 @@
 //
-// File assets/map/inside01.tmx converted to csv using cpct_tmx2csv [20260713 02:28:33 CEST]
+// File assets/map/inside01.tmx converted to csv using cpct_tmx2csv [20260718 16:43:15 CEST]
 //   * Width:  16 columns (16 bytes, 8 bits per column)
 //   * Height: 20 rows
 //   * Bytes:  320 bytes (16 x 20)

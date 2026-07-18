@@ -34,7 +34,7 @@
 .area _DATA
 
 FONT_NUMBERS: .dw #0000
-_welcome_string: .asciz "WELCOME - V.030"   ;;
+_welcome_string: .asciz "WELCOME - V.032"   ;;
 
 
 sys_render_front_buffer: .db 0xc0
@@ -121,13 +121,13 @@ sys_render_init::
    ld hl, #_g_palette0                     ;; Set palette
    ld de, #16                              ;;
    call cpct_setPalette_asm                ;;
-    cpctm_setBorder_asm HW_MAUVE            ;; Set Border gray
+    cpctm_setBorder_asm HW_BLACK             ;; Blend the hardware border into the background
 
     ;;call sys_render_clear_back_buffer
     call sys_render_clear_front_buffer
 
    ld hl, #_welcome_string
-   cpctm_screenPtr_asm DE, FRONT_BUFFER, 10, 10
+   cpctm_screenPtr_asm DE, FRONT_BUFFER, 10, 8
    call sys_text_draw_string
 
     ;;cpctm_clearScreen_asm 0                 ;; Clear screen

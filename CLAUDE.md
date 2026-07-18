@@ -100,10 +100,10 @@ Current key bindings:
 |-----|---------|--------|
 | O | `sys_input_selected_left` | Move left at speed −2, switch to walk-left anim |
 | P | `sys_input_selected_right` | Move right at speed +2, switch to walk-right anim |
-| Space | `sys_input_action` | Variable-height jump (see below) |
-| Q | `sys_input_shoot` | Fire a player bullet (see Shooting System below) |
+| Q | `sys_input_action` | Variable-height jump (see below) |
+| Space | `sys_input_shoot` | Fire a player bullet (see Shooting System below) |
 
-**Jump mechanics** (`sys_input_action`): on ground → set `e_speed_y = -6`, arm `jump_boost_left = 6`. Each subsequent frame Space is held while rising and boost frames remain: decrement speed_y by 1 (cap at −12). Tap = small hop; full hold = max jump.
+**Jump mechanics** (`sys_input_action`): on ground → set `e_speed_y = -6`, arm `jump_boost_left = 6`. Each subsequent frame Q is held while rising and boost frames remain: decrement speed_y by 1 (cap at −12). Tap = small hop; full hold = max jump.
 
 To add a new key binding: append a `.dw Key_Xxx, handler_label` pair before the terminating `.dw 0` in `sys_input_key_actions`.
 
@@ -166,7 +166,7 @@ Built-in behaviors: `beh_bounce_behavior` (timed left/right patrol), `beh_patrol
 Bullets are regular entities with `c_cmp_projectile` (0x80), moved by `sys_shoot_update` — a straight-line, no-gravity, no-tile-collision walk that destroys the entity (`e_cmps = c_cmp_invalid`) once it leaves `[0, MAP_WIDTH*4]` horizontally. They are **not** processed by `sys_physics_update` (no `c_cmp_movable`). Hit detection against other entities is not wired up — same "extension point" spirit as `sys_collision_on_hit`'s red-flash placeholder.
 
 Two bullet templates in `src/man/entity.s`, using sprites `_s_obj_1` (player) / `_s_obj_2` (enemy) from `assets/model01-8x8obj.png` (`S_BULLET_WIDTH = 4` bytes, `S_BULLET_HEIGHT = 8` px):
-- `man_entity_create_player_bullet` / `man_entity_create_enemy_bullet` — Input: B=world x (bytes), C=world y (pixels), D=room id, E=signed speed_x (bytes/frame). Both leave the array pointer unchanged if the entity pool is full — callers check `a_count(#entities) < a_max_count(#entities)` first (see below).
+- `man_entity_create_player_bullet` / `man_entity_create_enemy_bullet` — Input: B=world x (bytes), C=world y (pixels), D=room id, E=signed speed_x (bytes/step). Both return carry clear on success and carry set if the pool has no append capacity or recyclable slot.
 
 **Player** fires via key Q (`sys_input_shoot` in `src/sys/input.s`), subject to `PLAYER_SHOOT_COOLDOWN` (10 frames, ticked in `sys_input_update`). Spawn edge and bullet direction follow `player_facing` (0=right/1=left), updated by `sys_input_selected_left`/`_right`.
 
@@ -207,7 +207,7 @@ ld e_on_air(ix), #1      ;; 1=active
 
 Generic dynamic array with header struct `a`: `a_count`, `a_component_size`, `a_pend`, `a_array`.
 
-- `sys_array_create_element` — copies a template struct into the array (`ldir`)
+- `sys_array_create_element` — copies a template struct into an appended or recycled slot (`ldir`); returns carry clear on success and carry set when full
 - `sys_array_execute_each_ix_matching` — calls a routine for each entity whose `e_cmps & B != 0`; IX points to the current entity
 
 ### Physics (`src/sys/physics.s`)

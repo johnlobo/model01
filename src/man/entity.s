@@ -230,6 +230,7 @@ man_entity_create_player_bullet::
     ld ix, #entities
     ld hl, #player_bullet_template
     call sys_array_create_element
+    jr c, mecpb_full
     ld__ix_hl
     pop de                  ;; restore room (D) and speed (E)
     pop bc                  ;; restore spawn x (B) and y (C)
@@ -239,8 +240,14 @@ man_entity_create_player_bullet::
     ld e_room(ix), d
     ld e_speed_x(ix), e
     ld e_speed_x+1(ix), #PLAYER_BULLET_STRIDE   ;; frames between steps
-    ld e_beh_timer(ix), #PLAYER_BULLET_STRIDE   ;; countdown to first step
+    ld e_beh_timer(ix), #(PLAYER_BULLET_STRIDE - 1)
     ld e_moved(ix), #1
+    or a                    ;; carry clear: bullet created
+    ret
+mecpb_full:
+    pop de
+    pop bc
+    scf                     ;; carry set: entity pool full
     ret
 
 ;;-----------------------------------------------------------------
@@ -257,6 +264,7 @@ man_entity_create_enemy_bullet::
     ld ix, #entities
     ld hl, #enemy_bullet_template
     call sys_array_create_element
+    jr c, meceb_full
     ld__ix_hl
     pop de                  ;; restore room (D) and speed (E)
     pop bc                  ;; restore spawn x (B) and y (C)
@@ -266,7 +274,12 @@ man_entity_create_enemy_bullet::
     ld e_room(ix), d
     ld e_speed_x(ix), e
     ld e_speed_x+1(ix), #ENEMY_BULLET_STRIDE    ;; frames between steps
-    ld e_beh_timer(ix), #ENEMY_BULLET_STRIDE    ;; countdown to first step
+    ld e_beh_timer(ix), #(ENEMY_BULLET_STRIDE - 1)
     ld e_moved(ix), #1
+    or a                    ;; carry clear: bullet created
     ret
-
+meceb_full:
+    pop de
+    pop bc
+    scf                     ;; carry set: entity pool full
+    ret

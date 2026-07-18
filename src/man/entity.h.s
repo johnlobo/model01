@@ -54,9 +54,8 @@ MAX_ENTITIES = 20
                                      ;;   e_on_air         = active (1=active, 0=inactive)
 .globl man_entity_create_player_bullet  ;; B=x, C=y, D=room_id, E=signed speed_x → IX=new entity
 .globl man_entity_create_enemy_bullet   ;; B=x, C=y, D=room_id, E=signed speed_x → IX=new entity
-                                     ;; Both bullet factories leave the array pointer (HL) unchanged
-                                     ;; if the entity pool is full — check a_count(#entities) <
-                                     ;; a_max_count(#entities) before calling if you need certainty.
+                                     ;; Both return carry clear on success, carry set if the
+                                     ;; pool has neither append capacity nor a recyclable slot.
 
 ;;===============================================================================
 ;; DATA ARRAY STRUCTURE CREATION

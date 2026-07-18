@@ -37,8 +37,8 @@ sys_input_key_actions::
     .dw Key_O,      sys_input_selected_left
     .dw Key_P,      sys_input_selected_right
     ;;.dw Key_D,      sys_input_show_deck
-    .dw Key_Space,  sys_input_action
-    .dw Key_Q,      sys_input_shoot
+    .dw Key_Q,      sys_input_action
+    .dw Key_Space,  sys_input_shoot
     ;;.dw Key_A,      sys_input_remove_card
     ;;.dw Key_Esc,    _score_cancel_entry
     ;;.dw Joy0_Left,  _score_move_left
@@ -48,7 +48,7 @@ sys_input_key_actions::
     ;;.dw Joy0_Fire1, _score_fire
     .dw 0
 
-jump_boost_left:: .db 0             ;; boost frames remaining (counts down while Space held)
+jump_boost_left:: .db 0             ;; boost frames remaining (counts down while Q held)
 
 player_facing:: .db 0                ;; 0 = right, 1 = left; updated by left/right handlers
 player_shoot_cooldown:: .db 0        ;; frames remaining before next shot; ticked in sys_input_update
@@ -299,16 +299,6 @@ sys_input_shoot::
     ret nz                       ;; still cooling down
 
     push ix                      ;; save player entity pointer
-    ld ix, #entities
-    ld a, a_count(ix)
-    cp a_max_count(ix)
-    jr nc, sis_skip               ;; pool full: skip shot
-
-    pop ix                        ;; ix = player (read fields below)
-    push ix                       ;; keep saved for restore after the factory call
-
-    ld a, #PLAYER_SHOOT_COOLDOWN
-    ld (player_shoot_cooldown), a
 
     ld a, e_y(ix)
     add a, #((S_MONK_HEIGHT - S_BULLET_HEIGHT) / 2)
@@ -335,6 +325,9 @@ sis_left:
 
 sis_create:
     call man_entity_create_player_bullet   ;; clobbers ix -> new bullet
+    jr c, sis_skip                 ;; pool full: do not consume cooldown
+    ld a, #PLAYER_SHOOT_COOLDOWN
+    ld (player_shoot_cooldown), a
 
 sis_skip:
     pop ix                        ;; restore player entity pointer

@@ -96,7 +96,6 @@ man_game_update::
     call sys_input_update
     call sys_ai_update
     call sys_beh_update
-    cpctm_setBorder_asm HW_MAUVE
     call sys_collision_update
     call sys_anim_update
     call cpct_waitVSYNC_asm

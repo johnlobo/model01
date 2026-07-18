@@ -338,9 +338,8 @@ bdvx_done:
 ;; beh_action_shoot
 ;;
 ;;  Non-blocking: spawns an enemy bullet at the entity's current
-;;  position, moving at the inline signed speed argument. Skipped
-;;  silently if the entity pool is full (checked against
-;;  a_max_count, same bound sys_array_create_element enforces).
+;;  position, moving at the inline signed speed argument. The entity
+;;  factory silently skips creation if no append or recycled slot is available.
 ;;
 ;;  IX must be restored to the calling (shooter) entity before
 ;;  chaining to sys_beh_next, since the bullet factory clobbers IX.
@@ -351,11 +350,6 @@ beh_action_shoot::
     inc de                      ;; DE -> next action (preserve across factory call)
     push de                     ;; save behavior program pointer
     push ix                     ;; save shooter entity pointer
-
-    ld ix, #entities
-    ld a, a_count(ix)
-    cp a_max_count(ix)
-    jr nc, bas_skip              ;; pool full: skip spawn
 
     pop ix                       ;; ix = shooter (read fields below)
     push ix                      ;; keep saved for restore after the factory call
