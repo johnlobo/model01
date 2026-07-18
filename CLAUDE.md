@@ -39,7 +39,7 @@ cpct_rvm -as -f       # macOS
 
 ## Version String
 
-`_welcome_string` in `src/sys/render.s` (e.g. `"WELCOME - V.023"`) is displayed at startup. **Bump this after every significant change.**
+`_welcome_string` in `src/sys/render.s` (e.g. `"VERSION - V.040"`) is displayed at the bottom of the main menu. **Bump this after every significant change.**
 
 There is also `_game_loaded_string` in `src/main.s` — keep it in sync.
 
@@ -47,7 +47,13 @@ There is also `_game_loaded_string` in `src/main.s` — keep it in sync.
 
 ### Game Loop
 
-Entry point is `_main::` in `src/main.s`. After firmware disable and video init, calls `man_game_init` then loops forever calling `man_game_update`.
+Entry point is `_main::` in `src/main.s`. After firmware disable and low-memory initialization it calls `man_menu_init`. The main loop dispatches by `app_state`: `APP_STATE_MENU` calls `man_menu_update`, while `APP_STATE_GAME` calls `man_game_update`.
+
+### Main Menu
+
+`src/man/menu.s` owns the main menu and `src/sys/menu_input.s` owns its key/action table. Cursor keys select `HELP` or `START`; the main Return key (`Key_Return`) or numeric-keypad Enter (`Key_Enter`) activates the selection. The selected label is bright yellow and only the previous/current option labels are redrawn when selection changes. `HELP` is currently a no-op. `START` queues initialization until the generic key dispatcher has returned, then resets and initializes a new game before switching `app_state`.
+
+Menu input uses `sys_input_generic_update`, like gameplay input, plus a release latch so held cursor keys do not repeat every frame.
 
 `man_game_update` runs each frame in this order:
 1. `sys_physics_update` — gravity, friction, tile collision
@@ -103,10 +109,13 @@ Current key bindings:
 | P | `sys_input_selected_right` | Move right at speed +2, switch to walk-right anim |
 | Q | `sys_input_action` | Variable-height jump (see below) |
 | Space | `sys_input_shoot` | Fire a player bullet (see Shooting System below) |
+| Escape | `man_game_request_quit` | Open the quit confirmation dialog |
 
 **Jump mechanics** (`sys_input_action`): on ground → set `e_speed_y = -6`, arm `jump_boost_left = 6`. Each subsequent frame Q is held while rising and boost frames remain: decrement speed_y by 1 (cap at −12). Tap = small hop; full hold = max jump.
 
 To add a new key binding: append a `.dw Key_Xxx, handler_label` pair before the terminating `.dw 0` in `sys_input_key_actions`.
+
+While the quit dialog is active, normal game systems are paused. The message window asks `QUIT TO MAIN MENU? Y / N`. The Y/N key actions only queue a response; after the generic dispatcher returns, Y waits for key release and initializes the main menu, while N restores the background captured by `sys_messages_show` and resumes play. Deferring both actions is required because message/menu routines clobber IY, which the generic dispatcher still needs for its key table.
 
 ### Map System (`src/sys/map.s`)
 

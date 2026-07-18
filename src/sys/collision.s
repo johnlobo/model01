@@ -32,6 +32,9 @@ collision_border_flash: .db 0
 ;;  Modified:
 ;;
 sys_collision_init::
+    xor a
+    ld (collision_border_flash), a
+    cpctm_setBorder_asm HW_BLACK
     ret
 
 ;;-----------------------------------------------------------------

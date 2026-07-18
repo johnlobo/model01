@@ -199,6 +199,10 @@ sys_messages_restore_message_background::
     call cpct_drawSprite_asm            ;;
     ret
 
+sys_messages_close::
+    ld iy, #_window_data
+    jp sys_messages_restore_message_background
+
 
 ;;-----------------------------------------------------------------
 ;;

@@ -115,7 +115,8 @@ DefineEntity c_cmp_invalid, 0, 0, 0, 0, 0, 0, 0, 0, S_BULLET_WIDTH, S_BULLET_HEI
 ;;  Modified: AF, HL
 ;;
 man_entity_init::
-
+    ld ix, #entities
+    call sys_array_init
     ret
 
 ;;-----------------------------------------------------------------

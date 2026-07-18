@@ -99,6 +99,10 @@ MAP_HEIGHT      = 20
 
 null_ptr = 0x0000
 
+APP_STATE_MENU = 0x00
+APP_STATE_GAME = 0x01
+.globl app_state
+
 ;; entity status types
 STATUS_NORMAL = 0x00   ;; default entity status
 STATUS_PORTAL = 0x01   ;; portal entity — triggers room transition on AABB collision

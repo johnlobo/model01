@@ -28,6 +28,8 @@
 .include "sys/beh.h.s"
 .include "sys/mem.h.s"
 .include "sys/shoot.h.s"
+.include "sys/messages.h.s"
+.include "man/menu.h.s"
 .include "man/entity.h.s"
 
 ;;
@@ -37,6 +39,9 @@
 
 mgct_new_pos:        .db 0  ;; new player coordinate (e_x or e_y) during a room transition
 mgct_portal_dest_y:  .db 0  ;; saved portal destination y coordinate
+man_game_quit_dialog_active: .db 0
+man_game_quit_dialog_response: .db 0  ;; 0=none, 1=cancel, 2=confirm
+man_game_quit_message: .asciz "QUIT TO MAIN MENU?  Y / N"
 
 ;;
 ;; Start of _CODE area
@@ -53,8 +58,17 @@ mgct_portal_dest_y:  .db 0  ;; saved portal destination y coordinate
 ;;  Modified: AF, HL
 ;;
 man_game_init::
+    xor a
+    ld (man_game_quit_dialog_active), a
+    ld (man_game_quit_dialog_response), a
+    ld (current_room), a
+    ld hl, #_g_map01
+    ld (current_map_data), hl
+
     call sys_mem_init               ;; detect 128K RAM and install banking stub
     call man_entity_init
+    call sys_input_init
+    call sys_collision_init
     call man_entity_create_player_player
     call man_entity_create_patrol_enemy
 
@@ -89,6 +103,10 @@ man_game_init::
 ;;  Modified: AF, HL
 ;;
 man_game_update::
+    ld a, (man_game_quit_dialog_active)
+    or a
+    jp nz, man_game_update_quit_dialog
+
     call sys_physics_update
     call sys_shoot_update
     call man_game_check_transition
@@ -101,6 +119,61 @@ man_game_update::
     call sys_render_prepare
     call cpct_waitVSYNC_asm
     call sys_render_update
+    ld a, (man_game_quit_dialog_active)
+    or a
+    call nz, man_game_draw_quit_dialog
+    ret
+
+man_game_update_quit_dialog:
+    call sys_input_quit_dialog_update
+    ld a, (man_game_quit_dialog_response)
+    cp #1
+    jr z, man_game_apply_quit_cancel
+    cp #2
+    jr z, man_game_apply_quit_confirm
+    call cpct_waitVSYNC_asm
+    ret
+
+man_game_apply_quit_cancel:
+    xor a
+    ld (man_game_quit_dialog_active), a
+    ld (man_game_quit_dialog_response), a
+    call sys_messages_close
+    call cpct_waitVSYNC_asm
+    ret
+
+man_game_apply_quit_confirm:
+    call sys_input_clean_buffer
+    call man_menu_init
+    call cpct_waitVSYNC_asm
+    ret
+
+man_game_request_quit::
+    ld a, #1
+    ld (man_game_quit_dialog_active), a
+    xor a
+    ld (man_game_quit_dialog_response), a
+    ret
+
+man_game_draw_quit_dialog:
+    xor a
+    ex af, af'
+    xor a
+    ex af, af'
+    ld de, #70 * 256
+    ld bc, #48 * 256
+    ld hl, #man_game_quit_message
+    call sys_messages_show
+    ret
+
+man_game_cancel_quit::
+    ld a, #1
+    ld (man_game_quit_dialog_response), a
+    ret
+
+man_game_confirm_quit::
+    ld a, #2
+    ld (man_game_quit_dialog_response), a
     ret
 
 ;;-----------------------------------------------------------------

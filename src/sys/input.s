@@ -22,6 +22,7 @@
 .include "sys/util.h.s"
 .include "sys/array.h.s"
 .include "man/entity.h.s"
+.include "man/game.h.s"
 
 ;;
 ;; Start of _DATA area 
@@ -39,6 +40,7 @@ sys_input_key_actions::
     ;;.dw Key_D,      sys_input_show_deck
     .dw Key_Q,      sys_input_action
     .dw Key_Space,  sys_input_shoot
+    .dw Key_Esc,    man_game_request_quit
     ;;.dw Key_A,      sys_input_remove_card
     ;;.dw Key_Esc,    _score_cancel_entry
     ;;.dw Joy0_Left,  _score_move_left
@@ -52,6 +54,11 @@ jump_boost_left:: .db 0             ;; boost frames remaining (counts down while
 
 player_facing:: .db 0                ;; 0 = right, 1 = left; updated by left/right handlers
 player_shoot_cooldown:: .db 0        ;; frames remaining before next shot; ticked in sys_input_update
+
+sys_input_quit_dialog_actions::
+    .dw Key_Y, man_game_confirm_quit
+    .dw Key_N, man_game_cancel_quit
+    .dw 0
 
 ;; PLAYER_BULLET_STRIDE (shoot.h.s) skips frames between steps, so the
 ;; effective speed is SPEED bytes every STRIDE frames, not every frame.
@@ -174,7 +181,11 @@ sys_input_waitKeyPressed::
 ;;  Modified: 
 ;;
 sys_input_init::
-    ret 
+    xor a
+    ld (jump_boost_left), a
+    ld (player_facing), a
+    ld (player_shoot_cooldown), a
+    ret
 
 
 ;;-----------------------------------------------------------------
@@ -391,5 +402,10 @@ siu_no_cooldown:
     ld e_anim(ix), l
     ld e_anim+1(ix), h
     ld iy, #sys_input_key_actions
+    call sys_input_generic_update
+    ret
+
+sys_input_quit_dialog_update::
+    ld iy, #sys_input_quit_dialog_actions
     call sys_input_generic_update
     ret

@@ -34,7 +34,7 @@
 .area _DATA
 
 FONT_NUMBERS: .dw #0000
-_welcome_string: .asciz "WELCOME - V.034"   ;;
+_welcome_string:: .asciz "VERSION - V.040"   ;;
 
 
 sys_render_front_buffer: .db 0xc0
@@ -136,10 +136,6 @@ sys_render_init::
 
     ;;call sys_render_clear_back_buffer
     call sys_render_clear_front_buffer
-
-   ld hl, #_welcome_string
-   cpctm_screenPtr_asm DE, FRONT_BUFFER, 10, 8
-   call sys_text_draw_string
 
     ;;cpctm_clearScreen_asm 0                 ;; Clear screen
 

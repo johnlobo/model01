@@ -36,3 +36,4 @@ MINIMUM_WINDOW_WIDTH = 30
 .globl sys_messages_show
 .globl sys_messages_draw_box
 .globl sys_messages_restore_message_background
+.globl sys_messages_close

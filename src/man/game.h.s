@@ -28,3 +28,6 @@
 .globl man_game_init
 .globl man_game_update
 .globl man_game_do_portal_transition  ;; IY=portal entity → teleport player to portal destination
+.globl man_game_request_quit
+.globl man_game_cancel_quit
+.globl man_game_confirm_quit
