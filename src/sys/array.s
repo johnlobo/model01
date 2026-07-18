@@ -63,7 +63,15 @@ sys_array_init::
 ;;
 ;; sys_array_create_element
 ;;
-;;  Create a element from the model pointed by HL
+;;  Create a element from the model pointed by HL.
+;;
+;;  Slots are recycled: entities destroyed at runtime set their component byte
+;;  (offset 0) to c_cmp_invalid (0) but leave a_count untouched, because
+;;  compacting the array mid-iteration would corrupt the callers looping over
+;;  it. This routine therefore first scans [0, a_count) for such a dead slot and
+;;  reuses it in place; only when none is free does it append and bump a_count.
+;;  Without this the pool would leak one slot per destroyed entity and fill up.
+;;
 ;;  Input:  ix: pointer to the array
 ;;          hl: pointer to the entity to add to the array
 ;;  Output: hl: points to the new created entity, or unchanged (same as
@@ -71,17 +79,50 @@ sys_array_init::
 ;;  Modified: AF, BC, DE, HL
 ;;
 sys_array_create_element::
+    ld b, #0                        ;; bc = component size (stride + LDIR count)
+    ld a, a_component_size(ix)      ;;
+    ld c, a                         ;;
+
+    ;; --- Reuse pass: look for a dead slot (component byte == 0) ---
+    ld a, a_count(ix)
+    or a
+    jr z, sace_append               ;; nothing allocated yet: append
+
+    push hl                         ;; save template pointer
+    push ix                         ;; hl = &element[0]
+    pop hl
+    ld de, #a_array                 ;;
+    add hl, de                      ;;
+    ld d, a                         ;; d = slots left to scan (a_count)
+sace_scan:
+    ld a, (hl)                      ;; component byte of this slot
+    or a
+    jr z, sace_reuse                ;; found a dead slot (hl points to it)
+    add hl, bc                      ;; advance to next slot
+    dec d
+    jr nz, sace_scan
+
+    pop hl                          ;; no free slot: restore template and append
+    jr sace_append
+
+sace_reuse:
+    ex de, hl                       ;; de = dead slot (destination)
+    pop hl                          ;; hl = template (source)
+    push de                         ;; save slot for return value
+    ldir                            ;; overwrite the dead slot with the template
+    pop hl                          ;; hl = reused slot
+    ret
+
+sace_append:
     ld a, a_count(ix)               ;; refuse to add past the array capacity
     cp a_max_count(ix)
     ret nc                          ;; count >= max_count: array full
 
-    ld b, #0                        ;; bc = component size
-    ld a, a_component_size(ix)      ;;
-    ld c, a                         ;;    
+    ld a, c                         ;; component size
     ld (_create_size), a            ;; self modifying code to move the size of the entity to bc
     xor a                           ;; ld a, #0
     ld (_create_size+1), a          ;;
-    
+
     ld e, a_pend(ix)                ;; Load the address of the next element in de
     ld d, a_pend+1(ix)              ;;
     push de                         ;; Store the address of the next element to return it at the end

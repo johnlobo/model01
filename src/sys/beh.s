@@ -45,7 +45,7 @@ beh_patrol_moving_right::
 
 beh_patrol_turn_left::
     SET_ANIMATION monk_walk_left_anim
-    SHOOT #-3                  ;; fire an enemy bullet toward the new direction
+    SHOOT #-2                  ;; fire an enemy bullet toward the new direction (bytes/step; see ENEMY_BULLET_STRIDE in shoot.h.s)
     ;; fall through to beh_patrol_moving_left
 beh_patrol_moving_left::
     DRIVE_VX #-1, #4
@@ -54,7 +54,7 @@ beh_patrol_moving_left::
 
 beh_patrol_turn_right::
     SET_ANIMATION monk_walk_right_anim
-    SHOOT #3                   ;; fire an enemy bullet toward the new direction
+    SHOOT #2                   ;; fire an enemy bullet toward the new direction (bytes/step; see ENEMY_BULLET_STRIDE in shoot.h.s)
     GOTO beh_patrol_moving_right
 
 ;;-----------------------------------------------------------------
@@ -360,7 +360,24 @@ beh_action_shoot::
     pop ix                       ;; ix = shooter (read fields below)
     push ix                      ;; keep saved for restore after the factory call
 
-    ld b, e_x(ix)
+    ;; Spawn from the leading edge in the direction of travel, matching the
+    ;; player's own sys_input_shoot — not the entity's raw e_x, which would
+    ;; spawn the bullet from its back (behind the shooter, not in front).
+    ld a, (beh_shoot_speed)
+    bit 7, a                     ;; speed < 0: firing left
+    jr nz, bas_left
+
+    ld a, e_x(ix)
+    add a, e_width(ix)
+    ld b, a                      ;; B = spawn x (right edge)
+    jr bas_spawn_y
+
+bas_left:
+    ld a, e_x(ix)
+    sub #S_BULLET_WIDTH
+    ld b, a                      ;; B = spawn x (left edge)
+
+bas_spawn_y:
     ld c, e_y(ix)
     ld a, e_room(ix)
     ld d, a

@@ -21,6 +21,7 @@
 .include "sys/array.h.s"
 .include "sys/util.h.s"
 .include "sys/beh.h.s"
+.include "sys/shoot.h.s"
 
 ;;
 ;; Start of _DATA area 
@@ -224,15 +225,21 @@ man_entity_create_portal::
 ;;  Modified: AF, HL, IX
 ;;
 man_entity_create_player_bullet::
+    push bc                 ;; save spawn x/y and room/speed — create_element
+    push de                 ;; clobbers BC and DE (see its header)
     ld ix, #entities
     ld hl, #player_bullet_template
     call sys_array_create_element
     ld__ix_hl
+    pop de                  ;; restore room (D) and speed (E)
+    pop bc                  ;; restore spawn x (B) and y (C)
     ld e_cmps(ix), #(c_cmp_render | c_cmp_projectile)
     ld e_x(ix), b
     ld e_y(ix), c
     ld e_room(ix), d
     ld e_speed_x(ix), e
+    ld e_speed_x+1(ix), #PLAYER_BULLET_STRIDE   ;; frames between steps
+    ld e_beh_timer(ix), #PLAYER_BULLET_STRIDE   ;; countdown to first step
     ld e_moved(ix), #1
     ret
 
@@ -245,15 +252,21 @@ man_entity_create_player_bullet::
 ;;  Input/Output/Modified: same as man_entity_create_player_bullet
 ;;
 man_entity_create_enemy_bullet::
+    push bc                 ;; save spawn x/y and room/speed — create_element
+    push de                 ;; clobbers BC and DE (see its header)
     ld ix, #entities
     ld hl, #enemy_bullet_template
     call sys_array_create_element
     ld__ix_hl
+    pop de                  ;; restore room (D) and speed (E)
+    pop bc                  ;; restore spawn x (B) and y (C)
     ld e_cmps(ix), #(c_cmp_render | c_cmp_projectile)
     ld e_x(ix), b
     ld e_y(ix), c
     ld e_room(ix), d
     ld e_speed_x(ix), e
+    ld e_speed_x+1(ix), #ENEMY_BULLET_STRIDE    ;; frames between steps
+    ld e_beh_timer(ix), #ENEMY_BULLET_STRIDE    ;; countdown to first step
     ld e_moved(ix), #1
     ret
 

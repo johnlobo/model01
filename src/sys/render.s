@@ -34,7 +34,7 @@
 .area _DATA
 
 FONT_NUMBERS: .dw #0000
-_welcome_string: .asciz "WELCOME - V.025"   ;;
+_welcome_string: .asciz "WELCOME - V.030"   ;;
 
 
 sys_render_front_buffer: .db 0xc0

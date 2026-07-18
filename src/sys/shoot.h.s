@@ -18,6 +18,30 @@
 .include "common.h.s"
 
 ;;===============================================================================
+;; SPEED SYSTEM
+;;
+;;  Bullets move in whole-byte steps (the finest horizontal granularity the
+;;  renderer supports — same as every other entity). A flat N-bytes/frame speed
+;;  is therefore the fastest possible value; slower speeds can only be made by
+;;  skipping frames between steps, the same "stride" idiom DRIVE_VX already
+;;  uses for the patrol enemy's walk cycle.
+;;
+;;  Each bullet carries its own step size and stride, so different bullet
+;;  types (or future ones) can move at different speeds without engine
+;;  changes. Two otherwise-unused per-entity fields carry them, set once by
+;;  the entity factory at creation:
+;;    e_speed_x   (low byte)  — signed bytes moved per step (+right, -left)
+;;    e_speed_x+1 (high byte) — frames between steps (reload value); always 0
+;;                              on every other entity type, so this is safe
+;;    e_beh_timer             — countdown to the next step; projectiles never
+;;                              run a behavior program, so this is unused
+;;  sys_shoot_update_one_bullet (shoot.s) holds position while the countdown
+;;  is nonzero, and reloads it from e_speed_x+1 each time a step happens.
+;;===============================================================================
+PLAYER_BULLET_STRIDE = 2   ;; frames between steps
+ENEMY_BULLET_STRIDE  = 2   ;; frames between steps
+
+;;===============================================================================
 ;; PUBLIC METHODS
 ;;===============================================================================
 .globl sys_shoot_init

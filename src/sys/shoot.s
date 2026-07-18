@@ -19,6 +19,7 @@
 .include "cpctelera.h.s"
 .include "common.h.s"
 .include "sys/shoot.h.s"
+.include "sys/map.h.s"
 .include "man/entity.h.s"
 
 ;;
@@ -59,6 +60,20 @@ sys_shoot_update_one_bullet::
     cp e_room(ix)
     ret nz                          ;; wrong room: skip
 
+    ;; Stride: bytes are the finest step the renderer supports, so slower
+    ;; speeds are made by skipping frames between steps (e_beh_timer counts
+    ;; down; e_speed_x+1 holds the reload value — see shoot.h.s). Hold
+    ;; position, untouched, while the countdown is running.
+    ld a, e_beh_timer(ix)
+    or a
+    jr z, ssuob_step
+    dec a
+    ld e_beh_timer(ix), a
+    ret
+ssuob_step:
+    ld a, e_speed_x+1(ix)
+    ld e_beh_timer(ix), a
+
     ld a, e_x(ix)
     add a, e_speed_x(ix)            ;; A = new_x (signed)
 
@@ -75,6 +90,21 @@ sys_shoot_update_one_bullet::
     ret
 
 ssuob_destroy:
+    ;; Erase the last-drawn image first. Once c_cmp_invalid is set the entity is
+    ;; no longer rendered, so sys_render_restore_one_entity would never redraw
+    ;; the map tiles under its final position and the bullet would linger as a
+    ;; ghost. Restore those tiles here, at the last position it was drawn at.
+    ld a, e_p_address(ix)
+    or e_p_address+1(ix)
+    jr z, ssuob_kill                ;; never drawn: nothing to erase
+    ld b, e_p_y(ix)                 ;; B = last drawn y
+    ld c, e_p_x(ix)                 ;; C = last drawn x
+    ld d, e_height(ix)              ;; D = height
+    ld e, e_width(ix)               ;; E = width
+    push ix
+    call sys_map_restore_tiles_at
+    pop ix
+ssuob_kill:
     ld e_cmps(ix), #c_cmp_invalid
     ret
 

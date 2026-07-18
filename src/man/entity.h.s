@@ -21,7 +21,12 @@
 ;;===============================================================================
 ;; PUBLIC VARIABLES
 ;;===============================================================================
-MAX_ENTITIES = 10
+;; Bullets now live long enough on screen (see PLAYER_BULLET_STRIDE /
+;; ENEMY_BULLET_STRIDE in shoot.h.s) that holding the fire key can keep
+;; several in flight at once, on top of the 3 permanent entities (player,
+;; patrol enemy, portal). 20 costs (20-10)*sizeof_e ~= 310 extra bytes —
+;; trivial against the game's free RAM.
+MAX_ENTITIES = 20
 
 .globl entities
 .globl entity_array

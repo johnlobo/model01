@@ -53,7 +53,9 @@ jump_boost_left:: .db 0             ;; boost frames remaining (counts down while
 player_facing:: .db 0                ;; 0 = right, 1 = left; updated by left/right handlers
 player_shoot_cooldown:: .db 0        ;; frames remaining before next shot; ticked in sys_input_update
 
-PLAYER_BULLET_SPEED = 3              ;; bytes/frame
+;; PLAYER_BULLET_STRIDE (shoot.h.s) skips frames between steps, so the
+;; effective speed is SPEED bytes every STRIDE frames, not every frame.
+PLAYER_BULLET_SPEED = 2              ;; bytes per step
 PLAYER_SHOOT_COOLDOWN = 10           ;; frames between shots
 
 ;;
