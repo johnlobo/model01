@@ -5,6 +5,7 @@
 .include "cpctelera.h.s"
 .include "common.h.s"
 .include "sys/collision.h.s"
+.include "sys/map.h.s"
 .include "man/entity.h.s"
 .include "man/game.h.s"
 
@@ -13,6 +14,8 @@
 ;;
 .area _DATA
 
+COLLISION_BORDER_FLASH_FRAMES = 6
+collision_border_flash: .db 0
 
 ;;
 ;; Start of _CODE area
@@ -32,6 +35,24 @@ sys_collision_init::
     ret
 
 ;;-----------------------------------------------------------------
+;; Erase an entity's last rendered sprite and invalidate its pool slot.
+;; Input: IX = entity. IX is preserved.
+sys_collision_destroy_entity:
+    ld a, e_p_address(ix)
+    or e_p_address+1(ix)
+    jr z, scde_invalidate
+    ld b, e_p_y(ix)
+    ld c, e_p_x(ix)
+    ld d, e_height(ix)
+    ld e, e_width(ix)
+    push ix
+    call sys_map_restore_tiles_at
+    pop ix
+scde_invalidate:
+    ld e_cmps(ix), #c_cmp_invalid
+    ret
+
+;;-----------------------------------------------------------------
 ;;
 ;; sys_collision_on_hit
 ;;
@@ -43,10 +64,39 @@ sys_collision_init::
 ;;  Modified:
 ;;
 sys_collision_on_hit::
+    ;; Player projectile -> enemy: remove both entities.
+    ld a, e_status(ix)
+    cp #STATUS_PLAYER_BULLET
+    jr nz, scon_check_enemy_bullet
+    ld a, e_status(iy)
+    cp #STATUS_ENEMY
+    ret nz
+    call sys_collision_destroy_entity
+    push ix
+    push iy
+    pop ix
+    call sys_collision_destroy_entity
+    pop ix
+    ret
+
+scon_check_enemy_bullet:
+    ;; Enemy projectile -> player: consume the bullet and flash the border.
+    cp #STATUS_ENEMY_BULLET
+    jr nz, scon_check_portal
+    ld a, e_status(iy)
+    cp #STATUS_PLAYER
+    ret nz
+    call sys_collision_destroy_entity
+    ld a, #COLLISION_BORDER_FLASH_FRAMES
+    ld (collision_border_flash), a
+    cpctm_setBorder_asm HW_RED
+    ret
+
+scon_check_portal:
     ;; If collisionable is a portal, handle teleportation
     ld a, e_status(iy)
     cp #STATUS_PORTAL
-    jr nz, scon_default_hit
+    ret nz
 
     ;; Portal: only teleport if active
     ld a, e_on_air(iy)      ;; repurposed as active flag
@@ -56,8 +106,21 @@ sys_collision_on_hit::
     call man_game_do_portal_transition
     ret
 
-scon_default_hit:
+;;-----------------------------------------------------------------
+;; Advance the red/black border flash and guarantee a black final state.
+sys_collision_update_border:
+    ld a, (collision_border_flash)
+    or a
+    ret z
+    dec a
+    ld (collision_border_flash), a
+    jr z, scub_black
+    bit 0, a
+    jr nz, scub_black
     cpctm_setBorder_asm HW_RED
+    ret
+scub_black:
+    cpctm_setBorder_asm HW_BLACK
     ret
 
 ;;-----------------------------------------------------------------
@@ -168,6 +231,9 @@ sccoc_check:
     jr nz, sccoc_next   ;; collisionable not in current room: skip
 
     call sys_collision_check_pair
+    ld a, e_cmps(ix)
+    or a
+    jr z, sccoc_collider_destroyed
 
 sccoc_next:
     ld de, #sizeof_e        ;; advance IY to next entity
@@ -175,6 +241,10 @@ sccoc_next:
     pop bc
     djnz sccoc_loop
 
+    ret
+
+sccoc_collider_destroyed:
+    pop bc
     ret
 
 ;;-----------------------------------------------------------------
@@ -188,6 +258,7 @@ sccoc_next:
 ;;  Modified: AF, BC, DE, HL, IX, IY
 ;;
 sys_collision_update::
+    call sys_collision_update_border
     ld ix, #entities
     ld b, #c_cmp_collider
     ld hl, #sys_collision_check_one_collider

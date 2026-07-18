@@ -164,7 +164,7 @@ Built-in behaviors: `beh_bounce_behavior` (timed left/right patrol), `beh_patrol
 
 ### Shooting System (`src/sys/shoot.s`)
 
-Bullets are regular entities with `c_cmp_projectile` (0x80), moved by `sys_shoot_update` — a straight-line, no-gravity, no-tile-collision walk that destroys the entity (`e_cmps = c_cmp_invalid`) once it leaves `[0, MAP_WIDTH*4]` horizontally. They are **not** processed by `sys_physics_update` (no `c_cmp_movable`). Hit detection against other entities is not wired up — same "extension point" spirit as `sys_collision_on_hit`'s red-flash placeholder.
+Bullets are regular entities with `c_cmp_projectile` (0x80) and `c_cmp_collider`, moved by `sys_shoot_update` — a straight-line, no-gravity, no-tile-collision walk that destroys the entity (`e_cmps = c_cmp_invalid`) once it leaves `[0, MAP_WIDTH*4]` horizontally. They are **not** processed by `sys_physics_update` (no `c_cmp_movable`).
 
 Two bullet templates in `src/man/entity.s`, using sprites `_s_obj_1` (player) / `_s_obj_2` (enemy) from `assets/model01-8x8obj.png` (`S_BULLET_WIDTH = 4` bytes, `S_BULLET_HEIGHT = 8` px):
 - `man_entity_create_player_bullet` / `man_entity_create_enemy_bullet` — Input: B=world x (bytes), C=world y (pixels), D=room id, E=signed speed_x (bytes/step). Both return carry clear on success and carry set if the pool has no append capacity or recyclable slot.
@@ -189,7 +189,8 @@ Two bullet templates in `src/man/entity.s`, using sprites `_s_obj_1` (player) / 
 
 `sys_collision_on_hit` (IX=collider, IY=collisionable) is the extension point:
 - If `e_status(iy) == STATUS_PORTAL` and `e_on_air(iy) == 1`: calls `man_game_do_portal_transition`
-- Otherwise: red border flash (placeholder)
+- A `STATUS_PLAYER_BULLET` hitting `STATUS_ENEMY` destroys both.
+- A `STATUS_ENEMY_BULLET` hitting `STATUS_PLAYER` destroys the bullet and flashes the border red/black for six frames.
 
 ### Portal Teleportation
 

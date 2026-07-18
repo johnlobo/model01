@@ -102,6 +102,10 @@ null_ptr = 0x0000
 ;; entity status types
 STATUS_NORMAL = 0x00   ;; default entity status
 STATUS_PORTAL = 0x01   ;; portal entity — triggers room transition on AABB collision
+STATUS_PLAYER = 0x02
+STATUS_ENEMY = 0x03
+STATUS_PLAYER_BULLET = 0x04
+STATUS_ENEMY_BULLET = 0x05
 
 ;; game status
 g_status_fight              = 0x00

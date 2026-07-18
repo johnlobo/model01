@@ -132,7 +132,8 @@ man_entity_create_player_player::
     ld hl, #player_template
     call sys_array_create_element
     ld__ix_hl
-    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_input | c_cmp_animated)
+    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_collisionable | c_cmp_input | c_cmp_animated)
+    ld e_status(ix), #STATUS_PLAYER
     ld e_moved(ix), #1
     ld hl, #monk_idle_anim
     ld e_anim(ix), l
@@ -155,6 +156,7 @@ man_entity_create_patrol_enemy::
     call sys_array_create_element
     ld__ix_hl
     ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_ai | c_cmp_animated | c_cmp_collisionable)
+    ld e_status(ix), #STATUS_ENEMY
     ld e_moved(ix), #1
     ld hl, #monk_walk_right_anim
     ld e_anim(ix), l
@@ -234,7 +236,8 @@ man_entity_create_player_bullet::
     ld__ix_hl
     pop de                  ;; restore room (D) and speed (E)
     pop bc                  ;; restore spawn x (B) and y (C)
-    ld e_cmps(ix), #(c_cmp_render | c_cmp_projectile)
+    ld e_cmps(ix), #(c_cmp_render | c_cmp_projectile | c_cmp_collider)
+    ld e_status(ix), #STATUS_PLAYER_BULLET
     ld e_x(ix), b
     ld e_y(ix), c
     ld e_room(ix), d
@@ -268,7 +271,8 @@ man_entity_create_enemy_bullet::
     ld__ix_hl
     pop de                  ;; restore room (D) and speed (E)
     pop bc                  ;; restore spawn x (B) and y (C)
-    ld e_cmps(ix), #(c_cmp_render | c_cmp_projectile)
+    ld e_cmps(ix), #(c_cmp_render | c_cmp_projectile | c_cmp_collider)
+    ld e_status(ix), #STATUS_ENEMY_BULLET
     ld e_x(ix), b
     ld e_y(ix), c
     ld e_room(ix), d
