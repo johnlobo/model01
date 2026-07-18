@@ -40,6 +40,7 @@ FRONT_BUFFER = 0xc000
 ;; PUBLIC METHODS
 ;;===============================================================================
 .globl sys_render_init
+.globl sys_render_prepare
 .globl sys_render_update
 
 

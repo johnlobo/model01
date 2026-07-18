@@ -34,7 +34,7 @@
 .area _DATA
 
 FONT_NUMBERS: .dw #0000
-_welcome_string: .asciz "WELCOME - V.032"   ;;
+_welcome_string: .asciz "WELCOME - V.033"   ;;
 
 
 sys_render_front_buffer: .db 0xc0
@@ -43,6 +43,17 @@ sys_render_touched_zones: .db 0x00
 
 _x_coord_base: .db #0
 _y_coord_base: .db #0
+
+;; Front-buffer render queue. It is built before VSYNC so sorting consumes no
+;; active display time. Pointers and cached Y coordinates are kept separately:
+;; this avoids moving full entity structs and preserves ECS iteration order.
+render_queue_count:         .db 0
+render_queue_y:             .ds MAX_ENTITIES
+render_queue_ptr:           .ds MAX_ENTITIES * 2
+render_queue_candidate_y:   .db 0
+render_queue_candidate_ptr: .dw 0
+render_queue_insert_at:     .db 0
+render_queue_iter:          .db 0
 
 
 ;;
@@ -132,6 +143,126 @@ sys_render_init::
 
     ;;cpctm_clearScreen_asm 0                 ;; Clear screen
 
+    ret
+
+;;-----------------------------------------------------------------
+;;
+;; sys_render_prepare
+;;
+;;  Builds an auxiliary queue containing pointers to visible render entities,
+;;  ordered by ascending world Y. Insertion sort is appropriate here because
+;;  the pool is small (MAX_ENTITIES) and entity order changes only gradually.
+;;  This work deliberately runs before VSYNC.
+;;
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX, IY
+;;
+sys_render_prepare::
+    xor a
+    ld (render_queue_count), a
+
+    ld ix, #entities
+    ld a, a_count(ix)
+    or a
+    ret z
+    ld b, a
+
+    push ix
+    pop hl
+    ld de, #a_array
+    add hl, de
+    push hl
+    pop iy
+
+srp_collect_loop:
+    push bc
+
+    ld a, x_cmps(iy)
+    and #c_cmp_render
+    jr z, srp_next_entity
+    ld a, (current_room)
+    cp e_room(iy)
+    jr nz, srp_next_entity
+
+    ld a, e_y(iy)
+    ld (render_queue_candidate_y), a
+    push iy
+    pop hl
+    ld (render_queue_candidate_ptr), hl
+
+    ld a, (render_queue_count)
+    ld (render_queue_insert_at), a
+
+srp_find_slot:
+    ld a, (render_queue_insert_at)
+    or a
+    jr z, srp_place
+    dec a                              ;; A = preceding slot
+    ld e, a
+    ld d, #0
+    ld hl, #render_queue_y
+    add hl, de
+    ld a, (render_queue_candidate_y)
+    cp (hl)
+    jr nc, srp_place                   ;; candidate_y >= preceding_y
+
+    ;; Shift preceding cached Y one slot to the right.
+    ld a, (hl)
+    inc hl
+    ld (hl), a
+
+    ;; Shift its pointer one slot to the right.
+    ld a, (render_queue_insert_at)
+    dec a
+    add a, a
+    ld e, a
+    ld d, #0
+    ld hl, #render_queue_ptr
+    add hl, de                         ;; HL = preceding pointer
+    ld e, (hl)
+    inc hl
+    ld d, (hl)
+    inc hl                             ;; HL = destination pointer
+    ld (hl), e
+    inc hl
+    ld (hl), d
+
+    ld a, (render_queue_insert_at)
+    dec a
+    ld (render_queue_insert_at), a
+    jr srp_find_slot
+
+srp_place:
+    ld a, (render_queue_insert_at)
+    ld e, a
+    ld d, #0
+    ld hl, #render_queue_y
+    add hl, de
+    ld a, (render_queue_candidate_y)
+    ld (hl), a
+
+    ld a, (render_queue_insert_at)
+    add a, a
+    ld e, a
+    ld d, #0
+    ld hl, #render_queue_ptr
+    add hl, de
+    ld de, (render_queue_candidate_ptr)
+    ld (hl), e
+    inc hl
+    ld (hl), d
+
+    ld a, (render_queue_count)
+    inc a
+    ld (render_queue_count), a
+
+srp_next_entity:
+    ld de, #sizeof_e
+    add iy, de
+    pop bc
+    dec b
+    jp nz, srp_collect_loop
     ret
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -460,19 +591,61 @@ sys_render_one_entity::
 ;;  Modified: AF, BC, DE, HL
 ;;
 sys_render_entities::
-   ;; Pass 1: restore tiles at all entities' previous positions.
-   ;; Only runs for entities with e_moved=1, so static entities are untouched.
-   ld ix, #entities
-   ld b, #c_cmp_render
-   ld hl, #sys_render_restore_one_entity
-   call sys_array_execute_each_ix_matching
+   ld a, (render_queue_count)
+   or a
+   ret z
 
-   ;; Pass 2: draw all entities at their current positions.
-   ;; Always draws every entity so that any sprite erased by Pass 1 is redrawn.
-   ld ix, #entities
-   ld b, #c_cmp_render
-   ld hl, #sys_render_one_entity
-   call sys_array_execute_each_ix_matching
+   ;; Pass 1 runs bottom-to-top. The topmost dirty region is therefore the last
+   ;; one erased, immediately before the top-to-bottom draw pass begins.
+   dec a
+   ld (render_queue_iter), a
+sre_restore_loop:
+   ld a, (render_queue_iter)
+   add a, a
+   ld e, a
+   ld d, #0
+   ld hl, #render_queue_ptr
+   add hl, de
+   ld e, (hl)
+   inc hl
+   ld d, (hl)
+   push de
+   pop ix
+   call sys_render_restore_one_entity
+
+   ld a, (render_queue_iter)
+   or a
+   jr z, sre_draw_start
+   dec a
+   ld (render_queue_iter), a
+   jr sre_restore_loop
+
+   ;; Pass 2 runs top-to-bottom, following the CRT raster. Every entity is
+   ;; redrawn because a neighbouring tile restore may have erased part of it.
+sre_draw_start:
+   xor a
+   ld (render_queue_iter), a
+sre_draw_loop:
+   ld a, (render_queue_iter)
+   add a, a
+   ld e, a
+   ld d, #0
+   ld hl, #render_queue_ptr
+   add hl, de
+   ld e, (hl)
+   inc hl
+   ld d, (hl)
+   push de
+   pop ix
+   call sys_render_one_entity
+
+   ld a, (render_queue_iter)
+   inc a
+   ld (render_queue_iter), a
+   ld b, a
+   ld a, (render_queue_count)
+   cp b
+   jr nz, sre_draw_loop
    ret
 
    ;;-----------------------------------------------------------------

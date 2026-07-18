@@ -58,8 +58,9 @@ Entry point is `_main::` in `src/main.s`. After firmware disable and video init,
 6. `sys_beh_update` — bytecode behavior state machine
 7. `sys_collision_update` — AABB detection
 8. `sys_anim_update` — advance animation frames
-9. `cpct_waitVSYNC_asm` — wait for vsync
-10. `sys_render_update` — two-pass tile restore + entity redraw
+9. `sys_render_prepare` — build the Y-sorted render queue before vsync
+10. `cpct_waitVSYNC_asm` — wait for vsync
+11. `sys_render_update` — restore bottom-to-top, then redraw top-to-bottom
 
 ### Coordinate System
 
@@ -176,9 +177,9 @@ Two bullet templates in `src/man/entity.s`, using sprites `_s_obj_1` (player) / 
 
 ### Render System (`src/sys/render.s`)
 
-Two-pass per frame:
-1. **Restore pass** — for each entity with `e_moved=1`, redraws map tiles under `e_p_x`/`e_p_y` (previous draw position). All restores happen before any entity is redrawn.
-2. **Draw pass** — draws every entity at current world position (translated by map origin) using `cpct_drawSpriteMaskedAlignedTable_asm`. Saves current pos to `e_p_x`/`e_p_y`. Sets `e_p_address` non-zero as "has been drawn" sentinel.
+`sys_render_prepare` builds a pointer queue ordered by world Y before VSYNC. Rendering then uses two ordered passes:
+1. **Restore pass, bottom-to-top** — for each entity with `e_moved=1`, redraws map tiles under `e_p_x`/`e_p_y` (previous draw position). Reversing the queue makes the topmost erase happen immediately before drawing starts.
+2. **Draw pass, top-to-bottom** — follows the CRT raster and draws every entity at its current world position using `cpct_drawSpriteMaskedAlignedTable_asm`. Saves current position and sets `e_p_address` as the "has been drawn" sentinel.
 
 `sys_render_front_buffer = 0xC000`, `sys_render_back_buffer = 0x8000`.
 

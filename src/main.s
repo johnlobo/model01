@@ -31,7 +31,7 @@
 ;;
 .area _DATA
 
-_game_loaded_string: .asciz " GAME LOADED - V.032"      ;;27 chars, 54 bytes
+_game_loaded_string: .asciz " GAME LOADED - V.033"      ;;27 chars, 54 bytes
 
 ;; The transparency table must be 256-byte aligned at runtime, but it is NOT
 ;; emitted as an absolute area any more. Doing that made &0100 the binary's

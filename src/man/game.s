@@ -98,6 +98,7 @@ man_game_update::
     call sys_beh_update
     call sys_collision_update
     call sys_anim_update
+    call sys_render_prepare
     call cpct_waitVSYNC_asm
     call sys_render_update
     ret
