@@ -46,12 +46,6 @@ BEH_MAX_ACTIONS_PER_TICK = 16
 .globl sys_beh_call_hl
 
 ;;===============================================================================
-;; SHARED BEHAVIORS
-;;===============================================================================
-.globl beh_bounce_behavior      ;; simple left-right patrol
-.globl beh_patrol_behavior      ;; platform patrol with edge detection
-
-;;===============================================================================
 ;; ACTIONS
 ;;===============================================================================
 .globl beh_action_idle          ;; blocking — enter condition check immediately
@@ -62,7 +56,6 @@ BEH_MAX_ACTIONS_PER_TICK = 16
 .globl beh_action_set_animation ;; arg: .dw anim_descriptor_ptr
 .globl beh_action_set_moved     ;; mark entity dirty for renderer (no args)
 .globl beh_action_drive_vx     ;; blocking — re-apply speed each frame; arg: .db speed_x
-.globl beh_action_shoot        ;; non-blocking — fire an enemy bullet; arg: .db signed speed_x
 
 ;;===============================================================================
 ;; CONDITIONS
@@ -156,13 +149,4 @@ BEH_MAX_ACTIONS_PER_TICK = 16
 .macro DRIVE_VX _vx, _stride
     .dw beh_action_drive_vx
     .db _vx, _stride
-.endm
-
-;; SHOOT speed — non-blocking: fire an enemy bullet from the entity's
-;; current position at 'speed' bytes/frame (+right, -left). The bullet is
-;; a separate entity moved by sys_shoot_update (see man/entity.h.s).
-;; Skipped silently if the entity pool (MAX_ENTITIES) is full.
-.macro SHOOT _speed
-    .dw beh_action_shoot
-    .db _speed
 .endm

@@ -64,6 +64,7 @@ struct Symbols {
     uint16_t collision_set_handler;
     uint16_t collision_on_hit;
     uint16_t game_collision_handler;
+    uint16_t game_collision_init;
     uint16_t beh_update_one;
     uint16_t beh_action_idle;
     uint16_t beh_action_set_vx;
@@ -154,7 +155,8 @@ static uint16_t *symbol_slot(struct Symbols *symbols, const char *name) {
     if (!strcmp(name, "sys_collision_init")) return &symbols->collision_init;
     if (!strcmp(name, "sys_collision_set_handler")) return &symbols->collision_set_handler;
     if (!strcmp(name, "sys_collision_on_hit")) return &symbols->collision_on_hit;
-    if (!strcmp(name, "man_game_on_collision")) return &symbols->game_collision_handler;
+    if (!strcmp(name, "game_collision_on_hit")) return &symbols->game_collision_handler;
+    if (!strcmp(name, "game_collision_init")) return &symbols->game_collision_init;
     if (!strcmp(name, "sys_beh_update_one_entity")) return &symbols->beh_update_one;
     if (!strcmp(name, "beh_action_idle")) return &symbols->beh_action_idle;
     if (!strcmp(name, "beh_action_set_vx")) return &symbols->beh_action_set_vx;
@@ -504,8 +506,7 @@ static void test_collision_handler_contract(struct Machine *machine) {
 
     reset_fixture(machine);
     prepare_collision_entities(machine);
-    z80ex_set_reg(machine->cpu, regHL, machine->symbols.game_collision_handler);
-    run_routine(machine, machine->symbols.collision_set_handler);
+    run_routine(machine, machine->symbols.game_collision_init);
     z80ex_reset(machine->cpu);
     z80ex_set_reg(machine->cpu, regIX, TEST_COLLIDER);
     z80ex_set_reg(machine->cpu, regIY, TEST_COLLISIONABLE);

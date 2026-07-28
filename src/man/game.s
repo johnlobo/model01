@@ -28,6 +28,7 @@
 .include "sys/mem.h.s"
 .include "sys/shoot.h.s"
 .include "sys/messages.h.s"
+.include "game/collision.h.s"
 .include "man/menu.h.s"
 .include "man/entity.h.s"
 
@@ -36,10 +37,8 @@
 ;;
 .area _DATA
 
-COLLISION_BORDER_FLASH_FRAMES = 6
 mgct_new_pos:        .db 0  ;; new player coordinate (e_x or e_y) during a room transition
 mgct_portal_dest_y:  .db 0  ;; saved portal destination y coordinate
-man_game_collision_border_flash: .db 0
 man_game_quit_dialog_active: .db 0
 man_game_quit_dialog_response: .db 0  ;; 0=none, 1=cancel, 2=confirm
 man_game_quit_message: .asciz "QUIT TO MAIN MENU?  Y / N"
@@ -60,7 +59,6 @@ man_game_quit_message: .asciz "QUIT TO MAIN MENU?  Y / N"
 ;;
 man_game_init::
     xor a
-    ld (man_game_collision_border_flash), a
     ld (man_game_quit_dialog_active), a
     ld (man_game_quit_dialog_response), a
     ld (current_room), a
@@ -71,8 +69,7 @@ man_game_init::
     call man_entity_init
     call sys_input_init
     call sys_collision_init
-    ld hl, #man_game_on_collision
-    call sys_collision_set_handler
+    call game_collision_init
     call man_entity_create_player_player
     call man_entity_create_patrol_enemy
 
@@ -119,7 +116,7 @@ man_game_update::
     ld ix, #entity_array
     call sys_input_update
     call sys_beh_update
-    call man_game_update_collision_effects
+    call game_collision_update_effects
     call sys_collision_update
     call sys_anim_update
     call sys_render_prepare
@@ -180,68 +177,6 @@ man_game_cancel_quit::
 man_game_confirm_quit::
     ld a, #2
     ld (man_game_quit_dialog_response), a
-    ret
-
-;;-----------------------------------------------------------------
-;; Game-specific response to a collision detected by the engine.
-;; Input: IX = collider, IY = collisionable. IX and IY are preserved by the
-;; collision dispatcher, so this handler may use them freely before returning.
-man_game_on_collision::
-    ;; Player projectile -> enemy: remove both entities.
-    ld a, e_status(ix)
-    cp #STATUS_PLAYER_BULLET
-    jr nz, mgoc_check_enemy_bullet
-    ld a, e_status(iy)
-    cp #STATUS_ENEMY
-    ret nz
-    call sys_collision_destroy_entity
-    push ix
-    push iy
-    pop ix
-    call sys_collision_destroy_entity
-    pop ix
-    ret
-
-mgoc_check_enemy_bullet:
-    ;; Enemy projectile -> player: consume the bullet and flash the border.
-    cp #STATUS_ENEMY_BULLET
-    jr nz, mgoc_check_portal
-    ld a, e_status(iy)
-    cp #STATUS_PLAYER
-    ret nz
-    call sys_collision_destroy_entity
-    ld a, #COLLISION_BORDER_FLASH_FRAMES
-    ld (man_game_collision_border_flash), a
-    cpctm_setBorder_asm HW_RED
-    ret
-
-mgoc_check_portal:
-    ;; Only the player may activate a portal collision.
-    ld a, e_status(ix)
-    cp #STATUS_PLAYER
-    ret nz
-    ld a, e_status(iy)
-    cp #STATUS_PORTAL
-    ret nz
-    ld a, e_on_air(iy)              ;; repurposed as active flag
-    or a
-    ret z
-    jp man_game_do_portal_transition
-
-;; Advance the game-specific damage flash and guarantee a black final state.
-man_game_update_collision_effects:
-    ld a, (man_game_collision_border_flash)
-    or a
-    ret z
-    dec a
-    ld (man_game_collision_border_flash), a
-    jr z, mguce_black
-    bit 0, a
-    jr nz, mguce_black
-    cpctm_setBorder_asm HW_RED
-    ret
-mguce_black:
-    cpctm_setBorder_asm HW_BLACK
     ret
 
 ;;-----------------------------------------------------------------

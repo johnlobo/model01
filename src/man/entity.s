@@ -20,7 +20,7 @@
 .include "common.h.s"
 .include "sys/array.h.s"
 .include "sys/util.h.s"
-.include "sys/beh.h.s"
+.include "game/behaviors.h.s"
 .include "sys/shoot.h.s"
 
 ;;
@@ -148,7 +148,7 @@ man_entity_create_player_player::
 ;; man_entity_create_patrol_enemy
 ;;
 ;;  Creates a patrol enemy on the top platform.
-;;  Uses the monk sprite and animations. Runs beh_patrol_behavior.
+;;  Uses the monk sprite and animations. Runs game_beh_patrol.
 ;;  Input:
 ;;  Output:
 ;;  Modified: AF, HL, IX
@@ -165,7 +165,7 @@ man_entity_create_patrol_enemy::
     ld hl, #monk_walk_right_anim
     ld e_anim(ix), l
     ld e_anim+1(ix), h
-    ld hl, #beh_patrol_behavior
+    ld hl, #game_beh_patrol
     ld e_beh(ix), l
     ld e_beh+1(ix), h
     or a

@@ -48,6 +48,14 @@ There is also `_game_loaded_string` in `src/main.s` — keep it in sync.
 
 ## Architecture
 
+### Framework / game boundary
+
+- `src/sys/` contains reusable mechanisms: array storage, behavior bytecode interpretation, AABB detection/dispatch, physics, animation, rendering, maps, input primitives, messages and memory banking. System code must not reference `src/game` symbols.
+- `src/game/` contains replaceable model01 rules and content. It currently owns the monk behavior programs, the projectile-firing behavior action, collision responses, portal policy and damage-border feedback.
+- `src/man/` is transitional orchestration/content left from the original layout. Its managers, entity schema/templates and remaining legacy `sys → man` callbacks will move behind the game boundary incrementally; do not treat it as framework API.
+
+The enforced first boundary is that `src/sys` must not import `src/game`. New integration follows `game → sys`; generic systems expose callbacks or function-pointer bytecode entries instead of calling new game rules directly.
+
 ### Game Loop
 
 Entry point is `_main::` in `src/main.s`. After firmware disable and low-memory initialization it calls `man_menu_init`. The main loop dispatches by `app_state`: `APP_STATE_MENU` calls `man_menu_update`, while `APP_STATE_GAME` calls `man_game_update`.
@@ -64,7 +72,7 @@ Menu input uses `sys_input_generic_update`, like gameplay input, plus a release 
 3. `man_game_check_transition` — room-edge transitions
 4. `sys_input_update` — keyboard dispatch (IX = player entity)
 5. `sys_beh_update` — bytecode behavior state machine
-6. `man_game_update_collision_effects` — game-owned hit feedback
+6. `game_collision_update_effects` — game-owned hit feedback
 7. `sys_collision_update` — AABB detection and callback dispatch
 8. `sys_anim_update` — advance animation frames
 9. `sys_render_prepare` — build the Y-sorted render queue before vsync
@@ -176,7 +184,7 @@ Condition functions return Z=1 for true, Z=0 for false. Built-in: `beh_cond_true
 
 `DESTROY_ENTITY (= 0x0000)` — use as the `CONDITION` target to remove an entity.
 
-Built-in behaviors: `beh_bounce_behavior` (timed left/right patrol), `beh_patrol_behavior` (edge-detecting patrol, reverses on `edge_ahead`, switches walk animation to match direction).
+Generic actions and conditions live in `src/sys/beh.s`. Concrete example programs live in `src/game/behaviors.s`: `game_beh_bounce` (timed left/right patrol) and `game_beh_patrol` (edge-detecting patrol, reverses on `edge_ahead`, switches walk animation to match direction).
 
 ### Shooting System (`src/sys/shoot.s`)
 
@@ -187,7 +195,7 @@ Two bullet templates in `src/man/entity.s`, using sprites `_s_obj_1` (player) / 
 
 **Player** fires via key Q (`sys_input_shoot` in `src/sys/input.s`), subject to `PLAYER_SHOOT_COOLDOWN` (10 frames, ticked in `sys_input_update`). Spawn edge and bullet direction follow `player_facing` (0=right/1=left), updated by `sys_input_selected_left`/`_right`.
 
-**AI** fires via the `SHOOT speed` behavior DSL macro (`src/sys/beh.h.s` / `beh_action_shoot` in `beh.s`) — a non-blocking action that spawns an enemy bullet at the entity's current position, then chains to the next action. `beh_patrol_behavior` calls `SHOOT #-3` / `SHOOT #3` at each direction reversal as the reference example. Because the entity-creation call clobbers IX, `beh_action_shoot` saves/restores the shooter's IX around it before calling `sys_beh_next`.
+**AI** firing is deliberately game-owned. `GAME_SHOOT speed` and `game_beh_action_shoot` live in `src/game/behaviors.*`; they demonstrate how a game adds a non-blocking custom action on top of the generic `ACTION` contract. `game_beh_patrol` fires at direction reversals. Because the entity factory clobbers IX, the action saves/restores the shooter before calling `sys_beh_next`.
 
 **Entity pool capacity:** `DefineArrayStructure` now stores the array's capacity in `a_max_count` (was an unused `a_delta` byte). `sys_array_create_element` refuses to add past `a_max_count` (returns HL unchanged) — relevant here because bullets are created dynamically at runtime, unlike the other entities which are all created once at `man_game_init`.
 
@@ -203,7 +211,7 @@ Two bullet templates in `src/man/entity.s`, using sprites `_s_obj_1` (player) / 
 
 `sys_collision_update` iterates all `c_cmp_collider` entities (outer IX loop) against all `c_cmp_collisionable` entities (inner IY loop) doing AABB checks.
 
-The engine owns only AABB detection and dispatch. `sys_collision_set_handler` registers a callback receiving IX=collider and IY=collisionable; passing HL=0 restores the no-op handler. The dispatcher preserves IX and IY around the callback. `man_game_init` registers `man_game_on_collision`, which contains the rules specific to this example game:
+The engine owns only AABB detection and dispatch. `sys_collision_set_handler` registers a callback receiving IX=collider and IY=collisionable; passing HL=0 restores the no-op handler. The dispatcher preserves IX and IY around the callback. `game_collision_init` registers `game_collision_on_hit` from `src/game/collision.s`, which contains the rules specific to this example game:
 
 - An active portal teleports only `STATUS_PLAYER`; other colliders cannot trigger it.
 - A `STATUS_PLAYER_BULLET` hitting `STATUS_ENEMY` destroys both.

@@ -13,57 +13,6 @@
 ;;
 .area _DATA
 
-;;-----------------------------------------------------------------
-;; beh_bounce_behavior
-;;
-;; A simple patrol: move right for ~60 frames, then left, repeat.
-;; Entities must have c_cmp_movable for physics to apply speed.
-;;-----------------------------------------------------------------
-beh_bounce_behavior::
-    SET_VX #2
-beh_bounce_wait_right::
-    WAIT 60, beh_bounce_go_left
-    CONDITIONS_END
-beh_bounce_go_left::
-    SET_VX #-2
-    WAIT 60, beh_bounce_behavior
-    CONDITIONS_END
-
-;;-----------------------------------------------------------------
-;; beh_patrol_behavior
-;;
-;; Platform patrol: move right until the tile below the leading foot
-;; becomes passable (edge detected), then reverse direction and
-;; switch to the matching walk animation. Repeats indefinitely.
-;; Requires c_cmp_movable and c_cmp_animated on the entity.
-;;-----------------------------------------------------------------
-beh_patrol_behavior::
-    SET_ANIMATION monk_walk_right_anim
-beh_patrol_moving_right::
-    DRIVE_VX #1, #4
-    CONDITION edge_ahead, beh_patrol_turn_left
-    CONDITIONS_END
-
-beh_patrol_turn_left::
-    SET_ANIMATION monk_walk_left_anim
-    SHOOT #-2                  ;; fire an enemy bullet toward the new direction (bytes/step; see ENEMY_BULLET_STRIDE in shoot.h.s)
-    ;; fall through to beh_patrol_moving_left
-beh_patrol_moving_left::
-    DRIVE_VX #-1, #4
-    CONDITION edge_ahead, beh_patrol_turn_right
-    CONDITIONS_END
-
-beh_patrol_turn_right::
-    SET_ANIMATION monk_walk_right_anim
-    SHOOT #2                   ;; fire an enemy bullet toward the new direction (bytes/step; see ENEMY_BULLET_STRIDE in shoot.h.s)
-    GOTO beh_patrol_moving_right
-
-;;-----------------------------------------------------------------
-;; beh_shoot_speed — scratch byte: inline arg of the SHOOT action,
-;; stashed here so it survives the entity-creation call (which
-;; clobbers registers) before being read back as E for the factory.
-;;-----------------------------------------------------------------
-beh_shoot_speed:: .db 0
 sys_beh_actions_left:: .db 0
 
 ;;
@@ -344,56 +293,6 @@ bdvx_tick:
 bdvx_done:
     ld e_moved(ix), #1
     jp sys_beh_check_conditions
-
-;;-----------------------------------------------------------------
-;; beh_action_shoot
-;;
-;;  Non-blocking: spawns an enemy bullet at the entity's current
-;;  position, moving at the inline signed speed argument. The entity
-;;  factory silently skips creation if no append or recycled slot is available.
-;;
-;;  IX must be restored to the calling (shooter) entity before
-;;  chaining to sys_beh_next, since the bullet factory clobbers IX.
-;;
-beh_action_shoot::
-    ld a, (de)                  ;; A = inline signed speed
-    ld (beh_shoot_speed), a
-    inc de                      ;; DE -> next action (preserve across factory call)
-    push de                     ;; save behavior program pointer
-    push ix                     ;; save shooter entity pointer
-
-    pop ix                       ;; ix = shooter (read fields below)
-    push ix                      ;; keep saved for restore after the factory call
-
-    ;; Spawn from the leading edge in the direction of travel, matching the
-    ;; player's own sys_input_shoot — not the entity's raw e_x, which would
-    ;; spawn the bullet from its back (behind the shooter, not in front).
-    ld a, (beh_shoot_speed)
-    bit 7, a                     ;; speed < 0: firing left
-    jr nz, bas_left
-
-    ld a, e_x(ix)
-    add a, e_width(ix)
-    ld b, a                      ;; B = spawn x (right edge)
-    jr bas_spawn_y
-
-bas_left:
-    ld a, e_x(ix)
-    sub #S_BULLET_WIDTH
-    ld b, a                      ;; B = spawn x (left edge)
-
-bas_spawn_y:
-    ld c, e_y(ix)
-    ld a, e_room(ix)
-    ld d, a
-    ld a, (beh_shoot_speed)
-    ld e, a
-    call man_entity_create_enemy_bullet   ;; clobbers ix -> new bullet
-
-bas_skip:
-    pop ix                       ;; restore shooter entity pointer
-    pop de                       ;; restore behavior program pointer
-    jp sys_beh_next
 
 ;;-----------------------------------------------------------------
 ;; beh_action_set_animation
