@@ -36,6 +36,9 @@ Generic ECS masks and structure declaration helpers live separately in
 definitions directly; the former `common.h.s` compatibility facade is gone.
 Declaration-only headers made redundant by `globals.inc` have been removed;
 headers remain only where they provide constants, layouts or macros.
+World geometry and physics policy are compile-time parameters in
+`src/config.h.s`, preserving CPC performance while allowing a new game to tune
+gravity, terminal velocity and which component receives friction.
 
 The former `src/man/` layer has been removed. The reusable entity schema/pool
 lives in `src/sys/entity.*`; lifecycle and concrete content live here.

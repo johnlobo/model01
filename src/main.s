@@ -31,7 +31,7 @@
 ;;
 .area _DATA
 
-_game_loaded_string: .asciz " GAME LOADED - V.070"      ;;27 chars, 54 bytes
+_game_loaded_string: .asciz " GAME LOADED - V.071"      ;;27 chars, 54 bytes
 app_state:: .db APP_STATE_MENU
 
 ;; The transparency table must be 256-byte aligned at runtime, but it is NOT

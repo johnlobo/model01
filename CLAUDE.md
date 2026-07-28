@@ -42,7 +42,7 @@ cpct_rvm -as -f       # macOS
 
 ## Version String
 
-`game_menu_version` in `src/game/menu.s` (e.g. `"VERSION - V.070"`) is displayed at the bottom of the main menu. **Bump this after every significant change.**
+`game_menu_version` in `src/game/menu.s` (e.g. `"VERSION - V.071"`) is displayed at the bottom of the main menu. **Bump this after every significant change.**
 
 There is also `_game_loaded_string` in `src/main.s` — keep it in sync.
 
@@ -89,6 +89,9 @@ Entities use **world coordinates** (origin = map top-left):
 **`map_origin_y` must be a multiple of 8** — the SP-hijack tile draw only works correctly at character-row boundaries.
 
 `GROUND_LEVEL = MAP_HEIGHT * 8 - 1 = 159` is the hard-floor fallback in world space.
+Gravity, maximum fall speed and the component bit that receives horizontal
+friction are compile-time parameters in `src/config.h.s`, so changing them adds
+no runtime indirection.
 
 ### Entity Component System
 

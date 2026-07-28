@@ -24,12 +24,6 @@
 .include "sys/entity.h.s"
 
 ;;
-;; Start of _DATA area 
-;;
-GRAVITY = 1
-MAX_FALL_SPEED = 8
-;; Jump speed constants are in sys/input.s (JUMP_SPEED_MIN / JUMP_SPEED_MAX)
-
 .area _DATA
 
 
@@ -71,9 +65,9 @@ sys_physics_update_one_entity::
     or a                            ;; check if horizontal speed is zero
     jp z, spuoe_vertical_movement   ;; jump if horizontal speed is zero
 
-    ;; Friction: only apply for player-controlled entities (c_cmp_input = 0x04)
-    bit 2, e_cmps(ix)
-    jr z, spuoe_h_no_friction       ;; AI/physics-driven: skip friction
+    ;; Apply friction only to entities carrying the configured component bit.
+    bit PHYSICS_FRICTION_COMPONENT_BIT, e_cmps(ix)
+    jr z, spuoe_h_no_friction
     call sys_utiL_reduce_a          ;; apply friction to horizontal speed
     ld e_speed_x(ix), a             ;; update horizontal speed
 spuoe_h_no_friction:
@@ -183,13 +177,13 @@ spuoe_vertical_movement:
 
 spuoe_apply_gravity:
     ld a, e_speed_y(ix)
-    add a, #GRAVITY
-    ;; Cap positive speed_y at MAX_FALL_SPEED to prevent tunneling through tiles
+    add a, #PHYSICS_GRAVITY
+    ;; Cap positive speed_y to prevent tunneling through tiles.
     bit 7, a                    ;; is new speed negative (moving up)?
     jr nz, spuoe_no_cap         ;; negative: don't cap
-    cp #MAX_FALL_SPEED + 1      ;; A >= MAX_FALL_SPEED+1?
-    jr c, spuoe_no_cap          ;; A < MAX_FALL_SPEED+1: no cap needed
-    ld a, #MAX_FALL_SPEED       ;; cap at MAX_FALL_SPEED
+    cp #PHYSICS_MAX_FALL_SPEED + 1
+    jr c, spuoe_no_cap
+    ld a, #PHYSICS_MAX_FALL_SPEED
 spuoe_no_cap:
     ld e_speed_y(ix), a
 
