@@ -32,6 +32,10 @@ enum {
     E_X = 2,
     E_Y = 3,
     E_SPEED_X = 12,
+    E_SPEED_Y = 14,
+    E_ON_AIR = 16,
+    E_WIDTH = 17,
+    E_HEIGHT = 18,
     E_SPRITE = 20,
     E_MOVED = 22,
     E_ANIM = 23,
@@ -73,6 +77,7 @@ struct Symbols {
     uint16_t beh_cond_true;
     uint16_t beh_actions_left;
     uint16_t anim_set;
+    uint16_t physics_update_one;
     uint16_t idle_anim;
     uint16_t walk_right_anim;
     uint16_t monk_0;
@@ -167,6 +172,7 @@ static uint16_t *symbol_slot(struct Symbols *symbols, const char *name) {
     if (!strcmp(name, "beh_cond_true")) return &symbols->beh_cond_true;
     if (!strcmp(name, "sys_beh_actions_left")) return &symbols->beh_actions_left;
     if (!strcmp(name, "sys_anim_set")) return &symbols->anim_set;
+    if (!strcmp(name, "sys_physics_update_one_entity")) return &symbols->physics_update_one;
     if (!strcmp(name, "game_monk_idle_anim")) return &symbols->idle_anim;
     if (!strcmp(name, "game_monk_walk_right_anim")) return &symbols->walk_right_anim;
     if (!strcmp(name, "_s_monk_0")) return &symbols->monk_0;
@@ -589,6 +595,101 @@ static void test_animation_set(struct Machine *machine) {
            get_word(machine->memory, entity + E_SPRITE) == machine->symbols.monk_2);
 }
 
+static uint16_t prepare_physics_entity(struct Machine *machine) {
+    uint16_t entity = machine->symbols.entity_array;
+    reset_fixture(machine);
+    z80ex_set_reg(machine->cpu, regHL, machine->symbols.tile_solid_table);
+    run_routine(machine, machine->symbols.map_set_collision_table);
+    memset(machine->memory + TEST_MAP_ADDRESS, 0, MAP_WIDTH * MAP_HEIGHT);
+    set_word(machine->memory, machine->symbols.current_map_data, TEST_MAP_ADDRESS);
+    machine->memory[machine->symbols.current_room] = 0;
+    memset(machine->memory + entity, 0, ENTITY_SIZE);
+    machine->memory[entity + E_X] = 10;
+    machine->memory[entity + E_Y] = 20;
+    machine->memory[entity + E_WIDTH] = 5;
+    machine->memory[entity + E_HEIGHT] = 16;
+    machine->memory[entity + E_ROOM] = 0;
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regIX, entity);
+    return entity;
+}
+
+static void test_physics_contract(struct Machine *machine) {
+    uint16_t entity;
+
+    entity = prepare_physics_entity(machine);
+    machine->memory[entity + E_ON_AIR] = 1;
+    run_routine(machine, machine->symbols.physics_update_one);
+    report("gravity accelerates an airborne entity",
+           machine->memory[entity + E_SPEED_Y] == 1 &&
+           machine->memory[entity + E_Y] == 21 &&
+           machine->memory[entity + E_MOVED] == 1);
+
+    entity = prepare_physics_entity(machine);
+    machine->memory[entity + E_ON_AIR] = 1;
+    machine->memory[entity + E_SPEED_Y] = 8;
+    run_routine(machine, machine->symbols.physics_update_one);
+    report("falling speed is capped at terminal velocity",
+           machine->memory[entity + E_SPEED_Y] == 8 &&
+           machine->memory[entity + E_Y] == 28);
+
+    entity = prepare_physics_entity(machine);
+    machine->memory[entity + E_CMPS] = 0x04; /* c_cmp_input */
+    machine->memory[entity + E_SPEED_X] = 2;
+    run_routine(machine, machine->symbols.physics_update_one);
+    report("configured input friction reduces horizontal speed",
+           machine->memory[entity + E_SPEED_X] == 1 &&
+           machine->memory[entity + E_X] == 11);
+
+    entity = prepare_physics_entity(machine);
+    machine->memory[entity + E_X] = 60;
+    machine->memory[entity + E_SPEED_X] = 2;
+    run_routine(machine, machine->symbols.physics_update_one);
+    report("physics clamps entities to the right world edge",
+           machine->memory[entity + E_X] == 59 &&
+           machine->memory[entity + E_SPEED_X] == 0);
+
+    entity = prepare_physics_entity(machine);
+    machine->memory[entity + E_Y] = 140;
+    machine->memory[entity + E_ON_AIR] = 1;
+    machine->memory[entity + E_SPEED_Y] = 4;
+    run_routine(machine, machine->symbols.physics_update_one);
+    report("falling entities land on the world floor",
+           machine->memory[entity + E_Y] == 144 &&
+           machine->memory[entity + E_SPEED_Y] == 0 &&
+           machine->memory[entity + E_ON_AIR] == 0);
+
+    entity = prepare_physics_entity(machine);
+    machine->memory[entity + E_Y] = 2;
+    machine->memory[entity + E_ON_AIR] = 1;
+    machine->memory[entity + E_SPEED_Y] = 0xfc; /* -4 */
+    run_routine(machine, machine->symbols.physics_update_one);
+    report("rising entities are clamped to the world ceiling",
+           machine->memory[entity + E_Y] == 0 &&
+           machine->memory[entity + E_SPEED_Y] == 0);
+
+    entity = prepare_physics_entity(machine);
+    machine->memory[TEST_MAP_ADDRESS + 4 * MAP_WIDTH + 2] = 2;
+    machine->memory[entity + E_Y] = 15;
+    machine->memory[entity + E_ON_AIR] = 1;
+    machine->memory[entity + E_SPEED_Y] = 1;
+    run_routine(machine, machine->symbols.physics_update_one);
+    report("falling entities land on solid map tiles",
+           machine->memory[entity + E_Y] == 16 &&
+           machine->memory[entity + E_SPEED_Y] == 0 &&
+           machine->memory[entity + E_ON_AIR] == 0);
+
+    entity = prepare_physics_entity(machine);
+    machine->memory[TEST_MAP_ADDRESS + 4 * MAP_WIDTH + 2] = 2;
+    machine->memory[entity + E_Y] = 34;
+    machine->memory[entity + E_ON_AIR] = 1;
+    machine->memory[entity + E_SPEED_Y] = 0xfd; /* -3 */
+    run_routine(machine, machine->symbols.physics_update_one);
+    report("rising entities stop below solid map tiles",
+           machine->memory[entity + E_Y] == 40 &&
+           machine->memory[entity + E_SPEED_Y] == 0);
+}
+
 int main(int argc, char **argv) {
     struct Machine machine;
     if (argc != 3) {
@@ -612,6 +713,7 @@ int main(int argc, char **argv) {
     test_collision_handler_contract(&machine);
     test_behavior_contract(&machine);
     test_animation_set(&machine);
+    test_physics_contract(&machine);
     printf("1..%d\n", tests_run);
     z80ex_destroy(machine.cpu);
     if (tests_failed) {
