@@ -122,7 +122,8 @@ blocking action
 ## Writing a new condition
 
 A condition function receives `IX = entity` and must return `Z=1` for true,
-`Z=0` for false.  Add its `.globl` to `beh.h.s` and define it in `beh.s`.
+`Z=0` for false. Register its `.globl` once in `src/globals.inc` and define it
+in the game module that owns the rule.
 
 ```asm
 ;; True when entity's x position is past the right screen edge (x >= 160)
@@ -134,7 +135,7 @@ beh_cond_off_screen_right::
     ret
 ```
 
-Add `beh_cond_off_screen_right` to the `.globl` list in `beh.h.s` and use it
+Add `beh_cond_off_screen_right` to `src/globals.inc` and use it
 in any condition table:
 
 ```asm
@@ -160,11 +161,12 @@ entity to have `c_cmp_movable` so physics applies the velocity.
 The following creates a sentry that patrols left and right, freezes for a
 moment when it reaches each end, and can be destroyed by marking it invalid.
 
-### Behaviour program (`src/entities/sentry.s`)
+### Behaviour program (`src/game/sentry.s`)
 
 ```asm
 .include "sys/beh.h.s"
-.include "man/entity.h.s"
+.include "sys/entity.h.s"
+.include "globals.inc"
 
 .module sentry
 
@@ -191,7 +193,7 @@ sentry_pause_left::
     CONDITIONS_END
 ```
 
-### Custom conditions (`src/entities/sentry.s`, continued)
+### Custom conditions (`src/game/sentry.s`, continued)
 
 ```asm
 .area _CODE
@@ -213,31 +215,34 @@ beh_cond_off_left_edge::
     ret
 ```
 
-> **Important:** register these symbols in `beh.h.s` with `.globl` before use.
+> **Important:** register `sentry_behavior` and both condition callbacks once
+> in `src/globals.inc` before using them from another assembly module.
 
-### Spawning the sentry (`src/man/entity.s` or similar)
+### Spawning the sentry (`src/game/entities.s` or similar)
 
 ```asm
 .include "sys/beh.h.s"
-.include "man/entity.h.s"
+.include "sys/entity.h.s"
+.include "globals.inc"
 
-;; Create a sentry at x=10, y=184 using the player template as a base
-man_entity_create_sentry::
-    ld ix, #entities
-    ld hl, #player_template
-    call sys_array_create_element   ;; IX-addressable new entity returned in HL
-    ld__ix_hl
+;; Create a sentry using a game-owned template as a base.
+game_entity_create_sentry::
+    ld hl, #game_object_template
+    call sys_entity_create          ;; returns IX=new entity, carry set on failure
+    ret c
 
     ;; Configure components
-    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collisionable | c_cmp_ai)
+    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collisionable | c_cmp_behavior)
     ld e_x(ix),   #10
-    ld e_y(ix),   #184
+    ld e_y(ix),   #120
+    ld e_room(ix), #0
     ld e_moved(ix), #1
 
     ;; Wire up the behaviour
     ld e_beh(ix),   #<sentry_behavior
     ld e_beh+1(ix), #>sentry_behavior
 
+    or a                           ;; carry clear: success
     ret
 ```
 
@@ -246,8 +251,7 @@ man_entity_create_sentry::
 Each frame the game loop calls:
 
 1. `sys_physics_update` — applies `e_speed_x` / `e_speed_y` to position
-2. `sys_ai_update` — skips this entity (`e_beh != 0`)
-3. **`sys_beh_update`** — runs the sentry's behaviour step:
+2. **`sys_beh_update`** — runs the sentry's behaviour step:
    - If walking right and not yet at edge: `IDLE` re-checks conditions, none fire, entity stays
    - Once `beh_cond_off_right_edge` returns true: `SET_VX #0`, `WAIT 30`, then `SET_VX #-3`
-4. `sys_render_update` — redraws the entity because `e_moved` was set by `SET_VX`
+3. `sys_render_update` — redraws the entity because `e_moved` was set by `SET_VX`
