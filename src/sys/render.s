@@ -35,10 +35,6 @@
 
 sys_render_front_buffer: .db 0xc0
 sys_render_back_buffer: .db 0x80
-sys_render_touched_zones: .db 0x00
-
-_x_coord_base: .db #0
-_y_coord_base: .db #0
 
 ;; Front-buffer render queue. It is built before VSYNC so sorting consumes no
 ;; active display time. Pointers and cached Y coordinates are kept separately:

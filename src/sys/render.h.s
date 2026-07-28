@@ -17,24 +17,12 @@
 .module render_system
 
 
-;;===============================================================================
-;; PUBLIC CONSTANTS
-;;===============================================================================
-sys_render_zone_topbar        = 0b00000001
-sys_render_zone_player_sprite = 0b00000010
-sys_render_zone_player_effect = 0b00000100
-sys_render_zone_foe_sprite    = 0b00001000
-sys_render_zone_foe_effect    = 0b00010000
-sys_render_zone_hand          = 0b00100000
-sys_render_zone_icon_numbers  = 0b01000000
-sys_render_zone_messages      = 0b10000000
 FRONT_BUFFER = 0xc000
 ;;===============================================================================
 ;; PUBLIC VARIABLES
 ;;===============================================================================
 .globl sys_render_back_buffer
 .globl sys_render_front_buffer
-.globl sys_render_touched_zones
 
 ;;===============================================================================
 ;; PUBLIC METHODS
