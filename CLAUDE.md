@@ -199,10 +199,11 @@ Two bullet templates in `src/man/entity.s`, using sprites `_s_obj_1` (player) / 
 
 `sys_collision_update` iterates all `c_cmp_collider` entities (outer IX loop) against all `c_cmp_collisionable` entities (inner IY loop) doing AABB checks.
 
-`sys_collision_on_hit` (IX=collider, IY=collisionable) is the extension point:
-- If `e_status(iy) == STATUS_PORTAL` and `e_on_air(iy) == 1`: calls `man_game_do_portal_transition`
+The engine owns only AABB detection and dispatch. `sys_collision_set_handler` registers a callback receiving IX=collider and IY=collisionable; passing HL=0 restores the no-op handler. The dispatcher preserves IX and IY around the callback. `man_game_init` registers `man_game_on_collision`, which contains the rules specific to this example game:
+
+- An active portal teleports only `STATUS_PLAYER`; other colliders cannot trigger it.
 - A `STATUS_PLAYER_BULLET` hitting `STATUS_ENEMY` destroys both.
-- A `STATUS_ENEMY_BULLET` hitting `STATUS_PLAYER` destroys the bullet and flashes the border red/black for six frames.
+- A `STATUS_ENEMY_BULLET` hitting `STATUS_PLAYER` destroys the bullet and starts the game-owned red/black border flash.
 
 ### Portal Teleportation
 
@@ -219,9 +220,12 @@ ld e_on_air(ix), #1      ;; 1=active
 
 ### Array System (`src/sys/array.s`)
 
-Generic dynamic array with header struct `a`: `a_count`, `a_component_size`, `a_pend`, `a_array`.
+Generic fixed-capacity dynamic array with header struct `a`: `a_count`, `a_max_count`, `a_component_size`, `a_pend`, `a_array`.
 
-- `sys_array_create_element` — copies a template struct into an appended or recycled slot (`ldir`); returns carry clear on success and carry set when full
+- `sys_array_create_element` — generic append; byte zero is ordinary data
+- `sys_array_create_reusable_element` — component-pool insertion used by entity factories; recycles slots whose first/component byte is zero before appending
+- `sys_array_get_element` / `sys_array_remove_element` — validate the index and return carry set on error; removal compacts the array and must not run while iterating that same array
+- `sys_array_move_all_elements` — requires equal component sizes and never removes a source element unless its destination copy succeeded
 - `sys_array_execute_each_ix_matching` — calls a routine for each entity whose `e_cmps & B != 0`; IX points to the current entity
 
 ### Physics (`src/sys/physics.s`)

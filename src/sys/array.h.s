@@ -28,6 +28,7 @@
 ;;===============================================================================
 .globl sys_array_init
 .globl sys_array_create_element
+.globl sys_array_create_reusable_element
 .globl sys_array_remove_element
 .globl sys_array_get_element
 .globl sys_array_get_random_element
@@ -35,6 +36,7 @@
 .globl sys_array_move_all_elements
 .globl sys_array_execute_each
 .globl sys_array_execute_each_ix_matching
+.globl sys_array_execute_each_iy_matching
 
 ;;===============================================================================
 ;; COMPONENT DEFINITION MACRO

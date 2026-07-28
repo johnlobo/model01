@@ -2,20 +2,17 @@
 .module collision_system
 
 .include "sys/array.h.s"
-.include "cpctelera.h.s"
 .include "common.h.s"
 .include "sys/collision.h.s"
 .include "sys/map.h.s"
 .include "man/entity.h.s"
-.include "man/game.h.s"
 
 ;;
 ;; Start of _DATA area
 ;;
 .area _DATA
 
-COLLISION_BORDER_FLASH_FRAMES = 6
-collision_border_flash: .db 0
+collision_handler: .dw sys_collision_noop
 
 ;;
 ;; Start of _CODE area
@@ -26,21 +23,33 @@ collision_border_flash: .db 0
 ;;
 ;; sys_collision_init
 ;;
-;;  Initializes the collision system
+;;  Initializes the collision system with a no-op response handler.
 ;;  Input:
 ;;  Output:
 ;;  Modified:
 ;;
 sys_collision_init::
-    xor a
-    ld (collision_border_flash), a
-    cpctm_setBorder_asm HW_BLACK
+    ld hl, #sys_collision_noop
+    ld (collision_handler), hl
+    ret
+
+;;-----------------------------------------------------------------
+;; Register the game callback invoked for every detected collision.
+;; Input: HL = handler (IX=collider, IY=collisionable), or 0 for no-op.
+;; The dispatcher preserves IX and IY around the callback.
+sys_collision_set_handler::
+    ld a, h
+    or l
+    jr nz, scsh_store
+    ld hl, #sys_collision_noop
+scsh_store:
+    ld (collision_handler), hl
     ret
 
 ;;-----------------------------------------------------------------
 ;; Erase an entity's last rendered sprite and invalidate its pool slot.
 ;; Input: IX = entity. IX is preserved.
-sys_collision_destroy_entity:
+sys_collision_destroy_entity::
     ld a, e_p_address(ix)
     or e_p_address+1(ix)
     jr z, scde_invalidate
@@ -59,71 +68,24 @@ scde_invalidate:
 ;;
 ;; sys_collision_on_hit
 ;;
-;;  Called when a collision is detected between two entities.
-;;  Stub: override behavior here.
-;;  Input:  ix: collider entity
-;;          iy: collisionable entity
-;;  Output:
-;;  Modified:
+;;  Dispatches a detected collision to the registered game handler.
+;;  Input:  IX = collider entity, IY = collisionable entity
+;;  Output: IX and IY preserved
+;;  Modified: AF, BC, DE, HL (as modified by the registered handler)
 ;;
 sys_collision_on_hit::
-    ;; Player projectile -> enemy: remove both entities.
-    ld a, e_status(ix)
-    cp #STATUS_PLAYER_BULLET
-    jr nz, scon_check_enemy_bullet
-    ld a, e_status(iy)
-    cp #STATUS_ENEMY
-    ret nz
-    call sys_collision_destroy_entity
     push ix
     push iy
+    ld hl, #scoh_return
+    push hl
+    ld hl, (collision_handler)
+    jp (hl)
+scoh_return:
+    pop iy
     pop ix
-    call sys_collision_destroy_entity
-    pop ix
     ret
 
-scon_check_enemy_bullet:
-    ;; Enemy projectile -> player: consume the bullet and flash the border.
-    cp #STATUS_ENEMY_BULLET
-    jr nz, scon_check_portal
-    ld a, e_status(iy)
-    cp #STATUS_PLAYER
-    ret nz
-    call sys_collision_destroy_entity
-    ld a, #COLLISION_BORDER_FLASH_FRAMES
-    ld (collision_border_flash), a
-    cpctm_setBorder_asm HW_RED
-    ret
-
-scon_check_portal:
-    ;; If collisionable is a portal, handle teleportation
-    ld a, e_status(iy)
-    cp #STATUS_PORTAL
-    ret nz
-
-    ;; Portal: only teleport if active
-    ld a, e_on_air(iy)      ;; repurposed as active flag
-    or a
-    ret z                   ;; inactive portal → ignore
-
-    call man_game_do_portal_transition
-    ret
-
-;;-----------------------------------------------------------------
-;; Advance the red/black border flash and guarantee a black final state.
-sys_collision_update_border:
-    ld a, (collision_border_flash)
-    or a
-    ret z
-    dec a
-    ld (collision_border_flash), a
-    jr z, scub_black
-    bit 0, a
-    jr nz, scub_black
-    cpctm_setBorder_asm HW_RED
-    ret
-scub_black:
-    cpctm_setBorder_asm HW_BLACK
+sys_collision_noop:
     ret
 
 ;;-----------------------------------------------------------------
@@ -261,7 +223,6 @@ sccoc_collider_destroyed:
 ;;  Modified: AF, BC, DE, HL, IX, IY
 ;;
 sys_collision_update::
-    call sys_collision_update_border
     ld ix, #entities
     ld b, #c_cmp_collider
     ld hl, #sys_collision_check_one_collider

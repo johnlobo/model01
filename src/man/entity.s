@@ -92,8 +92,8 @@ portal_template::
 DefineEntity c_cmp_invalid, 0, 0, 0, 0, 0, 0, 0, 0, S_MONK_WIDTH, S_MONK_HEIGHT, 15, _s_monk_6, 0
 
 ;; Bullets: straight-flying projectiles (c_cmp_projectile), moved by
-;; sys_shoot_update — NOT by sys_physics_update (no gravity, no tile
-;; collision). Position/room/speed are set by the create_*_bullet factory.
+;; sys_shoot_update — NOT by sys_physics_update (no gravity). Position,
+;; room and speed are set by the create_*_bullet factory.
 player_bullet_template::
 DefineEntity c_cmp_invalid, 0, 0, 0, 0, 0, 0, 0, 0, S_BULLET_WIDTH, S_BULLET_HEIGHT, 15, _s_obj_1, 0
 
@@ -131,7 +131,7 @@ man_entity_init::
 man_entity_create_player_player::
     ld ix, #entities
     ld hl, #player_template
-    call sys_array_create_element
+    call sys_array_create_reusable_element
     ret c
     ld__ix_hl
     ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_collisionable | c_cmp_input | c_cmp_animated)
@@ -156,7 +156,7 @@ man_entity_create_player_player::
 man_entity_create_patrol_enemy::
     ld ix, #entities
     ld hl, #patrol_enemy_template
-    call sys_array_create_element
+    call sys_array_create_reusable_element
     ret c
     ld__ix_hl
     ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_ai | c_cmp_animated | c_cmp_collisionable)
@@ -185,7 +185,7 @@ man_entity_create_object::
     push de
     ld ix, #entities
     ld hl, #object_template
-    call sys_array_create_element
+    call sys_array_create_reusable_element
     jr c, meco_full
     ld__ix_hl
     pop de
@@ -221,7 +221,7 @@ man_entity_create_portal::
     push de
     ld ix, #entities
     ld hl, #portal_template
-    call sys_array_create_element
+    call sys_array_create_reusable_element
     jr c, mecp_full
     ld__ix_hl
     pop de
@@ -267,7 +267,7 @@ man_entity_create_player_bullet::
     push de                 ;; clobbers BC and DE (see its header)
     ld ix, #entities
     ld hl, #player_bullet_template
-    call sys_array_create_element
+    call sys_array_create_reusable_element
     jr c, mecpb_full
     ld__ix_hl
     pop de                  ;; restore room (D) and speed (E)
@@ -311,7 +311,7 @@ man_entity_create_enemy_bullet::
     push de                 ;; clobbers BC and DE (see its header)
     ld ix, #entities
     ld hl, #enemy_bullet_template
-    call sys_array_create_element
+    call sys_array_create_reusable_element
     jr c, meceb_full
     ld__ix_hl
     pop de                  ;; restore room (D) and speed (E)

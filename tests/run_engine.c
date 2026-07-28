@@ -12,6 +12,10 @@ enum {
     RETURN_ADDRESS = 0x0080,
     STACK_ADDRESS = 0xf000,
     TEST_MAP_ADDRESS = 0x2000,
+    TEST_ARRAY_SOURCE = 0x2200,
+    TEST_ARRAY_DESTINATION = 0x2300,
+    TEST_COLLIDER = 0x2400,
+    TEST_COLLISIONABLE = 0x2440,
     MAP_WIDTH = 16,
     MAP_HEIGHT = 20,
     MAX_STEPS = 1000000,
@@ -49,6 +53,14 @@ struct Symbols {
     uint16_t shoot_update_one_bullet;
     uint16_t current_map_data;
     uint16_t current_room;
+    uint16_t array_init;
+    uint16_t array_remove;
+    uint16_t array_get;
+    uint16_t array_move_all;
+    uint16_t collision_init;
+    uint16_t collision_set_handler;
+    uint16_t collision_on_hit;
+    uint16_t game_collision_handler;
     uint16_t anim_set;
     uint16_t idle_anim;
     uint16_t walk_right_anim;
@@ -127,6 +139,14 @@ static uint16_t *symbol_slot(struct Symbols *symbols, const char *name) {
     if (!strcmp(name, "sys_shoot_update_one_bullet")) return &symbols->shoot_update_one_bullet;
     if (!strcmp(name, "current_map_data")) return &symbols->current_map_data;
     if (!strcmp(name, "current_room")) return &symbols->current_room;
+    if (!strcmp(name, "sys_array_init")) return &symbols->array_init;
+    if (!strcmp(name, "sys_array_remove_element")) return &symbols->array_remove;
+    if (!strcmp(name, "sys_array_get_element")) return &symbols->array_get;
+    if (!strcmp(name, "sys_array_move_all_elements")) return &symbols->array_move_all;
+    if (!strcmp(name, "sys_collision_init")) return &symbols->collision_init;
+    if (!strcmp(name, "sys_collision_set_handler")) return &symbols->collision_set_handler;
+    if (!strcmp(name, "sys_collision_on_hit")) return &symbols->collision_on_hit;
+    if (!strcmp(name, "man_game_on_collision")) return &symbols->game_collision_handler;
     if (!strcmp(name, "sys_anim_set")) return &symbols->anim_set;
     if (!strcmp(name, "monk_idle_anim")) return &symbols->idle_anim;
     if (!strcmp(name, "monk_walk_right_anim")) return &symbols->walk_right_anim;
@@ -190,6 +210,29 @@ static int call_factory(struct Machine *machine, uint16_t routine,
     z80ex_set_reg(machine->cpu, regBC, ((uint16_t)x << 8) | y);
     z80ex_set_reg(machine->cpu, regDE, ((uint16_t)room << 8) | speed);
     return run_routine(machine, routine);
+}
+
+static int call_array_index(struct Machine *machine, uint16_t routine,
+                            uint16_t array, uint8_t index, uint16_t *result) {
+    int carry;
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regIX, array);
+    z80ex_set_reg(machine->cpu, regAF, (uint16_t)index << 8);
+    carry = run_routine(machine, routine);
+    if (result) *result = z80ex_get_reg(machine->cpu, regHL);
+    return carry;
+}
+
+static void configure_array(struct Machine *machine, uint16_t address,
+                            uint8_t capacity, uint8_t component_size,
+                            uint8_t count) {
+    size_t bytes = ARRAY_DATA + capacity * component_size;
+    memset(machine->memory + address, 0, bytes);
+    machine->memory[address + ARRAY_COUNT] = count;
+    machine->memory[address + ARRAY_MAX_COUNT] = capacity;
+    machine->memory[address + ARRAY_COMPONENT_SIZE] = component_size;
+    set_word(machine->memory, address + ARRAY_PEND,
+             address + ARRAY_DATA + count * component_size);
 }
 
 static void report(const char *name, int passed) {
@@ -314,6 +357,153 @@ static void test_pool_contract(struct Machine *machine) {
            machine->memory[machine->symbols.entity_array + E_STATUS] == STATUS_PLAYER_BULLET);
 }
 
+static void test_array_contract(struct Machine *machine) {
+    uint8_t *source;
+    uint8_t *destination;
+    uint16_t result;
+    int carry;
+
+    reset_fixture(machine);
+    configure_array(machine, TEST_ARRAY_SOURCE, 3, 3, 2);
+    source = machine->memory + TEST_ARRAY_SOURCE + ARRAY_DATA;
+    source[0] = 7;
+    carry = call_array_index(machine, machine->symbols.array_init,
+                             TEST_ARRAY_SOURCE, 0, NULL);
+    report("array initialization resets runtime state only",
+           !carry &&
+           machine->memory[TEST_ARRAY_SOURCE + ARRAY_COUNT] == 0 &&
+           machine->memory[TEST_ARRAY_SOURCE + ARRAY_MAX_COUNT] == 3 &&
+           machine->memory[TEST_ARRAY_SOURCE + ARRAY_COMPONENT_SIZE] == 3 &&
+           get_word(machine->memory, TEST_ARRAY_SOURCE + ARRAY_PEND) ==
+               TEST_ARRAY_SOURCE + ARRAY_DATA && source[0] == 0);
+
+    reset_fixture(machine);
+    configure_array(machine, TEST_ARRAY_SOURCE, 3, 3, 2);
+    source = machine->memory + TEST_ARRAY_SOURCE + ARRAY_DATA;
+    source[0] = 1; source[1] = 10; source[2] = 11;
+    source[3] = 2; source[4] = 20; source[5] = 21;
+    carry = call_array_index(machine, machine->symbols.array_get,
+                             TEST_ARRAY_SOURCE, 1, &result);
+    report("array lookup returns the requested element",
+           !carry && result == TEST_ARRAY_SOURCE + ARRAY_DATA + 3);
+    carry = call_array_index(machine, machine->symbols.array_get,
+                             TEST_ARRAY_SOURCE, 2, &result);
+    report("array lookup rejects an index equal to count",
+           carry && result == 0);
+
+    reset_fixture(machine);
+    configure_array(machine, TEST_ARRAY_SOURCE, 3, 3, 3);
+    source = machine->memory + TEST_ARRAY_SOURCE + ARRAY_DATA;
+    source[0] = 1; source[1] = 10; source[2] = 11;
+    source[3] = 2; source[4] = 20; source[5] = 21;
+    source[6] = 3; source[7] = 30; source[8] = 31;
+    carry = call_array_index(machine, machine->symbols.array_remove,
+                             TEST_ARRAY_SOURCE, 1, NULL);
+    report("array removal compacts following elements",
+           !carry &&
+           machine->memory[TEST_ARRAY_SOURCE + ARRAY_COUNT] == 2 &&
+           get_word(machine->memory, TEST_ARRAY_SOURCE + ARRAY_PEND) ==
+               TEST_ARRAY_SOURCE + ARRAY_DATA + 6 &&
+           source[3] == 3 && source[4] == 30 && source[5] == 31 &&
+           source[6] == 0);
+
+    reset_fixture(machine);
+    configure_array(machine, TEST_ARRAY_SOURCE, 3, 3, 1);
+    source = machine->memory + TEST_ARRAY_SOURCE + ARRAY_DATA;
+    source[0] = 7; source[1] = 70; source[2] = 71;
+    carry = call_array_index(machine, machine->symbols.array_remove,
+                             TEST_ARRAY_SOURCE, 1, NULL);
+    report("array removal rejects invalid indices without mutation",
+           carry &&
+           machine->memory[TEST_ARRAY_SOURCE + ARRAY_COUNT] == 1 &&
+           source[0] == 7 && source[1] == 70 && source[2] == 71);
+
+    reset_fixture(machine);
+    configure_array(machine, TEST_ARRAY_SOURCE, 3, 3, 2);
+    configure_array(machine, TEST_ARRAY_DESTINATION, 2, 3, 1);
+    source = machine->memory + TEST_ARRAY_SOURCE + ARRAY_DATA;
+    destination = machine->memory + TEST_ARRAY_DESTINATION + ARRAY_DATA;
+    source[0] = 1; source[1] = 10; source[2] = 11;
+    source[3] = 2; source[4] = 20; source[5] = 21;
+    destination[0] = 9; destination[1] = 90; destination[2] = 91;
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regHL, TEST_ARRAY_SOURCE);
+    z80ex_set_reg(machine->cpu, regDE, TEST_ARRAY_DESTINATION);
+    carry = run_routine(machine, machine->symbols.array_move_all);
+    report("array move preserves elements that do not fit",
+           carry &&
+           machine->memory[TEST_ARRAY_SOURCE + ARRAY_COUNT] == 1 &&
+           source[0] == 2 && source[1] == 20 && source[2] == 21 &&
+           machine->memory[TEST_ARRAY_DESTINATION + ARRAY_COUNT] == 2 &&
+           destination[3] == 1 && destination[4] == 10 && destination[5] == 11);
+
+    reset_fixture(machine);
+    configure_array(machine, TEST_ARRAY_SOURCE, 3, 3, 2);
+    configure_array(machine, TEST_ARRAY_DESTINATION, 3, 3, 0);
+    source = machine->memory + TEST_ARRAY_SOURCE + ARRAY_DATA;
+    destination = machine->memory + TEST_ARRAY_DESTINATION + ARRAY_DATA;
+    source[0] = 0; source[1] = 40; source[2] = 41;
+    source[3] = 5; source[4] = 50; source[5] = 51;
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regHL, TEST_ARRAY_SOURCE);
+    z80ex_set_reg(machine->cpu, regDE, TEST_ARRAY_DESTINATION);
+    carry = run_routine(machine, machine->symbols.array_move_all);
+    report("array move transfers every element when capacity is available",
+           !carry &&
+           machine->memory[TEST_ARRAY_SOURCE + ARRAY_COUNT] == 0 &&
+           machine->memory[TEST_ARRAY_DESTINATION + ARRAY_COUNT] == 2 &&
+           destination[0] == 0 && destination[1] == 40 && destination[2] == 41 &&
+           destination[3] == 5 && destination[4] == 50 && destination[5] == 51);
+
+    reset_fixture(machine);
+    configure_array(machine, TEST_ARRAY_SOURCE, 2, 3, 1);
+    configure_array(machine, TEST_ARRAY_DESTINATION, 2, 2, 0);
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regHL, TEST_ARRAY_SOURCE);
+    z80ex_set_reg(machine->cpu, regDE, TEST_ARRAY_DESTINATION);
+    carry = run_routine(machine, machine->symbols.array_move_all);
+    report("array move rejects incompatible component sizes",
+           carry &&
+           machine->memory[TEST_ARRAY_SOURCE + ARRAY_COUNT] == 1 &&
+           machine->memory[TEST_ARRAY_DESTINATION + ARRAY_COUNT] == 0);
+}
+
+static void prepare_collision_entities(struct Machine *machine) {
+    memset(machine->memory + TEST_COLLIDER, 0, ENTITY_SIZE);
+    memset(machine->memory + TEST_COLLISIONABLE, 0, ENTITY_SIZE);
+    machine->memory[TEST_COLLIDER + E_CMPS] = 1;
+    machine->memory[TEST_COLLIDER + E_STATUS] = STATUS_PLAYER_BULLET;
+    machine->memory[TEST_COLLISIONABLE + E_CMPS] = 1;
+    machine->memory[TEST_COLLISIONABLE + E_STATUS] = 3; /* STATUS_ENEMY */
+}
+
+static void test_collision_handler_contract(struct Machine *machine) {
+    reset_fixture(machine);
+    prepare_collision_entities(machine);
+    run_routine(machine, machine->symbols.collision_init);
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regIX, TEST_COLLIDER);
+    z80ex_set_reg(machine->cpu, regIY, TEST_COLLISIONABLE);
+    run_routine(machine, machine->symbols.collision_on_hit);
+    report("the engine collision handler defaults to no action",
+           machine->memory[TEST_COLLIDER + E_CMPS] == 1 &&
+           machine->memory[TEST_COLLISIONABLE + E_CMPS] == 1);
+
+    reset_fixture(machine);
+    prepare_collision_entities(machine);
+    z80ex_set_reg(machine->cpu, regHL, machine->symbols.game_collision_handler);
+    run_routine(machine, machine->symbols.collision_set_handler);
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regIX, TEST_COLLIDER);
+    z80ex_set_reg(machine->cpu, regIY, TEST_COLLISIONABLE);
+    run_routine(machine, machine->symbols.collision_on_hit);
+    report("a registered game collision handler applies game rules",
+           machine->memory[TEST_COLLIDER + E_CMPS] == 0 &&
+           machine->memory[TEST_COLLISIONABLE + E_CMPS] == 0 &&
+           z80ex_get_reg(machine->cpu, regIX) == TEST_COLLIDER &&
+           z80ex_get_reg(machine->cpu, regIY) == TEST_COLLISIONABLE);
+}
+
 static void test_animation_set(struct Machine *machine) {
     uint16_t entity = machine->symbols.entity_array;
     reset_fixture(machine);
@@ -364,6 +554,8 @@ int main(int argc, char **argv) {
     test_bullet_tile_collision(&machine);
     test_factory_parameters(&machine);
     test_pool_contract(&machine);
+    test_array_contract(&machine);
+    test_collision_handler_contract(&machine);
     test_animation_set(&machine);
     printf("1..%d\n", tests_run);
     z80ex_destroy(machine.cpu);
