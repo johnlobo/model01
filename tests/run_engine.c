@@ -139,12 +139,12 @@ static void load_binary(struct Machine *machine, const char *path) {
 static uint16_t *symbol_slot(struct Symbols *symbols, const char *name) {
     if (!strcmp(name, "entities")) return &symbols->entities;
     if (!strcmp(name, "entity_array")) return &symbols->entity_array;
-    if (!strcmp(name, "object_template")) return &symbols->object_template;
-    if (!strcmp(name, "portal_template")) return &symbols->portal_template;
-    if (!strcmp(name, "player_bullet_template")) return &symbols->player_bullet_template;
-    if (!strcmp(name, "man_entity_create_object")) return &symbols->create_object;
-    if (!strcmp(name, "man_entity_create_portal")) return &symbols->create_portal;
-    if (!strcmp(name, "man_entity_create_player_bullet")) return &symbols->create_player_bullet;
+    if (!strcmp(name, "game_object_template")) return &symbols->object_template;
+    if (!strcmp(name, "game_portal_template")) return &symbols->portal_template;
+    if (!strcmp(name, "game_player_bullet_template")) return &symbols->player_bullet_template;
+    if (!strcmp(name, "game_entity_create_object")) return &symbols->create_object;
+    if (!strcmp(name, "game_entity_create_portal")) return &symbols->create_portal;
+    if (!strcmp(name, "game_entity_create_player_bullet")) return &symbols->create_player_bullet;
     if (!strcmp(name, "sys_shoot_update_one_bullet")) return &symbols->shoot_update_one_bullet;
     if (!strcmp(name, "current_map_data")) return &symbols->current_map_data;
     if (!strcmp(name, "current_room")) return &symbols->current_room;
@@ -163,8 +163,8 @@ static uint16_t *symbol_slot(struct Symbols *symbols, const char *name) {
     if (!strcmp(name, "beh_cond_true")) return &symbols->beh_cond_true;
     if (!strcmp(name, "sys_beh_actions_left")) return &symbols->beh_actions_left;
     if (!strcmp(name, "sys_anim_set")) return &symbols->anim_set;
-    if (!strcmp(name, "monk_idle_anim")) return &symbols->idle_anim;
-    if (!strcmp(name, "monk_walk_right_anim")) return &symbols->walk_right_anim;
+    if (!strcmp(name, "game_monk_idle_anim")) return &symbols->idle_anim;
+    if (!strcmp(name, "game_monk_walk_right_anim")) return &symbols->walk_right_anim;
     if (!strcmp(name, "_s_monk_0")) return &symbols->monk_0;
     if (!strcmp(name, "_s_monk_2")) return &symbols->monk_2;
     return NULL;

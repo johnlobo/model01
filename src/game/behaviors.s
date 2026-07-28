@@ -4,6 +4,7 @@
 .module game_behaviors
 
 .include "game/behaviors.h.s"
+.include "game/entities.h.s"
 .include "common.h.s"
 .include "man/entity.h.s"
 .include "sys/shoot.h.s"
@@ -23,14 +24,14 @@ game_beh_bounce_go_left:
 
 ;; Platform patrol used by the monk enemy in model01.
 game_beh_patrol::
-    SET_ANIMATION monk_walk_right_anim
+    SET_ANIMATION game_monk_walk_right_anim
 game_beh_patrol_moving_right:
     DRIVE_VX #1, #4
     CONDITION edge_ahead, game_beh_patrol_turn_left
     CONDITIONS_END
 
 game_beh_patrol_turn_left:
-    SET_ANIMATION monk_walk_left_anim
+    SET_ANIMATION game_monk_walk_left_anim
     GAME_SHOOT #-2
 game_beh_patrol_moving_left:
     DRIVE_VX #-1, #4
@@ -38,7 +39,7 @@ game_beh_patrol_moving_left:
     CONDITIONS_END
 
 game_beh_patrol_turn_right:
-    SET_ANIMATION monk_walk_right_anim
+    SET_ANIMATION game_monk_walk_right_anim
     GAME_SHOOT #2
     GOTO game_beh_patrol_moving_right
 
@@ -76,7 +77,7 @@ gbas_spawn_y:
     ld d, a
     ld a, (game_beh_shoot_speed)
     ld e, a
-    call man_entity_create_enemy_bullet
+    call game_entity_create_enemy_bullet
 
     pop ix
     pop de

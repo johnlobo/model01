@@ -18,8 +18,6 @@
 ;;------------------------------------------------------------------------------
 ;; Global variables
 ;;------------------------------------------------------------------------------
-;;.globl sys_input_key_actions
-
 ;;------------------------------------------------------------------------------
 ;; Global routines
 ;;------------------------------------------------------------------------------
@@ -29,11 +27,4 @@
 .globl sys_input_waitKeyPressed
 .globl sys_input_getKeyPressed
 .globl sys_input_generic_update
-
-.globl sys_input_update
-.globl sys_input_quit_dialog_update
-
-;;.globl sys_input_main_screen_keys
-;;.globl sys_input_update
-;;.globl sys_input_score_entry_update
 

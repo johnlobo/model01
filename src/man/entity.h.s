@@ -30,32 +30,11 @@ MAX_ENTITIES = 20
 
 .globl entities
 .globl entity_array
-.globl player_template
-.globl player_bullet_template
-.globl enemy_bullet_template
-.globl monk_walk_anim
-.globl monk_idle_anim
-.globl monk_walk_right_anim
-.globl monk_walk_left_anim
-
 ;;===============================================================================
 ;; PUBLIC METHODS
 ;;===============================================================================
 .globl man_entity_init
-.globl man_entity_create_player_player
-.globl man_entity_create_patrol_enemy
-.globl man_entity_create_object      ;; B=x, C=y, D=room_id → IX=new entity, carry=error
-.globl man_entity_create_portal      ;; B=x, C=y, D=room_id → IX=new entity, carry=error
-                                     ;; after creation set destination fields:
-                                     ;;   e_beh (2B)       = dest map ptr
-                                     ;;   e_beh_timer      = dest room id
-                                     ;;   e_speed_x lo     = dest x (world bytes)
-                                     ;;   e_speed_x+1 hi   = dest y (world pixels)
-                                     ;;   e_on_air         = active (1=active, 0=inactive)
-.globl man_entity_create_player_bullet  ;; B=x, C=y, D=room_id, E=signed speed_x → IX=new entity
-.globl man_entity_create_enemy_bullet   ;; B=x, C=y, D=room_id, E=signed speed_x → IX=new entity
-                                     ;; Both return carry clear on success, carry set if the
-                                     ;; pool has neither append capacity nor a recyclable slot.
+.globl man_entity_create             ;; HL=template → IX=new entity, carry=error
 
 ;;===============================================================================
 ;; DATA ARRAY STRUCTURE CREATION

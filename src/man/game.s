@@ -29,6 +29,9 @@
 .include "sys/shoot.h.s"
 .include "sys/messages.h.s"
 .include "game/collision.h.s"
+.include "game/entities.h.s"
+.include "game/input.h.s"
+.include "game/map.h.s"
 .include "man/menu.h.s"
 .include "man/entity.h.s"
 
@@ -68,28 +71,12 @@ man_game_init::
     call sys_mem_init               ;; detect 128K RAM and install banking stub
     call man_entity_init
     call sys_input_init
+    call game_input_init
     call sys_collision_init
     call game_collision_init
-    call man_entity_create_player_player
-    call man_entity_create_patrol_enemy
+    call game_entity_create_player
+    call game_entity_create_patrol_enemy
 
-    ;; Portal in map03 (room 2): tile col 8, rows 12-13
-    ;; World: x = 8*4 = 32 bytes, y = 12*8 = 96 pixels; 1 tile wide (4B), 2 tiles tall (16px)
-    ;; Destination: inside01 (room 4) at tile (0,19) → world x=0, y=19*8=152
-    ld b, #32           ;; world x (bytes)
-    ld c, #96           ;; world y (pixels)
-    ld d, #2            ;; source room (map03)
-    call man_entity_create_portal
-    jr c, mginit_portal_done
-    ld hl, #_g_inside01
-    ld e_beh(ix), l
-    ld e_beh+1(ix), h   ;; dest map ptr = _g_inside01
-    ld e_beh_timer(ix), #4    ;; dest room id = 4 (inside01)
-    ld e_speed_x(ix), #0      ;; dest x = 0 bytes (tile col 0)
-    ld e_speed_x+1(ix), #152  ;; dest y = 152 pixels (tile row 19 * 8)
-    ld e_on_air(ix), #1       ;; active
-
-mginit_portal_done:
     call sys_render_init
     call sys_map_init
     call sys_shoot_init
@@ -114,7 +101,7 @@ man_game_update::
     call sys_shoot_update
     call man_game_check_transition
     ld ix, #entity_array
-    call sys_input_update
+    call game_input_update
     call sys_beh_update
     call game_collision_update_effects
     call sys_collision_update
@@ -128,7 +115,7 @@ man_game_update::
     ret
 
 man_game_update_quit_dialog:
-    call sys_input_quit_dialog_update
+    call game_input_quit_dialog_update
     ld a, (man_game_quit_dialog_response)
     cp #1
     jr z, man_game_apply_quit_cancel
