@@ -31,6 +31,44 @@ sys_anim_init::
     ret
 
 ;;-----------------------------------------------------------------
+;; sys_anim_set
+;;
+;;  Changes an entity's animation only when the descriptor differs. The first
+;;  frame is applied immediately, so an entity that becomes idle and is then
+;;  skipped by sys_anim_update still displays its idle sprite.
+;;  Input: IX = entity, HL = animation descriptor (or 0)
+;;  Modified: AF, DE, HL
+;;
+sys_anim_set::
+    ld a, e_anim(ix)
+    cp l
+    jr nz, sas_change
+    ld a, e_anim+1(ix)
+    cp h
+    ret z
+
+sas_change:
+    ld e_anim(ix), l
+    ld e_anim+1(ix), h
+    xor a
+    ld e_anim_frame(ix), a
+    ld a, h
+    or l
+    ret z                           ;; null descriptor: no sprite to apply
+
+    inc hl                          ;; skip frame_count
+    ld a, (hl)                      ;; keep frame 0 for a full animation period
+    ld e_anim_timer(ix), a
+    inc hl                          ;; skip speed; HL = &frames[0]
+    ld e, (hl)
+    inc hl
+    ld d, (hl)
+    ld e_sprite(ix), e
+    ld e_sprite+1(ix), d
+    ld e_moved(ix), #1
+    ret
+
+;;-----------------------------------------------------------------
 ;;
 ;; sys_anim_update_one_entity
 ;;

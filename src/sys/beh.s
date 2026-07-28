@@ -6,6 +6,7 @@
 .include "common.h.s"
 .include "man/entity.h.s"
 .include "sys/map.h.s"
+.include "sys/anim.h.s"
 
 ;;
 ;; Start of _DATA area
@@ -393,13 +394,14 @@ bas_skip:
 ;;
 beh_action_set_animation::
     ld a, (de)
+    ld l, a
     inc de
-    ld e_anim(ix), a
     ld a, (de)
+    ld h, a
     inc de
-    ld e_anim+1(ix), a
-    ld e_anim_frame(ix), #0
-    ld e_anim_timer(ix), #0
+    push de
+    call sys_anim_set
+    pop de
     jp sys_beh_next
 
 ;;-----------------------------------------------------------------

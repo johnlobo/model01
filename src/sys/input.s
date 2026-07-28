@@ -21,6 +21,7 @@
 .include "../common.h.s"
 .include "sys/util.h.s"
 .include "sys/array.h.s"
+.include "sys/anim.h.s"
 .include "man/entity.h.s"
 .include "man/game.h.s"
 
@@ -54,6 +55,7 @@ jump_boost_left:: .db 0             ;; boost frames remaining (counts down while
 
 player_facing:: .db 0                ;; 0 = right, 1 = left; updated by left/right handlers
 player_shoot_cooldown:: .db 0        ;; frames remaining before next shot; ticked in sys_input_update
+player_direction_pressed: .db 0      ;; set by left/right handlers during the current scan
 
 sys_input_quit_dialog_actions::
     .dw Key_Y, man_game_confirm_quit
@@ -185,6 +187,7 @@ sys_input_init::
     ld (jump_boost_left), a
     ld (player_facing), a
     ld (player_shoot_cooldown), a
+    ld (player_direction_pressed), a
     ret
 
 
@@ -268,10 +271,9 @@ sys_input_selected_left::
     ld e_speed_x(ix), #-2
     ld a, #1
     ld (player_facing), a
+    ld (player_direction_pressed), a
     ld hl, #monk_walk_left_anim
-    ld e_anim(ix), l
-    ld e_anim+1(ix), h
-    ret
+    jp sys_anim_set
 
 ;;-----------------------------------------------------------------
 ;;
@@ -286,10 +288,10 @@ sys_input_selected_right::
     ld e_speed_x(ix), #2
     xor a
     ld (player_facing), a
+    inc a
+    ld (player_direction_pressed), a
     ld hl, #monk_walk_right_anim
-    ld e_anim(ix), l
-    ld e_anim+1(ix), h
-    ret
+    jp sys_anim_set
 
 ;;-----------------------------------------------------------------
 ;;
@@ -397,13 +399,15 @@ sys_input_update::
     ld (player_shoot_cooldown), a
 siu_no_cooldown:
 
-    ;; Reset player to idle each frame; key handlers override if a direction is pressed
-    ld hl, #monk_idle_anim
-    ld e_anim(ix), l
-    ld e_anim+1(ix), h
+    xor a
+    ld (player_direction_pressed), a
     ld iy, #sys_input_key_actions
     call sys_input_generic_update
-    ret
+    ld a, (player_direction_pressed)
+    or a
+    ret nz
+    ld hl, #monk_idle_anim
+    jp sys_anim_set
 
 sys_input_quit_dialog_update::
     ld iy, #sys_input_quit_dialog_actions

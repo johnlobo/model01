@@ -22,4 +22,5 @@ anim_frames      = 2
 ;; PUBLIC METHODS
 ;;===============================================================================
 .globl sys_anim_init
+.globl sys_anim_set
 .globl sys_anim_update
