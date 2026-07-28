@@ -63,8 +63,9 @@ PHYSICS_MAX_FALL_SPEED = 8
 PHYSICS_FRICTION_COMPONENT_BIT = 2
 ```
 
-The current tile indexer requires `MAP_WIDTH = 16`; `make test` enforces it.
-Map height may range from 1 to 25 rows so an 8-pixel tilemap fits the screen.
+Map width may range from 1 to 20 columns (four Mode 0 bytes per tile), and map
+height from 1 to 25 rows. Width 16 uses a specialized four-shift indexer; other
+widths are expanded at assembly time and require no runtime multiplier.
 
 Keep game-only status values and asset dimensions in `game/config.h.s`.
 

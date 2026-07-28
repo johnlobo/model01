@@ -7,6 +7,25 @@
 .include "config.h.s"
 .include "sys/render.h.s"
 
+;; Convert HL=row to HL=row*MAP_WIDTH. Width 16 keeps the original fast path;
+;; other widths are expanded at assembly time without a runtime multiplier.
+.mdelete map_row_offset_hl
+.macro map_row_offset_hl
+    .if MAP_WIDTH-16
+        ld e, l
+        ld d, h
+        ld hl, #0
+        .rept MAP_WIDTH
+            add hl, de
+        .endm
+    .else
+        add hl, hl
+        add hl, hl
+        add hl, hl
+        add hl, hl
+    .endif
+.endm
+
 
 ;;
 ;; Start of _DATA area
@@ -149,10 +168,7 @@ smisa_get_type:
 
     ld l, a
     ld h, #0
-    add hl, hl                  ;; *2
-    add hl, hl                  ;; *4
-    add hl, hl                  ;; *8
-    add hl, hl                  ;; *16 = MAP_WIDTH
+    map_row_offset_hl
     ld de, (current_map_data)
     add hl, de
 
@@ -286,10 +302,7 @@ smrsa_draw_one_tile:
     ;; tile_id = current_map_data[tile_row * MAP_WIDTH + tile_col]
     ld l, b
     ld h, #0
-    add hl, hl              ;; HL = tile_row * 2
-    add hl, hl              ;; HL = tile_row * 4
-    add hl, hl              ;; HL = tile_row * 8
-    add hl, hl              ;; HL = tile_row * 16 (MAP_WIDTH)
+    map_row_offset_hl        ;; HL = tile_row * MAP_WIDTH
     ld e, c
     ld d, #0
     add hl, de              ;; HL = tile_row * MAP_WIDTH + tile_col

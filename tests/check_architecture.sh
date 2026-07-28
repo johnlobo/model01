@@ -55,8 +55,9 @@ config_value() {
         }' "$config_file"
 }
 
-map_width_matches_tilemap_indexer() {
-    test "$(config_value MAP_WIDTH)" = 16
+map_width_fits_cpc_screen() {
+    value=$(config_value MAP_WIDTH)
+    test "$value" -ge 1 2>/dev/null && test "$value" -le 20
 }
 
 map_height_fits_cpc_screen() {
@@ -79,7 +80,7 @@ report framework_has_no_game_imports "framework does not import the game layer"
 report globals_are_centralized "global declarations are centralized"
 report globals_are_unique "global declarations contain no duplicates"
 report global_definitions_are_registered "global definitions are registered"
-report map_width_matches_tilemap_indexer "map width matches the 16-column tile indexer"
+report map_width_fits_cpc_screen "map width fits the 80-byte CPC screen"
 report map_height_fits_cpc_screen "map height fits the 200-pixel CPC screen"
 report gravity_fits_signed_velocity "gravity fits signed 8-bit velocity"
 report fall_speed_fits_signed_velocity "fall speed fits signed 8-bit velocity"

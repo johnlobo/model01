@@ -48,7 +48,7 @@ linked binary crosses `0x7FFF`, the end of the live banking window.
 
 ## Version String
 
-`game_menu_version` in `src/game/menu.s` (e.g. `"VERSION - V.075"`) is displayed at the bottom of the main menu. **Bump this after every significant change.**
+`game_menu_version` in `src/game/menu.s` (e.g. `"VERSION - V.076"`) is displayed at the bottom of the main menu. **Bump this after every significant change.**
 
 There is also `_game_loaded_string` in `src/game/app.s` — keep it in sync.
 
