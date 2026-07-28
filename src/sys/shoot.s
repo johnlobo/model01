@@ -46,10 +46,9 @@ sys_shoot_init::
 ;; sys_shoot_update_one_bullet
 ;;
 ;;  Moves one projectile in a straight horizontal line and destroys
-;;  it when it leaves the map's horizontal bounds. Bullets have no
-;;  gravity and no tile/entity collision — they fly clean through
-;;  tiles and other entities. Hit detection is left as an extension
-;;  point (same spirit as sys_collision_on_hit's placeholder).
+;;  it when it leaves the map's horizontal bounds or its leading edge
+;;  reaches a blocking tile. Bullets have no gravity; entity hits are
+;;  handled later by sys_collision_update.
 ;;
 ;;  Input:  IX = entity pointer (c_cmp_projectile)
 ;;  Output:
@@ -86,10 +85,37 @@ ssuob_step:
     cp #MAP_WIDTH*4 + 1             ;; new_x + width > MAP_WIDTH*4?
     jr nc, ssuob_destroy            ;; off the right edge of the map
 
+    ;; Check the two corners of the projectile's leading edge. Using the
+    ;; landable query makes both solid tiles and one-way platforms stop a
+    ;; horizontal shot, matching the horizontal collision rules in physics.
+    bit 7, e_speed_x(ix)
+    jr nz, ssuob_leading_left
+    ld a, b
+    add a, e_width(ix)
+    dec a
+    ld c, a                         ;; C = new right edge
+    jr ssuob_check_tiles
+ssuob_leading_left:
+    ld c, b                         ;; C = new left edge
+ssuob_check_tiles:
+    push bc                         ;; preserve new_x and leading edge
+    ld b, e_y(ix)
+    call sys_map_is_landable_at     ;; top corner
+    jr nz, ssuob_tile_hit
+    ld a, e_y(ix)
+    add a, e_height(ix)
+    dec a
+    ld b, a
+    call sys_map_is_landable_at     ;; bottom corner
+    jr nz, ssuob_tile_hit
+    pop bc                          ;; B = new_x
+
     ld e_x(ix), b
     ld e_moved(ix), #1
     ret
 
+ssuob_tile_hit:
+    pop bc
 ssuob_destroy:
     ;; Erase the last-drawn image first. Once c_cmp_invalid is set the entity is
     ;; no longer rendered, so sys_render_restore_one_entity would never redraw

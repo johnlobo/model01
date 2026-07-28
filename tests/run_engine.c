@@ -11,6 +11,9 @@ enum {
     LOAD_ADDRESS = 0x4000,
     RETURN_ADDRESS = 0x0080,
     STACK_ADDRESS = 0xf000,
+    TEST_MAP_ADDRESS = 0x2000,
+    MAP_WIDTH = 16,
+    MAP_HEIGHT = 20,
     MAX_STEPS = 1000000,
     ARRAY_COUNT = 0,
     ARRAY_MAX_COUNT = 1,
@@ -28,6 +31,7 @@ enum {
     E_ANIM = 23,
     E_ANIM_FRAME = 25,
     E_ANIM_TIMER = 26,
+    E_BEH_TIMER = 29,
     E_ROOM = 30,
     MAX_ENTITIES = 20,
     STATUS_PLAYER_BULLET = 4
@@ -42,6 +46,9 @@ struct Symbols {
     uint16_t create_object;
     uint16_t create_portal;
     uint16_t create_player_bullet;
+    uint16_t shoot_update_one_bullet;
+    uint16_t current_map_data;
+    uint16_t current_room;
     uint16_t anim_set;
     uint16_t idle_anim;
     uint16_t walk_right_anim;
@@ -117,6 +124,9 @@ static uint16_t *symbol_slot(struct Symbols *symbols, const char *name) {
     if (!strcmp(name, "man_entity_create_object")) return &symbols->create_object;
     if (!strcmp(name, "man_entity_create_portal")) return &symbols->create_portal;
     if (!strcmp(name, "man_entity_create_player_bullet")) return &symbols->create_player_bullet;
+    if (!strcmp(name, "sys_shoot_update_one_bullet")) return &symbols->shoot_update_one_bullet;
+    if (!strcmp(name, "current_map_data")) return &symbols->current_map_data;
+    if (!strcmp(name, "current_room")) return &symbols->current_room;
     if (!strcmp(name, "sys_anim_set")) return &symbols->anim_set;
     if (!strcmp(name, "monk_idle_anim")) return &symbols->idle_anim;
     if (!strcmp(name, "monk_walk_right_anim")) return &symbols->walk_right_anim;
@@ -216,6 +226,47 @@ static void test_invalid_bullets(struct Machine *machine) {
            machine->memory[machine->symbols.entities + ARRAY_COUNT] == 0);
 }
 
+static uint16_t prepare_bullet_map(struct Machine *machine, uint8_t x,
+                                   uint8_t y, uint8_t speed) {
+    uint16_t entity = machine->symbols.entity_array;
+    reset_fixture(machine);
+    memset(machine->memory + TEST_MAP_ADDRESS, 0, MAP_WIDTH * MAP_HEIGHT);
+    set_word(machine->memory, machine->symbols.current_map_data, TEST_MAP_ADDRESS);
+    machine->memory[machine->symbols.current_room] = 0;
+    if (call_factory(machine, machine->symbols.create_player_bullet,
+                     x, y, 0, speed))
+        die("test projectile creation failed", NULL);
+    machine->memory[entity + E_BEH_TIMER] = 0;
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regIX, entity);
+    return entity;
+}
+
+static void test_bullet_tile_collision(struct Machine *machine) {
+    uint16_t entity;
+
+    entity = prepare_bullet_map(machine, 12, 32, 2);
+    run_routine(machine, machine->symbols.shoot_update_one_bullet);
+    report("a projectile moves through passable tiles",
+           machine->memory[entity + E_CMPS] != 0 &&
+           machine->memory[entity + E_X] == 14 &&
+           machine->memory[entity + E_MOVED] == 1);
+
+    entity = prepare_bullet_map(machine, 12, 32, 2);
+    machine->memory[TEST_MAP_ADDRESS + 4 * MAP_WIDTH + 4] = 2;
+    run_routine(machine, machine->symbols.shoot_update_one_bullet);
+    report("a right-moving projectile is destroyed by a solid tile",
+           machine->memory[entity + E_CMPS] == 0 &&
+           machine->memory[entity + E_X] == 12);
+
+    entity = prepare_bullet_map(machine, 20, 32, 0xfe);
+    machine->memory[TEST_MAP_ADDRESS + 4 * MAP_WIDTH + 4] = 1;
+    run_routine(machine, machine->symbols.shoot_update_one_bullet);
+    report("a left-moving projectile is destroyed by a one-way platform",
+           machine->memory[entity + E_CMPS] == 0 &&
+           machine->memory[entity + E_X] == 20);
+}
+
 static void test_factory_parameters(struct Machine *machine) {
     uint16_t entity;
     reset_fixture(machine);
@@ -310,6 +361,7 @@ int main(int argc, char **argv) {
     printf("TAP version 13\n");
     test_valid_bullet(&machine);
     test_invalid_bullets(&machine);
+    test_bullet_tile_collision(&machine);
     test_factory_parameters(&machine);
     test_pool_contract(&machine);
     test_animation_set(&machine);

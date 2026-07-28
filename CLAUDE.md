@@ -176,7 +176,7 @@ Built-in behaviors: `beh_bounce_behavior` (timed left/right patrol), `beh_patrol
 
 ### Shooting System (`src/sys/shoot.s`)
 
-Bullets are regular entities with `c_cmp_projectile` (0x80) and `c_cmp_collider`, moved by `sys_shoot_update` — a straight-line, no-gravity, no-tile-collision walk that destroys the entity (`e_cmps = c_cmp_invalid`) once it leaves `[0, MAP_WIDTH*4]` horizontally. They are **not** processed by `sys_physics_update` (no `c_cmp_movable`).
+Bullets are regular entities with `c_cmp_projectile` (0x80) and `c_cmp_collider`, moved by `sys_shoot_update` — a straight-line, no-gravity walk that destroys the entity (`e_cmps = c_cmp_invalid`) once it leaves `[0, MAP_WIDTH*4]` horizontally or its leading edge reaches a blocking tile. Both fully solid and one-way platform tiles block horizontal projectiles. They are **not** processed by `sys_physics_update` (no `c_cmp_movable`).
 
 Two bullet templates in `src/man/entity.s`, using sprites `_s_obj_1` (player) / `_s_obj_2` (enemy) from `assets/model01-8x8obj.png` (`S_BULLET_WIDTH = 4` bytes, `S_BULLET_HEIGHT = 8` px):
 - `man_entity_create_player_bullet` / `man_entity_create_enemy_bullet` — Input: B=world x (bytes), C=world y (pixels), D=room id, E=signed speed_x (bytes/step). Both return carry clear on success and carry set if the pool has no append capacity or recyclable slot.
