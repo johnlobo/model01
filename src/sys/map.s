@@ -5,26 +5,8 @@
 .include "cpctelera.h.s"
 .include "globals.inc"
 .include "config.h.s"
+.include "sys/map_index.inc"
 .include "sys/render.h.s"
-
-;; Convert HL=row to HL=row*MAP_WIDTH. Width 16 keeps the original fast path;
-;; other widths are expanded at assembly time without a runtime multiplier.
-.mdelete map_row_offset_hl
-.macro map_row_offset_hl
-    .if MAP_WIDTH-16
-        ld e, l
-        ld d, h
-        ld hl, #0
-        .rept MAP_WIDTH
-            add hl, de
-        .endm
-    .else
-        add hl, hl
-        add hl, hl
-        add hl, hl
-        add hl, hl
-    .endif
-.endm
 
 
 ;;

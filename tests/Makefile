@@ -1,4 +1,5 @@
 CC ?= cc
+Z80ASM ?= $(CPCT_PATH)/tools/sdcc-3.6.8-r9946/bin/sdasz80
 
 Z80EX_VERSION := 1.1.21
 Z80EX_ARCHIVE  := .cache/z80ex-$(Z80EX_VERSION).tar.gz
@@ -16,14 +17,17 @@ Z80EX_CFLAGS := -I$(Z80EX_DIR) -I$(Z80EX_DIR)/include \
 	-DZ80EX_API_REVISION=1 -DZ80EX_VERSION_MAJOR=1 \
 	-DZ80EX_VERSION_MINOR=21 -DZ80EX_RELEASE_TYPE=
 
-.PHONY: test architecture memory game clean
+.PHONY: test architecture config-smoke memory game clean
 
-test: architecture memory
+test: architecture config-smoke memory
 	$(MAKE) $(RUNNER)
 	./$(RUNNER) $(GAME_BIN) $(GAME_NOI)
 
 architecture:
 	sh ./check_architecture.sh ..
+
+config-smoke:
+	sh ./check_map_widths.sh "$(Z80ASM)" ..
 
 memory: game
 	sh ./check_memory.sh $(GAME_BIN).log
