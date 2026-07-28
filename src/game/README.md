@@ -11,6 +11,7 @@ reusable engine mechanisms.
   jump, shooting and quit-dialog responses.
 - `map.s`: tileset and initial map configuration, tile collision properties,
   room graph, edge transitions, portal placement and teleportation.
+- `menu.s`: main-menu presentation, key bindings and actions.
 
 Code under `src/sys/` may expose callbacks and generic actions used here, but
 must not reference symbols from `src/game/`. A new game should be able to

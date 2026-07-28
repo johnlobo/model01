@@ -20,7 +20,7 @@
 .include "cpctelera.h.s"
 .include "common.h.s"
 .include "man/game.h.s"
-.include "man/menu.h.s"
+.include "game/menu.h.s"
 .include "sys/system.h.s"
 
 ;;-----------------------------------------------------------------
@@ -32,7 +32,7 @@
 ;;
 .area _DATA
 
-_game_loaded_string: .asciz " GAME LOADED - V.058"      ;;27 chars, 54 bytes
+_game_loaded_string: .asciz " GAME LOADED - V.059"      ;;27 chars, 54 bytes
 app_state:: .db APP_STATE_MENU
 
 ;; The transparency table must be 256-byte aligned at runtime, but it is NOT
@@ -124,7 +124,7 @@ _main::
 
    call cpct_setDrawCharM0_asm   ;; Set draw char colours
 
-   call man_menu_init            ;; Main menu is the initial application state
+   call game_menu_init           ;; Main menu is the initial application state
    ;; Loop forever
 loop:
    ld a, (app_state)
@@ -133,5 +133,5 @@ loop:
    call man_game_update
    jr    loop
 loop_menu:
-   call man_menu_update
+   call game_menu_update
    jr loop

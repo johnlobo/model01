@@ -58,11 +58,11 @@ The enforced first boundary is that `src/sys` must not import `src/game`. New in
 
 ### Game Loop
 
-Entry point is `_main::` in `src/main.s`. After firmware disable and low-memory initialization it calls `man_menu_init`. The main loop dispatches by `app_state`: `APP_STATE_MENU` calls `man_menu_update`, while `APP_STATE_GAME` calls `man_game_update`.
+Entry point is `_main::` in `src/main.s`. After firmware disable and low-memory initialization it calls `game_menu_init`. The main loop dispatches by `app_state`: `APP_STATE_MENU` calls `game_menu_update`, while `APP_STATE_GAME` calls `man_game_update`.
 
 ### Main Menu
 
-`src/man/menu.s` owns the main menu and `src/sys/menu_input.s` owns its key/action table. Cursor keys select `HELP` or `START`; the main Return key (`Key_Return`) or numeric-keypad Enter (`Key_Enter`) activates the selection. The selected label is bright yellow and only the previous/current option labels are redrawn when selection changes. `HELP` is currently a no-op. `START` queues initialization until the generic key dispatcher has returned, then resets and initializes a new game before switching `app_state`.
+`src/game/menu.s` owns the main menu, its key/action table and presentation. Cursor keys select `HELP` or `START`; the main Return key (`Key_Return`) or numeric-keypad Enter (`Key_Enter`) activates the selection. The selected label is bright yellow and only the previous/current option labels are redrawn when selection changes. `HELP` is currently a no-op. `START` queues initialization until the generic key dispatcher has returned, then resets and initializes a new game before switching `app_state`.
 
 Menu input uses `sys_input_generic_update`, like gameplay input, plus a release latch so held cursor keys do not repeat every frame.
 

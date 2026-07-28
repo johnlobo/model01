@@ -31,7 +31,7 @@
 .include "game/entities.h.s"
 .include "game/input.h.s"
 .include "game/map.h.s"
-.include "man/menu.h.s"
+.include "game/menu.h.s"
 .include "man/entity.h.s"
 
 .area _DATA
@@ -101,7 +101,7 @@ man_game_apply_quit_cancel:
 
 man_game_apply_quit_confirm:
     call sys_input_clean_buffer
-    call man_menu_init
+    call game_menu_init
     call cpct_waitVSYNC_asm
     ret
 
