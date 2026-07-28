@@ -5,11 +5,17 @@ reusable engine mechanisms.
 
 - `behaviors.s`: concrete enemy bytecode and the game-specific shoot action.
 - `collision.s`: status-pair responses, portal activation and hit feedback.
+- `entities.s`: concrete animation tables, templates and factories for players,
+  enemies, objects, portals and projectiles.
+- `input.s`: key bindings and concrete player actions such as movement, variable
+  jump, shooting and quit-dialog responses.
+- `map.s`: tileset and initial map configuration, tile collision properties,
+  room graph and map-specific portal placement.
 
 Code under `src/sys/` may expose callbacks and generic actions used here, but
 must not reference symbols from `src/game/`. A new game should be able to
 replace this directory without editing the corresponding system internals.
 
-`src/man/` is currently transitional: its managers and entity templates still
-contain model01 orchestration/content, and a few old `sys -> man` callbacks
-remain. They will move behind this boundary in later incremental changes.
+`src/man/` is currently transitional: it owns the entity pool/schema and game
+orchestration. Concrete entity content now lives here in `src/game/`; the
+remaining old `sys -> man` callbacks will move behind this boundary later.

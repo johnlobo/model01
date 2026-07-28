@@ -64,10 +64,6 @@ man_game_init::
     xor a
     ld (man_game_quit_dialog_active), a
     ld (man_game_quit_dialog_response), a
-    ld (current_room), a
-    ld hl, #_g_map01
-    ld (current_map_data), hl
-
     call sys_mem_init               ;; detect 128K RAM and install banking stub
     call man_entity_init
     call sys_input_init
@@ -78,7 +74,7 @@ man_game_init::
     call game_entity_create_patrol_enemy
 
     call sys_render_init
-    call sys_map_init
+    call game_map_init
     call sys_shoot_init
     call sys_map_draw           ;; draw map once at startup
     ret

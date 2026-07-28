@@ -23,24 +23,12 @@ map_origin_y:: .db 16             ;; screen y of map top edge (pixels): nearest 
 
 ;; Pointer to the active tilemap data array (g_map01 or g_map02).
 ;; Change with sys_map_set to switch maps.
-current_map_data:: .dw _g_map01
+current_map_data:: .dw 0
 
 ;; Current room index (0 = map01, 1 = map02, ...).
 ;; Updated by sys_map_set. Entities with e_room != current_room are skipped
 ;; by all systems (render, physics, ai, anim, beh, collision).
 current_room:: .db 0
-
-;; Room connection table.
-;; Each entry is a room_info struct: four 2-byte pointers (N, S, E, W).
-;; 0x0000 = no connection in that direction.
-;; Index by: room_connections + room_index * sizeof_room_info + room_info_[n|s|e|w]
-room_connections::
-    ;;                   N     N_id   S     S_id   E          E_id   W          W_id
-    DefineRoomConnections 0, 0xff, 0, 0xff, _g_map02,   1,    0,         0xff  ;; room 0 (map01)
-    DefineRoomConnections 0, 0xff, 0, 0xff, _g_map03,   2,    _g_map01,  0     ;; room 1 (map02)
-    DefineRoomConnections 0, 0xff, 0, 0xff, _g_map04,   3,    _g_map02,  1     ;; room 2 (map03)
-    DefineRoomConnections 0, 0xff, 0, 0xff, 0,          0xff, _g_map03,  2     ;; room 3 (map04)
-    DefineRoomConnections 0, 0xff, 0, 0xff, 0,          0xff, 0,         0xff  ;; room 4 (inside01, no connections)
 
 ;; Working storage for sys_map_restore_tiles_at
 smrsa_x_left:   .db 0
@@ -49,26 +37,8 @@ smrsa_y_top:    .db 0
 smrsa_y_bottom: .db 0
 smrsa_save_sp:  .dw 0   ;; SP saved during gray-code tile draw
 
-tile_solid_table:
-    .db 0   ;; tile  0: passable (blank)
-    .db 2   ;; tile  1: jumpable (one-way platform)
-    .db 1   ;; tile  2: solid
-    .db 1   ;; tile  3: solid
-    .db 1   ;; tile  4: solid
-    .db 1   ;; tile  5: solid
-    .db 1   ;; tile  6: solid
-    .db 1   ;; tile  7: solid
-    .db 1   ;; tile  8: solid
-    .db 1   ;; tile  9: solid
-    .db 0   ;; tile 10: passable (decoration)
-    .db 0   ;; tile 11: passable (decoration)
-    .db 1   ;; tile 12: solid
-    .db 0   ;; tile 13: passable
-    .db 0   ;; tile 14: passable
-    .db 0   ;; tile 15: passable
-    .db 0   ;; tile 16: passable (decoration)
-    .db 0   ;; tile 17: passable (decoration)
-    .db 0   ;; tile 18: passable (decoration)
+tile_solid_table_ptr: .dw 0
+map_tileset_ptr: .dw 0
 
 ;;
 ;; Start of _CODE area
@@ -81,16 +51,26 @@ tile_solid_table:
 ;;
 ;;  Configures the ETM 4x8 engine with the tileset and map dimensions.
 ;;  Must be called once before sys_map_draw.
-;;  Input:
+;;  Input: HL=tileset, DE=initial tilemap, IX=tile solidity table
 ;;  Output:
 ;;  Modified: AF, DE
 ;;
 sys_map_init::
+    ld (current_map_data), de
+    ld (map_tileset_ptr), hl
+    push hl
+    push ix
+    pop hl
+    call sys_map_set_collision_table
+    pop hl
     ld c, #MAP_WIDTH                        ;; view width in tiles
     ld b, #MAP_HEIGHT                       ;; view height in tiles
     ld de, #MAP_WIDTH                       ;; full tilemap width (= view width, no scrolling)
-    ld hl, #_s_tileset_00                   ;; flat tileset base (tiles are contiguous in memory)
     call cpct_etm_setDrawTilemap4x8_agf_asm
+    ret
+
+sys_map_set_collision_table::
+    ld (tile_solid_table_ptr), hl
     ret
 
 ;;-----------------------------------------------------------------
@@ -98,7 +78,7 @@ sys_map_init::
 ;; sys_map_set
 ;;
 ;;  Sets the active tilemap and redraws it immediately.
-;;  Input:  HL = pointer to tilemap data array (e.g. _g_map01 or _g_map02)
+;;  Input:  HL = pointer to tilemap data array
 ;;  Output:
 ;;  Modified: AF, BC, DE, HL, IX, IY
 ;;
@@ -186,7 +166,7 @@ smisa_get_type:
     add hl, de
 
     ld a, (hl)                  ;; A = tile_id
-    ld hl, #tile_solid_table
+    ld hl, (tile_solid_table_ptr)
     ld e, a
     ld d, #0
     add hl, de
@@ -301,7 +281,7 @@ smrsa_draw_one_tile:
     cp #MAP_WIDTH
     ret nc                  ;; tile_col >= MAP_WIDTH: out of bounds, skip
 
-    ;; tile_id = g_map01[tile_row * MAP_WIDTH + tile_col]
+    ;; tile_id = current_map_data[tile_row * MAP_WIDTH + tile_col]
     ld l, b
     ld h, #0
     add hl, hl              ;; HL = tile_row * 2
@@ -315,7 +295,7 @@ smrsa_draw_one_tile:
     add hl, de
     ld a, (hl)              ;; A = tile_id
 
-    ;; sprite_ptr = _s_tileset_00 + tile_id * 32
+    ;; sprite_ptr = configured tileset + tile_id * 32
     ld l, a
     ld h, #0
     add hl, hl              ;; * 2
@@ -323,7 +303,7 @@ smrsa_draw_one_tile:
     add hl, hl              ;; * 8
     add hl, hl              ;; * 16
     add hl, hl              ;; * 32
-    ld de, #_s_tileset_00
+    ld de, (map_tileset_ptr)
     add hl, de              ;; HL = sprite data pointer
 
     push hl                 ;; save sprite ptr

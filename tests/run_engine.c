@@ -56,6 +56,8 @@ struct Symbols {
     uint16_t shoot_update_one_bullet;
     uint16_t current_map_data;
     uint16_t current_room;
+    uint16_t tile_solid_table;
+    uint16_t map_set_collision_table;
     uint16_t array_init;
     uint16_t array_remove;
     uint16_t array_get;
@@ -148,6 +150,8 @@ static uint16_t *symbol_slot(struct Symbols *symbols, const char *name) {
     if (!strcmp(name, "sys_shoot_update_one_bullet")) return &symbols->shoot_update_one_bullet;
     if (!strcmp(name, "current_map_data")) return &symbols->current_map_data;
     if (!strcmp(name, "current_room")) return &symbols->current_room;
+    if (!strcmp(name, "game_tile_solid_table")) return &symbols->tile_solid_table;
+    if (!strcmp(name, "sys_map_set_collision_table")) return &symbols->map_set_collision_table;
     if (!strcmp(name, "sys_array_init")) return &symbols->array_init;
     if (!strcmp(name, "sys_array_remove_element")) return &symbols->array_remove;
     if (!strcmp(name, "sys_array_get_element")) return &symbols->array_get;
@@ -288,6 +292,9 @@ static uint16_t prepare_bullet_map(struct Machine *machine, uint8_t x,
                                    uint8_t y, uint8_t speed) {
     uint16_t entity = machine->symbols.entity_array;
     reset_fixture(machine);
+    z80ex_set_reg(machine->cpu, regHL, machine->symbols.tile_solid_table);
+    run_routine(machine, machine->symbols.map_set_collision_table);
+    z80ex_reset(machine->cpu);
     memset(machine->memory + TEST_MAP_ADDRESS, 0, MAP_WIDTH * MAP_HEIGHT);
     set_word(machine->memory, machine->symbols.current_map_data, TEST_MAP_ADDRESS);
     machine->memory[machine->symbols.current_room] = 0;
@@ -337,6 +344,7 @@ static void test_factory_parameters(struct Machine *machine) {
     reset_fixture(machine);
     report("portal creation preserves x, y and room",
            !call_factory(machine, machine->symbols.create_portal, 20, 88, 2, 0) &&
+           machine->memory[entity + E_CMPS] == 0x40 &&
            machine->memory[entity + E_X] == 20 &&
            machine->memory[entity + E_Y] == 88 &&
            machine->memory[entity + E_ROOM] == 2);

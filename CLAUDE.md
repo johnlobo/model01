@@ -52,7 +52,7 @@ There is also `_game_loaded_string` in `src/main.s` — keep it in sync.
 
 - `src/sys/` contains reusable mechanisms: array storage, behavior bytecode interpretation, AABB detection/dispatch, physics, animation, rendering, maps, input primitives, messages and memory banking. System code must not reference `src/game` symbols.
 - `src/game/` contains replaceable model01 rules and content. It currently owns the monk behavior programs, the projectile-firing behavior action, collision responses, portal policy and damage-border feedback.
-- `src/man/` is transitional orchestration/content left from the original layout. Its managers, entity schema/templates and remaining legacy `sys → man` callbacks will move behind the game boundary incrementally; do not treat it as framework API.
+- `src/man/` is transitional orchestration left from the original layout. It still owns the entity pool/schema and remaining legacy `sys → man` callbacks; do not treat it as framework API. Concrete entity templates/factories live in `src/game/entities.s`.
 
 The enforced first boundary is that `src/sys` must not import `src/game`. New integration follows `game → sys`; generic systems expose callbacks or function-pointer bytecode entries instead of calling new game rules directly.
 
@@ -70,7 +70,7 @@ Menu input uses `sys_input_generic_update`, like gameplay input, plus a release 
 1. `sys_physics_update` — gravity, friction, tile collision
 2. `sys_shoot_update` — advance bullets, destroy them off map bounds
 3. `man_game_check_transition` — room-edge transitions
-4. `sys_input_update` — keyboard dispatch (IX = player entity)
+4. `game_input_update` — Model01 keyboard actions using the generic input dispatcher (IX = player entity)
 5. `sys_beh_update` — bytecode behavior state machine
 6. `game_collision_update_effects` — game-owned hit feedback
 7. `sys_collision_update` — AABB detection and callback dispatch
@@ -92,7 +92,7 @@ Entities use **world coordinates** (origin = map top-left):
 
 ### Entity Component System
 
-Entities live in a flat array (`entities` in `src/man/entity.s`, max 10). Each has a bitmask `e_cmps`:
+Entities live in a flat array (`entities` in `src/man/entity.s`, max 20). Each has a bitmask `e_cmps`:
 
 | Flag | Value | Meaning |
 |------|-------|---------|
@@ -111,32 +111,32 @@ The entity struct (`e`) is defined with `BeginStruct`/`Field`/`EndStruct` in `sr
 
 ### Input System (`src/sys/input.s`)
 
-`sys_input_update` resets the player to idle animation each frame, then scans `sys_input_key_actions` — a null-terminated table of `(key_constant, handler_address)` 4-byte pairs dispatched via `sys_input_generic_update`. All handlers receive IX = player entity.
+`game_input_update` resets the player to idle animation each frame, then scans `game_input_key_actions` in `src/game/input.s` — a null-terminated table of `(key_constant, handler_address)` 4-byte pairs dispatched by the framework routine `sys_input_generic_update`. All handlers receive IX = player entity.
 
 Current key bindings:
 | Key | Handler | Action |
 |-----|---------|--------|
-| O | `sys_input_selected_left` | Move left at speed −2, switch to walk-left anim |
-| P | `sys_input_selected_right` | Move right at speed +2, switch to walk-right anim |
-| Q | `sys_input_action` | Variable-height jump (see below) |
-| Space | `sys_input_shoot` | Fire a player bullet (see Shooting System below) |
+| O | `game_input_left` | Move left at speed −2, switch to walk-left anim |
+| P | `game_input_right` | Move right at speed +2, switch to walk-right anim |
+| Q | `game_input_jump` | Variable-height jump (see below) |
+| Space | `game_input_shoot` | Fire a player bullet (see Shooting System below) |
 | Escape | `man_game_request_quit` | Open the quit confirmation dialog |
 
-**Jump mechanics** (`sys_input_action`): on ground → set `e_speed_y = -6`, arm `jump_boost_left = 6`. Each subsequent frame Q is held while rising and boost frames remain: decrement speed_y by 1 (cap at −12). Tap = small hop; full hold = max jump.
+**Jump mechanics** (`game_input_jump`): on ground → set `e_speed_y = -6`, arm `game_input_jump_boost_left = 6`. Each subsequent frame Q is held while rising and boost frames remain: decrement speed_y by 1 (cap at −12). Tap = small hop; full hold = max jump.
 
-To add a new key binding: append a `.dw Key_Xxx, handler_label` pair before the terminating `.dw 0` in `sys_input_key_actions`.
+To add a new key binding: append a `.dw Key_Xxx, handler_label` pair before the terminating `.dw 0` in `game_input_key_actions`.
 
 While the quit dialog is active, normal game systems are paused. The message window asks `QUIT TO MAIN MENU? Y / N`. The Y/N key actions only queue a response; after the generic dispatcher returns, Y waits for key release and initializes the main menu, while N restores the background captured by `sys_messages_show` and resumes play. Deferring both actions is required because message/menu routines clobber IY, which the generic dispatcher still needs for its key table.
 
-### Map System (`src/sys/map.s`)
+### Map System (`src/sys/map.s`, `src/game/map.s`)
 
-Five rooms: `_g_map01`–`_g_map04` (rooms 0–3, linked left-to-right) + `_g_inside01` (room 4, portal-only access).
+Five rooms: `_g_map01`–`_g_map04` (rooms 0–3, linked left-to-right) + `_g_inside01` (room 4, entered through the map03 portal and exited through its west door).
 
 `sys_map_draw` draws the map once at init via CPCtelera ETM 4×8 engine. During play only tiles under moved entities are redrawn via `sys_map_restore_tiles_at`. Use `sys_map_set` (HL = tilemap ptr) to switch rooms — it redraws the full map and updates `current_room` and `current_map_data`.
 
-**Room connections** are declared in `room_connections` (map.s) with `DefineRoomConnections`. `man_game_check_transition` checks all four edges and calls `mgct_do_horizontal` / `mgct_do_vertical` when the player crosses a boundary; the player is repositioned one step from the opposite edge to prevent instant re-trigger.
+**Room connections** are Model01 content declared in `room_connections` (`src/game/map.s`) with `DefineRoomConnections`. `man_game_check_transition` checks all four edges and calls `mgct_do_horizontal` / `mgct_do_vertical` when the player crosses a boundary; the player is repositioned one step from the opposite edge to prevent instant re-trigger.
 
-**Tile collision types** (`tile_solid_table` in map.s):
+**Tile collision types** (`game_tile_solid_table` in `src/game/map.s`) are supplied to the generic map system during `game_map_init`:
 | Value | Meaning |
 |-------|---------|
 | 0 | Passable |
@@ -190,10 +190,10 @@ Generic actions and conditions live in `src/sys/beh.s`. Concrete example program
 
 Bullets are regular entities with `c_cmp_projectile` (0x80) and `c_cmp_collider`, moved by `sys_shoot_update` — a straight-line, no-gravity walk that destroys the entity (`e_cmps = c_cmp_invalid`) once it leaves `[0, MAP_WIDTH*4]` horizontally or its leading edge reaches a blocking tile. Both fully solid and one-way platform tiles block horizontal projectiles. They are **not** processed by `sys_physics_update` (no `c_cmp_movable`).
 
-Two bullet templates in `src/man/entity.s`, using sprites `_s_obj_1` (player) / `_s_obj_2` (enemy) from `assets/model01-8x8obj.png` (`S_BULLET_WIDTH = 4` bytes, `S_BULLET_HEIGHT = 8` px):
-- `man_entity_create_player_bullet` / `man_entity_create_enemy_bullet` — Input: B=world x (bytes), C=world y (pixels), D=room id, E=signed speed_x (bytes/step). Both return carry clear on success and carry set if the pool has no append capacity or recyclable slot.
+Two bullet templates in `src/game/entities.s`, using sprites `_s_obj_1` (player) / `_s_obj_2` (enemy) from `assets/model01-8x8obj.png` (`S_BULLET_WIDTH = 4` bytes, `S_BULLET_HEIGHT = 8` px):
+- `game_entity_create_player_bullet` / `game_entity_create_enemy_bullet` — Input: B=world x (bytes), C=world y (pixels), D=room id, E=signed speed_x (bytes/step). Both return carry clear on success and carry set if the pool has no append capacity or recyclable slot.
 
-**Player** fires via key Q (`sys_input_shoot` in `src/sys/input.s`), subject to `PLAYER_SHOOT_COOLDOWN` (10 frames, ticked in `sys_input_update`). Spawn edge and bullet direction follow `player_facing` (0=right/1=left), updated by `sys_input_selected_left`/`_right`.
+**Player** fires via Space (`game_input_shoot` in `src/game/input.s`), subject to `PLAYER_SHOOT_COOLDOWN` (10 frames, ticked in `game_input_update`). Spawn edge and bullet direction follow `game_input_facing` (0=right/1=left), updated by `game_input_left`/`game_input_right`.
 
 **AI** firing is deliberately game-owned. `GAME_SHOOT speed` and `game_beh_action_shoot` live in `src/game/behaviors.*`; they demonstrate how a game adds a non-blocking custom action on top of the generic `ACTION` contract. `game_beh_patrol` fires at direction reversals. Because the entity factory clobbers IX, the action saves/restores the shooter before calling `sys_beh_next`.
 
@@ -219,14 +219,14 @@ The engine owns only AABB detection and dispatch. `sys_collision_set_handler` re
 
 ### Portal Teleportation
 
-Portals repurpose unused entity fields. After `man_entity_create_portal` (B=x, C=y, D=room_id):
+Portals are non-rendered trigger volumes placed over doors already drawn in the tilemap. They repurpose unused entity fields. After `game_entity_create_portal` (B=x, C=y, D=room_id):
 ```asm
 ld hl, #_g_inside01
 ld e_beh(ix), l
 ld e_beh+1(ix), h        ;; dest map pointer
 ld e_beh_timer(ix), #4   ;; dest room id
-ld e_speed_x(ix), #0     ;; dest x (world bytes)
-ld e_speed_x+1(ix), #152 ;; dest y (world pixels)
+ld e_speed_x(ix), #1     ;; dest x (world bytes)
+ld e_speed_x+1(ix), #144 ;; dest y (world pixels)
 ld e_on_air(ix), #1      ;; 1=active
 ```
 
