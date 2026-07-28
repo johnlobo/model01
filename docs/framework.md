@@ -233,6 +233,29 @@ call sys_state_add_counter
 Los identificadores no se validan durante la ejecución para evitar coste en el
 Z80: flags válidos `0..255`, contadores válidos `0..31`.
 
+### Inventario
+
+`sys/inventory` mantiene hasta 8 identificadores de objeto únicos. El ID `0`
+representa un slot vacío; los IDs `1..255` pertenecen al juego. Añadir un objeto
+duplicado, usar el ID cero o superar la capacidad devuelve carry activo. Al
+eliminar un objeto se compactan los siguientes slots y se conserva el orden.
+
+```asm
+ITEM_CELLAR_KEY = 1
+
+call sys_inventory_init
+
+ld a, #ITEM_CELLAR_KEY
+call sys_inventory_add          ;; carry=1 si no se pudo añadir
+
+ld a, #ITEM_CELLAR_KEY
+call sys_inventory_contains     ;; Z=1 si está presente
+```
+
+El inventario consume 9 bytes: un contador y ocho slots. No interpreta los
+objetos ni aplica sus efectos; esas reglas permanecen en el juego. Los flags
+pueden utilizarse además para recordar que el objeto ya desapareció del mundo.
+
 ### Texto, mensajes y bancos
 
 El subsistema de texto recibe del juego los recursos de fuente y números. El de

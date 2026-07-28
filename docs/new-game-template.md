@@ -112,6 +112,7 @@ utiliza entidades, entrada, física, mapa, animación y render:
 
 game_init::
     call sys_state_init
+    call sys_inventory_init
     call sys_entity_init
     call sys_input_init
     call sys_collision_init
@@ -153,6 +154,26 @@ COUNTER_KEYS   = 0
     ld b, #1
     call sys_state_add_counter  ;; saturación en 255
 ```
+
+Para objetos transportables, reserva IDs entre 1 y 255 y utiliza el inventario
+de ocho slots:
+
+```asm
+ITEM_KEY = 1
+
+    ld a, #ITEM_KEY
+    call sys_inventory_add       ;; carry=1 si está lleno o ya existe
+
+    ld a, #ITEM_KEY
+    call sys_inventory_contains  ;; Z=1 si el jugador tiene la llave
+
+    ld a, #ITEM_KEY
+    call sys_inventory_remove
+```
+
+El objeto visible sigue siendo una entidad del juego. Al recogerlo, añade su ID
+al inventario, destruye la entidad sólo si la inserción tuvo éxito y activa un
+flag para no recrearla al volver a entrar en la habitación.
 
 ## 6. Crear una entidad
 

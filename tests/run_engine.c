@@ -92,6 +92,13 @@ struct Symbols {
     uint16_t state_set_counter;
     uint16_t state_add_counter;
     uint16_t state_sub_counter;
+    uint16_t inventory_count;
+    uint16_t inventory_items;
+    uint16_t inventory_init;
+    uint16_t inventory_add;
+    uint16_t inventory_remove;
+    uint16_t inventory_contains;
+    uint16_t inventory_get;
 };
 
 struct Machine {
@@ -197,6 +204,13 @@ static uint16_t *symbol_slot(struct Symbols *symbols, const char *name) {
     if (!strcmp(name, "sys_state_set_counter")) return &symbols->state_set_counter;
     if (!strcmp(name, "sys_state_add_counter")) return &symbols->state_add_counter;
     if (!strcmp(name, "sys_state_sub_counter")) return &symbols->state_sub_counter;
+    if (!strcmp(name, "sys_inventory_count")) return &symbols->inventory_count;
+    if (!strcmp(name, "sys_inventory_items")) return &symbols->inventory_items;
+    if (!strcmp(name, "sys_inventory_init")) return &symbols->inventory_init;
+    if (!strcmp(name, "sys_inventory_add")) return &symbols->inventory_add;
+    if (!strcmp(name, "sys_inventory_remove")) return &symbols->inventory_remove;
+    if (!strcmp(name, "sys_inventory_contains")) return &symbols->inventory_contains;
+    if (!strcmp(name, "sys_inventory_get")) return &symbols->inventory_get;
     return NULL;
 }
 
@@ -765,6 +779,76 @@ static void test_state_contract(struct Machine *machine) {
            machine->memory[machine->symbols.state_counters + 31] == 0);
 }
 
+static uint16_t call_inventory(struct Machine *machine, uint16_t routine,
+                               uint8_t value) {
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regAF, (uint16_t)value << 8);
+    run_routine(machine, routine);
+    return z80ex_get_reg(machine->cpu, regAF);
+}
+
+static void test_inventory_contract(struct Machine *machine) {
+    uint16_t af;
+    int i;
+
+    reset_fixture(machine);
+    machine->memory[machine->symbols.inventory_count] = 8;
+    memset(machine->memory + machine->symbols.inventory_items, 0xff, 8);
+    call_inventory(machine, machine->symbols.inventory_init, 0);
+    report("inventory initialization clears count and slots",
+           machine->memory[machine->symbols.inventory_count] == 0 &&
+           machine->memory[machine->symbols.inventory_items] == 0 &&
+           machine->memory[machine->symbols.inventory_items + 7] == 0);
+
+    af = call_inventory(machine, machine->symbols.inventory_add, 5);
+    report("an item can be added to the inventory",
+           (af & 1) == 0 &&
+           machine->memory[machine->symbols.inventory_count] == 1 &&
+           machine->memory[machine->symbols.inventory_items] == 5);
+
+    af = call_inventory(machine, machine->symbols.inventory_add, 5);
+    report("duplicate and empty item ids are rejected",
+           (af & 1) != 0 &&
+           (call_inventory(machine, machine->symbols.inventory_add, 0) & 1) != 0 &&
+           machine->memory[machine->symbols.inventory_count] == 1);
+
+    call_inventory(machine, machine->symbols.inventory_add, 9);
+    af = call_inventory(machine, machine->symbols.inventory_contains, 9);
+    report("inventory membership uses condition-friendly Z true",
+           (af & 0x40) != 0);
+
+    af = call_inventory(machine, machine->symbols.inventory_get, 1);
+    report("inventory slots preserve insertion order",
+           (af & 1) == 0 && (af >> 8) == 9);
+
+    af = call_inventory(machine, machine->symbols.inventory_remove, 5);
+    report("removing an item compacts following slots",
+           (af & 1) == 0 &&
+           machine->memory[machine->symbols.inventory_count] == 1 &&
+           machine->memory[machine->symbols.inventory_items] == 9 &&
+           machine->memory[machine->symbols.inventory_items + 1] == 0);
+
+    af = call_inventory(machine, machine->symbols.inventory_remove, 9);
+    report("removing the final item empties the inventory",
+           (af & 1) == 0 &&
+           machine->memory[machine->symbols.inventory_count] == 0 &&
+           machine->memory[machine->symbols.inventory_items] == 0 &&
+           (call_inventory(machine, machine->symbols.inventory_remove, 9) & 1) != 0);
+
+    call_inventory(machine, machine->symbols.inventory_init, 0);
+    for (i = 1; i <= 8; ++i)
+        call_inventory(machine, machine->symbols.inventory_add, (uint8_t)i);
+    af = call_inventory(machine, machine->symbols.inventory_add, 9);
+    report("a full inventory rejects items without corruption",
+           (af & 1) != 0 &&
+           machine->memory[machine->symbols.inventory_count] == 8 &&
+           machine->memory[machine->symbols.inventory_items + 7] == 8);
+
+    af = call_inventory(machine, machine->symbols.inventory_get, 8);
+    report("inventory lookup rejects an index equal to count",
+           (af & 1) != 0 && (af >> 8) == 0);
+}
+
 int main(int argc, char **argv) {
     struct Machine machine;
     if (argc != 3) {
@@ -790,6 +874,7 @@ int main(int argc, char **argv) {
     test_animation_set(&machine);
     test_physics_contract(&machine);
     test_state_contract(&machine);
+    test_inventory_contract(&machine);
     printf("1..%d\n", tests_run);
     z80ex_destroy(machine.cpu);
     if (tests_failed) {

@@ -143,6 +143,13 @@
 .globl sys_input_init
 .globl sys_input_wait4anykey
 .globl sys_input_waitKeyPressed
+.globl sys_inventory_add
+.globl sys_inventory_contains
+.globl sys_inventory_count
+.globl sys_inventory_get
+.globl sys_inventory_init
+.globl sys_inventory_items
+.globl sys_inventory_remove
 .globl sys_map_draw
 .globl sys_map_init
 .globl sys_map_is_landable_at
