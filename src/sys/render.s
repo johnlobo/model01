@@ -33,9 +33,6 @@
 ;;
 .area _DATA
 
-FONT_NUMBERS: .dw #0000
-
-
 sys_render_front_buffer: .db 0xc0
 sys_render_back_buffer: .db 0x80
 sys_render_touched_zones: .db 0x00

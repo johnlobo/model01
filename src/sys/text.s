@@ -21,9 +21,6 @@
 .include "sys/util.h.s"
 .include "sys/render.h.s"
 
-.globl _s_font_0
-.globl _s_small_numbers_00
-
 
 ;;
 ;; Start of _DATA area 
@@ -34,12 +31,22 @@
 .area _DATA
 
 aux_txt:: .ds 20
+sys_text_font:          .dw 0
+sys_text_small_numbers: .dw 0
 
 
 ;;
 ;; Start of _CODE area
 ;; 
 .area _CODE
+
+;; Register the game-provided text assets.
+;; Input: HL = font sprite base, DE = small-number sprite base
+;; Modified: none
+sys_text_init::
+    ld (sys_text_font), hl
+    ld (sys_text_small_numbers), de
+    ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; sys_text_reset_aux_txt
@@ -293,7 +300,7 @@ _draw_char:
     ld e, a                         ;; copy char position in e
     ld h, l                         ;; copy WIDTH*HEIGHT in h
     call sys_util_h_times_e                  ;; hl = WIDTH * HEIGHT * char position
-    ld de, #_s_font_0           ;; add the begining of the font set to the offset
+    ld de, (sys_text_font)          ;; add the configured font base to the offset
     add hl, de                      ;; final address of the sprite to draw
     pop de                          ;; video memory address
     ld c, #FONT_WIDTH               ;; width of the char
@@ -403,7 +410,7 @@ sys_text_draw_small_char_number::
 
     ld b, #0                            ;;
     ld c, l                             ;;
-    ld hl, #_s_small_numbers_00         ;; point hl to the start of the numbers
+    ld hl, (sys_text_small_numbers)     ;; point HL to the configured number set
     add hl, bc                          ;; address of the number to show
     push hl                             ;; store sprite address in stack
 

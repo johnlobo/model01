@@ -21,6 +21,7 @@
 ;;===============================================================================
 ;; PUBLIC METHODS
 ;;===============================================================================
+.globl sys_text_init
 .globl sys_text_str_length
 .globl sys_text_str_copy
 .globl sys_text_str_cmp

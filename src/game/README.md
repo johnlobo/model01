@@ -23,6 +23,8 @@ game can configure the framework without introducing a `sys` dependency on the
 game layer.
 The render system receives the active 16-colour palette from the game in `HL`;
 it does not reference a concrete asset itself.
+Likewise, `sys_text_init` receives the font in `HL` and the small-number sprite
+set in `DE`, keeping concrete text assets in the game layer.
 
 The former `src/man/` layer has been removed. The reusable entity schema/pool
 lives in `src/sys/entity.*`; lifecycle and concrete content live here.

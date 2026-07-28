@@ -19,7 +19,7 @@ game_menu_selected: .db MENU_OPTION_START
 game_menu_start_requested: .db 0
 game_menu_input_locked: .db 0
 game_menu_title: .asciz "MODEL 01"
-game_menu_version: .asciz "VERSION - V.063"
+game_menu_version: .asciz "VERSION - V.064"
 game_menu_help: .asciz "HELP"
 game_menu_start: .asciz "START"
 
@@ -41,6 +41,9 @@ game_menu_init::
     ld (game_menu_input_locked), a
     ld a, #MENU_OPTION_START
     ld (game_menu_selected), a
+    ld hl, #_s_font_0
+    ld de, #_s_small_numbers_00
+    call sys_text_init
     ld hl, #_g_palette0
     call sys_render_init
     call game_menu_draw

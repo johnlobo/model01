@@ -15,6 +15,7 @@
 .include "sys/mem.h.s"
 .include "sys/shoot.h.s"
 .include "sys/messages.h.s"
+.include "sys/text.h.s"
 .include "game/collision.h.s"
 .include "game/entities.h.s"
 .include "game/input.h.s"
@@ -41,6 +42,9 @@ game_init::
     call game_collision_init
     call game_entity_create_player
     call game_entity_create_patrol_enemy
+    ld hl, #_s_font_0
+    ld de, #_s_small_numbers_00
+    call sys_text_init
     ld hl, #_g_palette0
     call sys_render_init
     call game_map_init

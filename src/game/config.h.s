@@ -1,6 +1,8 @@
 ;; Model01-specific assets, states and entity dimensions.
 
 .globl _g_palette0
+.globl _s_font_0
+.globl _s_small_numbers_00
 .globl _s_monk_0
 .globl _s_monk_1
 .globl _s_monk_2
