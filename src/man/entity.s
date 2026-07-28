@@ -159,7 +159,7 @@ man_entity_create_patrol_enemy::
     call sys_array_create_reusable_element
     ret c
     ld__ix_hl
-    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_ai | c_cmp_animated | c_cmp_collisionable)
+    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_behavior | c_cmp_animated | c_cmp_collisionable)
     ld e_status(ix), #STATUS_ENEMY
     ld e_moved(ix), #1
     ld hl, #monk_walk_right_anim

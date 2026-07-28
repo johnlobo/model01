@@ -16,6 +16,8 @@ enum {
     TEST_ARRAY_DESTINATION = 0x2300,
     TEST_COLLIDER = 0x2400,
     TEST_COLLISIONABLE = 0x2440,
+    TEST_BEHAVIOR = 0x2500,
+    TEST_BEHAVIOR_ENTITY = 0x2600,
     MAP_WIDTH = 16,
     MAP_HEIGHT = 20,
     MAX_STEPS = 1000000,
@@ -35,6 +37,7 @@ enum {
     E_ANIM = 23,
     E_ANIM_FRAME = 25,
     E_ANIM_TIMER = 26,
+    E_BEH = 27,
     E_BEH_TIMER = 29,
     E_ROOM = 30,
     MAX_ENTITIES = 20,
@@ -61,6 +64,11 @@ struct Symbols {
     uint16_t collision_set_handler;
     uint16_t collision_on_hit;
     uint16_t game_collision_handler;
+    uint16_t beh_update_one;
+    uint16_t beh_action_idle;
+    uint16_t beh_action_set_vx;
+    uint16_t beh_cond_true;
+    uint16_t beh_actions_left;
     uint16_t anim_set;
     uint16_t idle_anim;
     uint16_t walk_right_anim;
@@ -147,6 +155,11 @@ static uint16_t *symbol_slot(struct Symbols *symbols, const char *name) {
     if (!strcmp(name, "sys_collision_set_handler")) return &symbols->collision_set_handler;
     if (!strcmp(name, "sys_collision_on_hit")) return &symbols->collision_on_hit;
     if (!strcmp(name, "man_game_on_collision")) return &symbols->game_collision_handler;
+    if (!strcmp(name, "sys_beh_update_one_entity")) return &symbols->beh_update_one;
+    if (!strcmp(name, "beh_action_idle")) return &symbols->beh_action_idle;
+    if (!strcmp(name, "beh_action_set_vx")) return &symbols->beh_action_set_vx;
+    if (!strcmp(name, "beh_cond_true")) return &symbols->beh_cond_true;
+    if (!strcmp(name, "sys_beh_actions_left")) return &symbols->beh_actions_left;
     if (!strcmp(name, "sys_anim_set")) return &symbols->anim_set;
     if (!strcmp(name, "monk_idle_anim")) return &symbols->idle_anim;
     if (!strcmp(name, "monk_walk_right_anim")) return &symbols->walk_right_anim;
@@ -504,6 +517,38 @@ static void test_collision_handler_contract(struct Machine *machine) {
            z80ex_get_reg(machine->cpu, regIY) == TEST_COLLISIONABLE);
 }
 
+static void prepare_behavior_entity(struct Machine *machine) {
+    memset(machine->memory + TEST_BEHAVIOR_ENTITY, 0, ENTITY_SIZE);
+    machine->memory[machine->symbols.current_room] = 0;
+    set_word(machine->memory, TEST_BEHAVIOR_ENTITY + E_BEH, TEST_BEHAVIOR);
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regIX, TEST_BEHAVIOR_ENTITY);
+}
+
+static void test_behavior_contract(struct Machine *machine) {
+    reset_fixture(machine);
+    prepare_behavior_entity(machine);
+    set_word(machine->memory, TEST_BEHAVIOR, machine->symbols.beh_action_set_vx);
+    machine->memory[TEST_BEHAVIOR + 2] = 7;
+    set_word(machine->memory, TEST_BEHAVIOR + 3, machine->symbols.beh_action_idle);
+    set_word(machine->memory, TEST_BEHAVIOR + 5, 0); /* CONDITIONS_END */
+    run_routine(machine, machine->symbols.beh_update_one);
+    report("behavior bytecode dispatches action callbacks",
+           machine->memory[TEST_BEHAVIOR_ENTITY + E_SPEED_X] == 7 &&
+           get_word(machine->memory, TEST_BEHAVIOR_ENTITY + E_BEH) ==
+               TEST_BEHAVIOR + 3);
+
+    reset_fixture(machine);
+    prepare_behavior_entity(machine);
+    set_word(machine->memory, TEST_BEHAVIOR, machine->symbols.beh_action_idle);
+    set_word(machine->memory, TEST_BEHAVIOR + 2, machine->symbols.beh_cond_true);
+    set_word(machine->memory, TEST_BEHAVIOR + 4, TEST_BEHAVIOR);
+    run_routine(machine, machine->symbols.beh_update_one);
+    report("behavior dispatch budget yields an immediate action cycle",
+           get_word(machine->memory, TEST_BEHAVIOR_ENTITY + E_BEH) == TEST_BEHAVIOR &&
+           machine->memory[machine->symbols.beh_actions_left] == 0);
+}
+
 static void test_animation_set(struct Machine *machine) {
     uint16_t entity = machine->symbols.entity_array;
     reset_fixture(machine);
@@ -556,6 +601,7 @@ int main(int argc, char **argv) {
     test_pool_contract(&machine);
     test_array_contract(&machine);
     test_collision_handler_contract(&machine);
+    test_behavior_contract(&machine);
     test_animation_set(&machine);
     printf("1..%d\n", tests_run);
     z80ex_destroy(machine.cpu);

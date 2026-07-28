@@ -29,9 +29,15 @@
 ;; Special value for target_addr:
 DESTROY_ENTITY = 0x0000   ;; mark entity invalid (remove from active set)
 
+;; Maximum actions dispatched for one entity in one update. Blocking actions
+;; normally consume one. Immediate action cycles yield after this many entries
+;; and resume from e_beh on the next frame instead of freezing the machine.
+BEH_MAX_ACTIONS_PER_TICK = 16
+
 ;;===============================================================================
 ;; PUBLIC METHODS
 ;;===============================================================================
+.globl sys_beh_actions_left       ;; remaining dispatch budget (diagnostics/tests)
 .globl sys_beh_init
 .globl sys_beh_update
 .globl sys_beh_run
@@ -71,6 +77,21 @@ DESTROY_ENTITY = 0x0000   ;; mark entity invalid (remove from active set)
 ;; DSL MACROS
 ;;===============================================================================
 
+;; ACTION fn — emit a direct action function pointer. Custom non-blocking
+;; actions receive IX=entity and DE=inline arguments; advance DE over their
+;; arguments and finish with `jp sys_beh_next`. Blocking actions finish with
+;; `jp sys_beh_check_conditions` and leave e_beh at the current instruction.
+.macro ACTION _fn
+    .dw _fn
+.endm
+
+;; CONDITION_FN fn, target — condition callback without a naming convention.
+;; Custom conditions receive IX=entity and DE=target pointer, must preserve DE,
+;; and return Z=1 for true or Z=0 for false.
+.macro CONDITION_FN _fn, _target
+    .dw _fn, _target
+.endm
+
 ;; IDLE — blocking action: check conditions immediately each frame.
 ;; Follow with CONDITION / CONDITIONS_END.
 .macro IDLE
@@ -86,7 +107,7 @@ DESTROY_ENTITY = 0x0000   ;; mark entity invalid (remove from active set)
 ;;   cond   : bare name, e.g. "true", "timeout", "on_ground"
 ;;   target : label to jump to when condition is true
 .macro CONDITION _cond, _target
-    .dw beh_cond_'_cond, _target
+    CONDITION_FN beh_cond_'_cond, _target
 .endm
 
 ;; GOTO target — unconditional jump to another behavior label.

@@ -20,7 +20,6 @@
 .include "common.h.s"
 .include "sys/render.h.s"
 .include "sys/map.h.s"
-.include "sys/ai.h.s"
 .include "sys/physics.h.s"
 .include "sys/input.h.s"
 .include "sys/collision.h.s"
@@ -119,7 +118,6 @@ man_game_update::
     call man_game_check_transition
     ld ix, #entity_array
     call sys_input_update
-    call sys_ai_update
     call sys_beh_update
     call man_game_update_collision_effects
     call sys_collision_update

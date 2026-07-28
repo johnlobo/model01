@@ -64,6 +64,7 @@ beh_patrol_turn_right::
 ;; clobbers registers) before being read back as E for the factory.
 ;;-----------------------------------------------------------------
 beh_shoot_speed:: .db 0
+sys_beh_actions_left:: .db 0
 
 ;;
 ;; Start of _CODE area
@@ -115,13 +116,17 @@ sys_beh_update_one_entity::
     ld a, d
     or e
     ret z               ;; e_beh == 0 → no behavior, skip
+    ld a, #BEH_MAX_ACTIONS_PER_TICK
+    ld (sys_beh_actions_left), a
     jp sys_beh_run
 
 ;;-----------------------------------------------------------------
 ;;
 ;; sys_beh_run
 ;;
-;;  Read the action pointer at DE, advance DE past it, jump to the
+;;  Consume one dispatch-budget unit, read the action pointer at DE, advance
+;;  DE past it and jump to the action. When the per-tick budget is exhausted,
+;;  return immediately; sys_beh_next has already saved DE as the resume point.
 ;;  action. The action receives IX = entity and DE = its first
 ;;  inline argument byte (or condition table for blocking actions).
 ;;
@@ -134,6 +139,11 @@ sys_beh_update_one_entity::
 ;;  Modified: AF, HL
 ;;
 sys_beh_run::
+    ld a, (sys_beh_actions_left)
+    or a
+    ret z
+    dec a
+    ld (sys_beh_actions_left), a
     ld a, (de)
     ld l, a
     inc de
@@ -217,7 +227,7 @@ sbhcc_true::
 ;;
 ;; sys_beh_update
 ;;
-;;  Iterate all entities with c_cmp_ai and run their behavior.
+;;  Iterate all entities with c_cmp_behavior and run their behavior.
 ;;  Entities with e_beh == 0 are skipped inside
 ;;  sys_beh_update_one_entity.
 ;;
@@ -227,7 +237,7 @@ sbhcc_true::
 ;;
 sys_beh_update::
     ld ix, #entities
-    ld b, #c_cmp_ai
+    ld b, #c_cmp_behavior
     ld hl, #sys_beh_update_one_entity
     call sys_array_execute_each_ix_matching
     ret

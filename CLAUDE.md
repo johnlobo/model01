@@ -63,9 +63,9 @@ Menu input uses `sys_input_generic_update`, like gameplay input, plus a release 
 2. `sys_shoot_update` — advance bullets, destroy them off map bounds
 3. `man_game_check_transition` — room-edge transitions
 4. `sys_input_update` — keyboard dispatch (IX = player entity)
-5. `sys_ai_update` — AI gravity/bounce
-6. `sys_beh_update` — bytecode behavior state machine
-7. `sys_collision_update` — AABB detection
+5. `sys_beh_update` — bytecode behavior state machine
+6. `man_game_update_collision_effects` — game-owned hit feedback
+7. `sys_collision_update` — AABB detection and callback dispatch
 8. `sys_anim_update` — advance animation frames
 9. `sys_render_prepare` — build the Y-sorted render queue before vsync
 10. `cpct_waitVSYNC_asm` — wait for vsync
@@ -91,7 +91,7 @@ Entities live in a flat array (`entities` in `src/man/entity.s`, max 10). Each h
 | `c_cmp_render` | 0x01 | Rendered each frame |
 | `c_cmp_movable` | 0x02 | Physics applied |
 | `c_cmp_input` | 0x04 | Player-controlled |
-| `c_cmp_ai` | 0x08 | AI-controlled |
+| `c_cmp_behavior` | 0x08 | Controlled by behavior bytecode (`c_cmp_ai` remains as a compatibility alias) |
 | `c_cmp_animated` | 0x10 | Animated sprite |
 | `c_cmp_collider` | 0x20 | Active collider (outer loop) |
 | `c_cmp_collisionable` | 0x40 | Passive collision target (inner loop) |
@@ -159,12 +159,16 @@ Set `e_anim` to the descriptor pointer and add `c_cmp_animated`. Animation is sk
 
 ### Behavior System (`src/sys/beh.s`)
 
-Bytecode state machine for `c_cmp_ai` entities with `e_beh != 0`. **All cross-function jumps use `jp` (not `call`) — the Z80 stack stays flat.**
+Bytecode state machine for `c_cmp_behavior` entities with `e_beh != 0`. It is the framework's single AI path; the former hardcoded `sys_ai` pass has been removed. **All cross-function jumps use `jp` (not `call`) — the Z80 stack stays flat.**
 
 DSL macros (in `beh.h.s`):
 - Non-blocking (chain immediately): `SET_TIMER n`, `SET_VX vx`, `SET_VY vy`, `SET_ANIMATION addr`
 - Blocking (check conditions each frame): `IDLE`, `WAIT ticks, target`, `DRIVE_VX vx, stride`
 - Control: `GOTO target`, `CONDITION cond, target`, `CONDITIONS_END`
+
+Each entity may dispatch at most `BEH_MAX_ACTIONS_PER_TICK` (16) actions per update. Blocking actions normally consume one; immediate cycles yield at the limit and resume from `e_beh` next frame. This prevents malformed game bytecode from freezing the CPC.
+
+Game-specific extensions need no engine registry because behavior entries already contain function pointers. Use `ACTION function` for a custom action and `CONDITION_FN function, target` for a custom condition. Non-blocking actions advance DE over their inline data and jump to `sys_beh_next`; blocking actions jump to `sys_beh_check_conditions`. Conditions preserve DE and return Z=1 for true or Z=0 for false.
 
 `DRIVE_VX vx, stride` — drives entity at `vx` bytes; `stride=1` moves every frame, `stride=N>1` moves one step every N frames via `e_beh_timer`.
 
