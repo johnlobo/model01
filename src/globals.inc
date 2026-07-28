@@ -196,6 +196,13 @@
 .globl sys_shoot_init
 .globl sys_shoot_update
 .globl sys_shoot_update_one_bullet
+.globl sys_script_init
+.globl sys_script_is_running
+.globl sys_script_ops_left
+.globl sys_script_pc
+.globl sys_script_start
+.globl sys_script_stop
+.globl sys_script_update
 .globl sys_state_add_counter
 .globl sys_state_clear_flag
 .globl sys_state_counters

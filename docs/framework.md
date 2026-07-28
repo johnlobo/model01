@@ -304,6 +304,44 @@ game_input_use:                  ;; IX=jugador
 devuelven carry activo si no existe objetivo. Puertas, personajes, cofres y
 objetos siguen identificándose mediante estados definidos por cada juego.
 
+### Scripts de eventos
+
+`sys/script` combina estado, inventario, contadores, mapa y callbacks mediante
+bytecode declarativo. Mantiene un único evento activo, apropiado para la
+interacción que el jugador está resolviendo. No sustituye a `sys/beh`: los
+comportamientos controlan cada entidad por frame; los scripts expresan una
+secuencia de consecuencias y condiciones del mundo.
+
+```asm
+door_script:
+    SCRIPT_REQUIRE_ITEM ITEM_RED_KEY, door_locked
+    SCRIPT_REMOVE_ITEM ITEM_RED_KEY, door_locked
+    SCRIPT_SET_FLAG FLAG_RED_DOOR_OPEN
+    SCRIPT_SET_TILE #12, #7, #TILE_OPEN_DOOR
+    SCRIPT_CALL game_door_opened
+    SCRIPT_END
+
+door_locked:
+    SCRIPT_CALL game_door_locked
+    SCRIPT_END
+```
+
+La primera versión incluye flags, objetos, contadores, requisitos mínimos,
+cambio y redibujado de tiles, callbacks y saltos. Un target de fallo cero termina
+el evento. `sys_script_update` procesa como máximo 16 instrucciones; un bucle de
+saltos inmediatos cede el control y continúa en el frame siguiente.
+
+```asm
+ld hl, #door_script
+call sys_script_start
+;; En cada frame pertinente:
+call sys_script_update
+```
+
+Los callbacks permiten ejecutar reglas propias sin importar `src/game` desde el
+framework. El contrato de pausa para páginas de diálogo y elecciones queda fuera
+de esta versión síncrona.
+
 ### Texto, mensajes y bancos
 
 El subsistema de texto recibe del juego los recursos de fuente y números. El de

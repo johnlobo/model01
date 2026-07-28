@@ -21,6 +21,9 @@ enum {
     TEST_INTERACTION_HANDLER = 0x2700,
     TEST_INTERACTION_FILTER = 0x2710,
     TEST_INTERACTION_MARKER = 0x2720,
+    TEST_SCRIPT = 0x2800,
+    TEST_SCRIPT_CALLBACK = 0x2900,
+    TEST_SCRIPT_MARKER = 0x2910,
     MAP_WIDTH = 16,
     MAP_HEIGHT = 20,
     MAX_STEPS = 1000000,
@@ -113,6 +116,12 @@ struct Symbols {
     uint16_t interaction_set_handler;
     uint16_t interaction_find;
     uint16_t interaction_try;
+    uint16_t script_pc;
+    uint16_t script_ops_left;
+    uint16_t script_init;
+    uint16_t script_start;
+    uint16_t script_update;
+    uint16_t script_is_running;
 };
 
 struct Machine {
@@ -236,6 +245,12 @@ static uint16_t *symbol_slot(struct Symbols *symbols, const char *name) {
     if (!strcmp(name, "sys_interaction_set_handler")) return &symbols->interaction_set_handler;
     if (!strcmp(name, "sys_interaction_find")) return &symbols->interaction_find;
     if (!strcmp(name, "sys_interaction_try")) return &symbols->interaction_try;
+    if (!strcmp(name, "sys_script_pc")) return &symbols->script_pc;
+    if (!strcmp(name, "sys_script_ops_left")) return &symbols->script_ops_left;
+    if (!strcmp(name, "sys_script_init")) return &symbols->script_init;
+    if (!strcmp(name, "sys_script_start")) return &symbols->script_start;
+    if (!strcmp(name, "sys_script_update")) return &symbols->script_update;
+    if (!strcmp(name, "sys_script_is_running")) return &symbols->script_is_running;
     return NULL;
 }
 
@@ -1016,6 +1031,118 @@ static void test_dynamic_map_contract(struct Machine *machine) {
            machine->memory[FRONT_TILE_0] == expected);
 }
 
+static void run_script(struct Machine *machine, uint16_t address) {
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regHL, address);
+    run_routine(machine, machine->symbols.script_start);
+    z80ex_reset(machine->cpu);
+    run_routine(machine, machine->symbols.script_update);
+}
+
+static void test_script_contract(struct Machine *machine) {
+    enum {
+        OP_END = 0, OP_SET_FLAG = 1, OP_REQUIRE_FLAG = 3,
+        OP_ADD_ITEM = 4, OP_REMOVE_ITEM = 5, OP_REQUIRE_ITEM = 6,
+        OP_SET_COUNTER = 7, OP_ADD_COUNTER = 8, OP_REQUIRE_COUNTER = 9,
+        OP_SET_TILE = 10, OP_CALL = 11, OP_GOTO = 12
+    };
+    uint16_t failure;
+    uint16_t af;
+    uint16_t p;
+
+    reset_fixture(machine);
+    call_state_value(machine, machine->symbols.state_init, 0, 0);
+    p = TEST_SCRIPT;
+    machine->memory[p++] = OP_SET_FLAG; machine->memory[p++] = 1;
+    machine->memory[p++] = OP_SET_COUNTER; machine->memory[p++] = 2; machine->memory[p++] = 10;
+    machine->memory[p++] = OP_ADD_COUNTER; machine->memory[p++] = 2; machine->memory[p++] = 5;
+    machine->memory[p++] = OP_END;
+    run_script(machine, TEST_SCRIPT);
+    report("event scripts apply flag and counter actions",
+           (machine->memory[machine->symbols.state_flags] & 0x02) != 0 &&
+           machine->memory[machine->symbols.state_counters + 2] == 15 &&
+           get_word(machine->memory, machine->symbols.script_pc) == 0);
+
+    reset_fixture(machine);
+    call_state_value(machine, machine->symbols.state_init, 0, 0);
+    failure = TEST_SCRIPT + 8;
+    p = TEST_SCRIPT;
+    machine->memory[p++] = OP_REQUIRE_FLAG; machine->memory[p++] = 7;
+    set_word(machine->memory, p, failure); p += 2;
+    machine->memory[p++] = OP_SET_COUNTER; machine->memory[p++] = 0; machine->memory[p++] = 1;
+    machine->memory[p++] = OP_END;
+    machine->memory[p++] = OP_SET_COUNTER; machine->memory[p++] = 0; machine->memory[p++] = 2;
+    machine->memory[p++] = OP_END;
+    run_script(machine, TEST_SCRIPT);
+    report("a failed flag requirement branches to its target",
+           machine->memory[machine->symbols.state_counters] == 2);
+
+    call_state_value(machine, machine->symbols.state_set_flag, 7, 0);
+    run_script(machine, TEST_SCRIPT);
+    report("a satisfied flag requirement continues in sequence",
+           machine->memory[machine->symbols.state_counters] == 1);
+
+    reset_fixture(machine);
+    call_state_value(machine, machine->symbols.state_init, 0, 0);
+    call_inventory(machine, machine->symbols.inventory_init, 0);
+    failure = TEST_SCRIPT + 13;
+    p = TEST_SCRIPT;
+    machine->memory[p++] = OP_ADD_ITEM; machine->memory[p++] = 4;
+    set_word(machine->memory, p, failure); p += 2;
+    machine->memory[p++] = OP_REQUIRE_ITEM; machine->memory[p++] = 4;
+    set_word(machine->memory, p, failure); p += 2;
+    machine->memory[p++] = OP_REMOVE_ITEM; machine->memory[p++] = 4;
+    set_word(machine->memory, p, failure); p += 2;
+    machine->memory[p++] = OP_END;
+    machine->memory[p++] = OP_SET_FLAG; machine->memory[p++] = 9;
+    machine->memory[p++] = OP_END;
+    run_script(machine, TEST_SCRIPT);
+    report("event scripts compose inventory actions and conditions",
+           machine->memory[machine->symbols.inventory_count] == 0 &&
+           (machine->memory[machine->symbols.state_flags + 1] & 0x02) == 0);
+
+    call_state_value(machine, machine->symbols.state_set_counter, 3, 4);
+    failure = TEST_SCRIPT + 8;
+    p = TEST_SCRIPT;
+    machine->memory[p++] = OP_REQUIRE_COUNTER; machine->memory[p++] = 3;
+    machine->memory[p++] = 5; set_word(machine->memory, p, failure); p += 2;
+    machine->memory[p++] = OP_SET_FLAG; machine->memory[p++] = 10;
+    machine->memory[p++] = OP_END;
+    machine->memory[p++] = OP_SET_FLAG; machine->memory[p++] = 11;
+    machine->memory[p++] = OP_END;
+    run_script(machine, TEST_SCRIPT);
+    report("counter requirements branch below their minimum",
+           (machine->memory[machine->symbols.state_flags + 1] & 0x08) != 0 &&
+           (machine->memory[machine->symbols.state_flags + 1] & 0x04) == 0);
+
+    prepare_dynamic_map(machine);
+    machine->memory[TEST_SCRIPT_CALLBACK] = 0x3e;
+    machine->memory[TEST_SCRIPT_CALLBACK + 1] = 0x5a;
+    machine->memory[TEST_SCRIPT_CALLBACK + 2] = 0x32;
+    machine->memory[TEST_SCRIPT_CALLBACK + 3] = TEST_SCRIPT_MARKER & 0xff;
+    machine->memory[TEST_SCRIPT_CALLBACK + 4] = TEST_SCRIPT_MARKER >> 8;
+    machine->memory[TEST_SCRIPT_CALLBACK + 5] = 0xc9;
+    p = TEST_SCRIPT;
+    machine->memory[p++] = OP_SET_TILE; machine->memory[p++] = 0;
+    machine->memory[p++] = 0; machine->memory[p++] = 1;
+    machine->memory[p++] = OP_CALL; set_word(machine->memory, p, TEST_SCRIPT_CALLBACK); p += 2;
+    machine->memory[p++] = OP_END;
+    run_script(machine, TEST_SCRIPT);
+    report("event scripts update tiles and invoke game callbacks",
+           machine->memory[TEST_MAP_ADDRESS] == 1 &&
+           machine->memory[TEST_SCRIPT_MARKER] == 0x5a);
+
+    reset_fixture(machine);
+    machine->memory[TEST_SCRIPT] = OP_GOTO;
+    set_word(machine->memory, TEST_SCRIPT + 1, TEST_SCRIPT);
+    run_script(machine, TEST_SCRIPT);
+    af = call_state_value(machine, machine->symbols.script_is_running, 0, 0);
+    report("the script budget yields immediate instruction loops",
+           get_word(machine->memory, machine->symbols.script_pc) == TEST_SCRIPT &&
+           machine->memory[machine->symbols.script_ops_left] == 0 &&
+           af == 0);
+}
+
 int main(int argc, char **argv) {
     struct Machine machine;
     if (argc != 3) {
@@ -1044,6 +1171,7 @@ int main(int argc, char **argv) {
     test_inventory_contract(&machine);
     test_interaction_contract(&machine);
     test_dynamic_map_contract(&machine);
+    test_script_contract(&machine);
     printf("1..%d\n", tests_run);
     z80ex_destroy(machine.cpu);
     if (tests_failed) {

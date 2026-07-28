@@ -354,6 +354,40 @@ con `sys_map_redraw_tile`, o llama una sola vez a `sys_map_draw`. El ID nuevo se
 aplica también a las consultas de colisión. Al entrar de nuevo en la habitación,
 consulta `FLAG_DOOR_OPEN` y reconstruye su aspecto persistente.
 
+Cuando varias condiciones y acciones formen una secuencia, descríbela como un
+script de evento en vez de crear una rutina distinta para cada puerta:
+
+```asm
+.include "sys/script.h.s"
+
+door_script:
+    SCRIPT_REQUIRE_ITEM ITEM_KEY, door_locked
+    SCRIPT_REMOVE_ITEM ITEM_KEY, door_locked
+    SCRIPT_SET_FLAG FLAG_DOOR_OPEN
+    SCRIPT_SET_TILE #12, #7, #TILE_OPEN_DOOR
+    SCRIPT_END
+
+door_locked:
+    SCRIPT_CALL game_show_locked_message
+    SCRIPT_END
+```
+
+Arráncalo desde el manejador de interacción y actualízalo mientras esté activo:
+
+```asm
+    ld hl, #door_script
+    call sys_script_start
+
+    ;; Dentro del orden del frame:
+    call sys_script_update
+```
+
+También están disponibles `SCRIPT_REQUIRE_FLAG`, `SCRIPT_SET_COUNTER`,
+`SCRIPT_ADD_COUNTER`, `SCRIPT_REQUIRE_COUNTER`, `SCRIPT_ADD_ITEM`,
+`SCRIPT_GOTO` y `SCRIPT_CALL`. Los fallos saltan a una dirección absoluta; usa
+`0` para terminar. El límite de 16 operaciones por tick evita que un script
+cíclico congele el CPC.
+
 ## 9. Activar animaciones
 
 Una entidad necesita `c_cmp_animated` y un puntero válido en `e_anim`. Para
