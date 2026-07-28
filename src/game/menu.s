@@ -7,7 +7,7 @@
 .include "sys/render.h.s"
 .include "sys/text.h.s"
 .include "sys/input.h.s"
-.include "man/game.h.s"
+.include "game/game.h.s"
 
 MENU_OPTION_HELP = 0
 MENU_OPTION_START = 1
@@ -52,7 +52,7 @@ game_menu_update::
     call sys_input_clean_buffer
     xor a
     ld (game_menu_start_requested), a
-    call man_game_init
+    call game_init
     ld a, #APP_STATE_GAME
     ld (app_state), a
     ret

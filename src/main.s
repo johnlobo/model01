@@ -19,7 +19,7 @@
 ;; Include all CPCtelera constant definitions, macros and variables
 .include "cpctelera.h.s"
 .include "common.h.s"
-.include "man/game.h.s"
+.include "game/game.h.s"
 .include "game/menu.h.s"
 .include "sys/system.h.s"
 
@@ -32,7 +32,7 @@
 ;;
 .area _DATA
 
-_game_loaded_string: .asciz " GAME LOADED - V.060"      ;;27 chars, 54 bytes
+_game_loaded_string: .asciz " GAME LOADED - V.061"      ;;27 chars, 54 bytes
 app_state:: .db APP_STATE_MENU
 
 ;; The transparency table must be 256-byte aligned at runtime, but it is NOT
@@ -130,7 +130,7 @@ loop:
    ld a, (app_state)
    or a
    jr z, loop_menu
-   call man_game_update
+   call game_update
    jr    loop
 loop_menu:
    call game_menu_update

@@ -12,11 +12,11 @@ reusable engine mechanisms.
 - `map.s`: tileset and initial map configuration, tile collision properties,
   room graph, edge transitions, portal placement and teleportation.
 - `menu.s`: main-menu presentation, key bindings and actions.
+- `game.s`: Model01 lifecycle, system order and quit-dialog flow.
 
 Code under `src/sys/` may expose callbacks and generic actions used here, but
 must not reference symbols from `src/game/`. A new game should be able to
 replace this directory without editing the corresponding system internals.
 
-`src/man/` is currently transitional and contains only game-loop orchestration.
-The reusable entity schema/pool lives in `src/sys/entity.*`; concrete entity
-content lives here in `src/game/`.
+The former `src/man/` layer has been removed. The reusable entity schema/pool
+lives in `src/sys/entity.*`; lifecycle and concrete content live here.

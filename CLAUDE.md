@@ -52,13 +52,13 @@ There is also `_game_loaded_string` in `src/main.s` — keep it in sync.
 
 - `src/sys/` contains reusable mechanisms: array storage, behavior bytecode interpretation, AABB detection/dispatch, physics, animation, rendering, maps, input primitives, messages and memory banking. System code must not reference `src/game` symbols.
 - `src/game/` contains replaceable model01 rules and content. It currently owns the monk behavior programs, the projectile-firing behavior action, collision responses, portal policy and damage-border feedback.
-- `src/man/` is transitional game-loop orchestration left from the original layout; do not treat it as framework API. The reusable entity schema/pool lives in `src/sys/entity.*`, while concrete templates/factories live in `src/game/entities.s`.
+- `src/game/` also owns application lifecycle and system orchestration in `game.s`; the former transitional `src/man/` layer has been removed. The reusable entity schema/pool lives in `src/sys/entity.*`.
 
 The enforced first boundary is that `src/sys` must not import `src/game`. New integration follows `game → sys`; generic systems expose callbacks or function-pointer bytecode entries instead of calling new game rules directly.
 
 ### Game Loop
 
-Entry point is `_main::` in `src/main.s`. After firmware disable and low-memory initialization it calls `game_menu_init`. The main loop dispatches by `app_state`: `APP_STATE_MENU` calls `game_menu_update`, while `APP_STATE_GAME` calls `man_game_update`.
+Entry point is `_main::` in `src/main.s`. After firmware disable and low-memory initialization it calls `game_menu_init`. The main loop dispatches by `app_state`: `APP_STATE_MENU` calls `game_menu_update`, while `APP_STATE_GAME` calls `game_update`.
 
 ### Main Menu
 
@@ -66,7 +66,7 @@ Entry point is `_main::` in `src/main.s`. After firmware disable and low-memory 
 
 Menu input uses `sys_input_generic_update`, like gameplay input, plus a release latch so held cursor keys do not repeat every frame.
 
-`man_game_update` runs each frame in this order:
+`game_update` runs each frame in this order:
 1. `sys_physics_update` — gravity, friction, tile collision
 2. `sys_shoot_update` — advance bullets, destroy them off map bounds
 3. `game_map_update_transition` — Model01 room-edge transitions
@@ -120,7 +120,7 @@ Current key bindings:
 | P | `game_input_right` | Move right at speed +2, switch to walk-right anim |
 | Q | `game_input_jump` | Variable-height jump (see below) |
 | Space | `game_input_shoot` | Fire a player bullet (see Shooting System below) |
-| Escape | `man_game_request_quit` | Open the quit confirmation dialog |
+| Escape | `game_request_quit` | Open the quit confirmation dialog |
 
 **Jump mechanics** (`game_input_jump`): on ground → set `e_speed_y = -6`, arm `game_input_jump_boost_left = 6`. Each subsequent frame Q is held while rising and boost frames remain: decrement speed_y by 1 (cap at −12). Tap = small hop; full hold = max jump.
 
@@ -197,7 +197,7 @@ Two bullet templates in `src/game/entities.s`, using sprites `_s_obj_1` (player)
 
 **AI** firing is deliberately game-owned. `GAME_SHOOT speed` and `game_beh_action_shoot` live in `src/game/behaviors.*`; they demonstrate how a game adds a non-blocking custom action on top of the generic `ACTION` contract. `game_beh_patrol` fires at direction reversals. Because the entity factory clobbers IX, the action saves/restores the shooter before calling `sys_beh_next`.
 
-**Entity pool capacity:** `DefineArrayStructure` now stores the array's capacity in `a_max_count` (was an unused `a_delta` byte). `sys_array_create_element` refuses to add past `a_max_count` (returns HL unchanged) — relevant here because bullets are created dynamically at runtime, unlike the other entities which are all created once at `man_game_init`.
+**Entity pool capacity:** `DefineArrayStructure` now stores the array's capacity in `a_max_count` (was an unused `a_delta` byte). `sys_array_create_element` refuses to add past `a_max_count` (returns HL unchanged) — relevant here because bullets are created dynamically at runtime, unlike the other entities which are all created once at `game_init`.
 
 ### Render System (`src/sys/render.s`)
 

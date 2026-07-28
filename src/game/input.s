@@ -6,7 +6,7 @@
 .include "cpctelera.h.s"
 .include "common.h.s"
 .include "sys/entity.h.s"
-.include "man/game.h.s"
+.include "game/game.h.s"
 .include "sys/anim.h.s"
 .include "sys/input.h.s"
 
@@ -23,12 +23,12 @@ game_input_key_actions:
     .dw Key_P, game_input_right
     .dw Key_Q, game_input_jump
     .dw Key_Space, game_input_shoot
-    .dw Key_Esc, man_game_request_quit
+    .dw Key_Esc, game_request_quit
     .dw 0
 
 game_input_quit_actions:
-    .dw Key_Y, man_game_confirm_quit
-    .dw Key_N, man_game_cancel_quit
+    .dw Key_Y, game_confirm_quit
+    .dw Key_N, game_cancel_quit
     .dw 0
 
 game_input_jump_boost_left: .db 0
