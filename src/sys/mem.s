@@ -17,7 +17,7 @@
 .module mem_system
 
 .include "sys/mem.h.s"
-.include "common.h.s"
+.include "globals.inc"
 
 ;;
 ;; Start of _DATA area

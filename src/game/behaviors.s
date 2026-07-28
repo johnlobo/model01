@@ -5,7 +5,7 @@
 
 .include "game/behaviors.h.s"
 .include "game/entities.h.s"
-.include "common.h.s"
+.include "globals.inc"
 .include "game/config.h.s"
 .include "sys/entity.h.s"
 .include "sys/shoot.h.s"

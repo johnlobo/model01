@@ -3,7 +3,7 @@
 
 .include "sys/map.h.s"
 .include "cpctelera.h.s"
-.include "common.h.s"
+.include "globals.inc"
 .include "config.h.s"
 .include "sys/render.h.s"
 

@@ -17,7 +17,7 @@
 
 .include "cpctelera.h.s"
 .include "sys/util.h.s"
-.include "../common.h.s"
+.include "globals.inc"
 
 SCORE_NUM_BYTES = 4
 

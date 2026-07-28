@@ -42,7 +42,7 @@ cpct_rvm -as -f       # macOS
 
 ## Version String
 
-`game_menu_version` in `src/game/menu.s` (e.g. `"VERSION - V.068"`) is displayed at the bottom of the main menu. **Bump this after every significant change.**
+`game_menu_version` in `src/game/menu.s` (e.g. `"VERSION - V.069"`) is displayed at the bottom of the main menu. **Bump this after every significant change.**
 
 There is also `_game_loaded_string` in `src/main.s` — keep it in sync.
 
@@ -299,7 +299,7 @@ call sys_mem_copy_from_bank
 
 A 256-byte transparency table at absolute address `0x100` (in `main.s`) is used by all masked sprite drawing routines.
 
-### Struct Macros (`src/common.h.s`)
+### Struct Macros (`src/sys/struct.inc`)
 
 ```asm
 BeginStruct Foo          ; Foo_offset = 0

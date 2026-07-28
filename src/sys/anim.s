@@ -3,7 +3,7 @@
 
 .include "sys/array.h.s"
 .include "cpctelera.h.s"
-.include "common.h.s"
+.include "globals.inc"
 .include "sys/anim.h.s"
 .include "sys/entity.h.s"
 .include "sys/map.h.s"

@@ -3,7 +3,7 @@
 
 .include "game/menu.h.s"
 .include "cpctelera.h.s"
-.include "common.h.s"
+.include "globals.inc"
 .include "game/config.h.s"
 .include "sys/render.h.s"
 .include "sys/text.h.s"
@@ -20,7 +20,7 @@ game_menu_selected: .db MENU_OPTION_START
 game_menu_start_requested: .db 0
 game_menu_input_locked: .db 0
 game_menu_title: .asciz "MODEL 01"
-game_menu_version: .asciz "VERSION - V.068"
+game_menu_version: .asciz "VERSION - V.069"
 game_menu_help: .asciz "HELP"
 game_menu_start: .asciz "START"
 

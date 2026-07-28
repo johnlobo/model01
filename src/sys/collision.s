@@ -2,7 +2,7 @@
 .module collision_system
 
 .include "sys/array.h.s"
-.include "common.h.s"
+.include "globals.inc"
 .include "sys/collision.h.s"
 .include "sys/map.h.s"
 .include "sys/entity.h.s"

@@ -1,7 +1,8 @@
 ;;-------------------------------------------------------------------------------
 .module map_system
 
-.include "common.h.s"
+.include "globals.inc"
+.include "sys/struct.inc"
 
 ;;===============================================================================
 ;; ROOM CONNECTION STRUCT

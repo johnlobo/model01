@@ -17,7 +17,7 @@
 
 .include "sys/array.h.s"
 .include "cpctelera.h.s"
-.include "common.h.s"
+.include "globals.inc"
 .include "config.h.s"
 .include "sys/shoot.h.s"
 .include "sys/map.h.s"

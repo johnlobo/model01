@@ -28,12 +28,12 @@ set in `DE`, keeping concrete text assets in the game layer.
 The renderer exposes only its current queue-based API; obsolete zone flags tied
 to entities from an earlier game implementation have been removed.
 System-private constants now live beside their implementation instead of being
-exported transitively through `common.h.s`.
+exported transitively through a catch-all header.
 All framework, game, asset and CPCtelera declarations are registered once in
 `src/globals.inc`, making duplicate declarations directly auditable.
 Generic ECS masks and structure declaration helpers live separately in
-`src/sys/component.inc` and `src/sys/struct.inc`; `common.h.s` currently acts
-only as a compatibility facade that includes those focused definitions.
+`src/sys/component.inc` and `src/sys/struct.inc`. Modules include these focused
+definitions directly; the former `common.h.s` compatibility facade is gone.
 
 The former `src/man/` layer has been removed. The reusable entity schema/pool
 lives in `src/sys/entity.*`; lifecycle and concrete content live here.

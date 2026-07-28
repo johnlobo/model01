@@ -3,7 +3,7 @@
 
 .include "game/game.h.s"
 .include "cpctelera.h.s"
-.include "common.h.s"
+.include "globals.inc"
 .include "game/config.h.s"
 .include "sys/entity.h.s"
 .include "sys/render.h.s"

@@ -3,7 +3,7 @@
 
 .include "sys/beh.h.s"
 .include "sys/array.h.s"
-.include "common.h.s"
+.include "globals.inc"
 .include "sys/entity.h.s"
 .include "sys/map.h.s"
 .include "sys/anim.h.s"

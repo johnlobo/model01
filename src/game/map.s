@@ -3,7 +3,7 @@
 
 .include "game/map.h.s"
 .include "game/entities.h.s"
-.include "common.h.s"
+.include "globals.inc"
 .include "../config.h.s"
 .include "game/config.h.s"
 .include "sys/entity.h.s"

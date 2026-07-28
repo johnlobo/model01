@@ -18,7 +18,7 @@
 .module input_system
 
 .include "cpctelera.h.s"
-.include "../common.h.s"
+.include "globals.inc"
 
 BUFFER_SIZE = 10
 ZERO_KEYS_ACTIVATED = 0xFF

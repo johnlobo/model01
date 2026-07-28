@@ -17,7 +17,7 @@
 
 ;; Include all CPCtelera constant definitions, macros and variables
 .include "cpctelera.h.s"
-.include "common.h.s"
+.include "globals.inc"
 .include "sys/util.h.s"
 .include "sys/render.h.s"
 

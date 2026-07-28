@@ -17,7 +17,7 @@
 
 .include "sys/array.h.s"
 .include "cpctelera.h.s"
-.include "common.h.s"
+.include "globals.inc"
 .include "sys/util.h.s"
 
 ;;

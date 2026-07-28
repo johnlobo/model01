@@ -18,7 +18,7 @@
 
 ;;.include "sys/audio.h.s"
 .include "system.h.s"
-.include "common.h.s"
+.include "globals.inc"
 .include "cpctelera.h.s"
 .include "sys/render.h.s"
 

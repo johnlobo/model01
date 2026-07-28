@@ -1,7 +1,9 @@
 ;; Generic entity schema and pool interface.
 .module entity_system
 
-.include "common.h.s"
+.include "globals.inc"
+.include "sys/component.inc"
+.include "sys/struct.inc"
 
 MAX_ENTITIES = 20
 

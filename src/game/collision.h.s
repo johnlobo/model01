@@ -1,4 +1,4 @@
 ;;-------------------------------------------------------------------------------
 .module game_collision
 
-.include "common.h.s"
+.include "globals.inc"

@@ -16,7 +16,9 @@
 ;;-------------------------------------------------------------------------------
 .module array_manager
 
-.include "common.h.s"
+.include "globals.inc"
+.include "sys/component.inc"
+.include "sys/struct.inc"
 
 ;;===============================================================================
 ;; PUBLIC VARIABLES

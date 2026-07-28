@@ -17,7 +17,7 @@
 
 .include "sys/array.h.s"
 .include "cpctelera.h.s"
-.include "common.h.s"
+.include "globals.inc"
 .include "config.h.s"
 .include "sys/physics.h.s"
 .include "sys/util.h.s"
