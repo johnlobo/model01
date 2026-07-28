@@ -4,7 +4,6 @@
 .include "sys/entity.h.s"
 .include "cpctelera.h.s"
 .include "sys/array.h.s"
-.include "sys/util.h.s"
 
 .area _DATA
 

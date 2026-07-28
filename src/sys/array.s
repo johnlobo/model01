@@ -18,7 +18,6 @@
 .include "sys/array.h.s"
 .include "cpctelera.h.s"
 .include "globals.inc"
-.include "sys/util.h.s"
 
 ;;
 ;; Start of _DATA area 

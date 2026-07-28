@@ -1,15 +1,11 @@
 ;; Key bindings and player controls owned by Model01.
 .module game_input
 
-.include "game/input.h.s"
-.include "game/entities.h.s"
 .include "cpctelera.h.s"
 .include "globals.inc"
 .include "game/config.h.s"
 .include "sys/entity.h.s"
-.include "game/game.h.s"
 .include "sys/anim.h.s"
-.include "sys/input.h.s"
 
 JUMP_SPEED_MIN = -6
 JUMP_SPEED_MAX = -12

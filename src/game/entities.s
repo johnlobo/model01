@@ -1,7 +1,6 @@
 ;; Entity types, templates and factories owned by Model01.
 .module game_entities
 
-.include "game/entities.h.s"
 .include "game/behaviors.h.s"
 .include "sys/entity.h.s"
 .include "sys/shoot.h.s"

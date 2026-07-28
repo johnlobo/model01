@@ -1,14 +1,10 @@
 ;; Main menu, bindings and actions owned by Model01.
 .module game_menu
 
-.include "game/menu.h.s"
 .include "cpctelera.h.s"
 .include "globals.inc"
 .include "game/config.h.s"
 .include "sys/render.h.s"
-.include "sys/text.h.s"
-.include "sys/input.h.s"
-.include "game/game.h.s"
 
 
 MENU_OPTION_HELP = 0
@@ -20,7 +16,7 @@ game_menu_selected: .db MENU_OPTION_START
 game_menu_start_requested: .db 0
 game_menu_input_locked: .db 0
 game_menu_title: .asciz "MODEL 01"
-game_menu_version: .asciz "VERSION - V.069"
+game_menu_version: .asciz "VERSION - V.070"
 game_menu_help: .asciz "HELP"
 game_menu_start: .asciz "START"
 

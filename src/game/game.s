@@ -1,26 +1,20 @@
 ;; Model01 lifecycle and system orchestration.
 .module model01_game
 
-.include "game/game.h.s"
 .include "cpctelera.h.s"
 .include "globals.inc"
 .include "game/config.h.s"
 .include "sys/entity.h.s"
 .include "sys/render.h.s"
 .include "sys/physics.h.s"
-.include "sys/input.h.s"
 .include "sys/collision.h.s"
 .include "sys/anim.h.s"
 .include "sys/beh.h.s"
 .include "sys/mem.h.s"
 .include "sys/shoot.h.s"
 .include "sys/messages.h.s"
-.include "sys/text.h.s"
 .include "game/collision.h.s"
-.include "game/entities.h.s"
-.include "game/input.h.s"
 .include "game/map.h.s"
-.include "game/menu.h.s"
 
 
 .area _DATA

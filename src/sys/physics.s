@@ -20,7 +20,6 @@
 .include "globals.inc"
 .include "config.h.s"
 .include "sys/physics.h.s"
-.include "sys/util.h.s"
 .include "sys/map.h.s"
 .include "sys/entity.h.s"
 

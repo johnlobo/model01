@@ -20,8 +20,6 @@
 .include "globals.inc"
 .include "sys/entity.h.s"
 .include "sys/array.h.s"
-.include "sys/text.h.s"
-.include "sys/input.h.s"
 
 .module render_system
 

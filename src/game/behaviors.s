@@ -4,7 +4,6 @@
 .module game_behaviors
 
 .include "game/behaviors.h.s"
-.include "game/entities.h.s"
 .include "globals.inc"
 .include "game/config.h.s"
 .include "sys/entity.h.s"

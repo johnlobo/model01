@@ -34,6 +34,8 @@ All framework, game, asset and CPCtelera declarations are registered once in
 Generic ECS masks and structure declaration helpers live separately in
 `src/sys/component.inc` and `src/sys/struct.inc`. Modules include these focused
 definitions directly; the former `common.h.s` compatibility facade is gone.
+Declaration-only headers made redundant by `globals.inc` have been removed;
+headers remain only where they provide constants, layouts or macros.
 
 The former `src/man/` layer has been removed. The reusable entity schema/pool
 lives in `src/sys/entity.*`; lifecycle and concrete content live here.

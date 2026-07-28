@@ -2,7 +2,6 @@
 .module game_map
 
 .include "game/map.h.s"
-.include "game/entities.h.s"
 .include "globals.inc"
 .include "../config.h.s"
 .include "game/config.h.s"

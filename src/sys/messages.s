@@ -18,9 +18,6 @@
 .include "sys/messages.h.s"
 .include "cpctelera.h.s"
 .include "globals.inc"
-.include "sys/util.h.s"
-.include "sys/text.h.s"
-.include "sys/input.h.s"
 .include "sys/render.h.s"
 
 
