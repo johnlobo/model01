@@ -79,6 +79,7 @@ man_game_init::
     ld c, #96           ;; world y (pixels)
     ld d, #2            ;; source room (map03)
     call man_entity_create_portal
+    jr c, mginit_portal_done
     ld hl, #_g_inside01
     ld e_beh(ix), l
     ld e_beh+1(ix), h   ;; dest map ptr = _g_inside01
@@ -87,6 +88,7 @@ man_game_init::
     ld e_speed_x+1(ix), #152  ;; dest y = 152 pixels (tile row 19 * 8)
     ld e_on_air(ix), #1       ;; active
 
+mginit_portal_done:
     call sys_render_init
     call sys_map_init
     call sys_shoot_init

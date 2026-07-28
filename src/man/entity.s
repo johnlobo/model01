@@ -132,6 +132,7 @@ man_entity_create_player_player::
     ld ix, #entities
     ld hl, #player_template
     call sys_array_create_element
+    ret c
     ld__ix_hl
     ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_collisionable | c_cmp_input | c_cmp_animated)
     ld e_status(ix), #STATUS_PLAYER
@@ -139,6 +140,7 @@ man_entity_create_player_player::
     ld hl, #monk_idle_anim
     ld e_anim(ix), l
     ld e_anim+1(ix), h
+    or a
     ret
 
 ;;-----------------------------------------------------------------
@@ -155,6 +157,7 @@ man_entity_create_patrol_enemy::
     ld ix, #entities
     ld hl, #patrol_enemy_template
     call sys_array_create_element
+    ret c
     ld__ix_hl
     ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_ai | c_cmp_animated | c_cmp_collisionable)
     ld e_status(ix), #STATUS_ENEMY
@@ -165,6 +168,7 @@ man_entity_create_patrol_enemy::
     ld hl, #beh_patrol_behavior
     ld e_beh(ix), l
     ld e_beh+1(ix), h
+    or a
     ret
 
 ;;-----------------------------------------------------------------
@@ -177,15 +181,26 @@ man_entity_create_patrol_enemy::
 ;;  Modified: AF, HL, IX
 ;;
 man_entity_create_object::
+    push bc                         ;; creation clobbers the position and room
+    push de
     ld ix, #entities
     ld hl, #object_template
     call sys_array_create_element
+    jr c, meco_full
     ld__ix_hl
+    pop de
+    pop bc
     ld e_cmps(ix), #(c_cmp_render | c_cmp_collisionable)
     ld e_x(ix), b
     ld e_y(ix), c
     ld e_room(ix), d
     ld e_moved(ix), #1
+    or a
+    ret
+meco_full:
+    pop de
+    pop bc
+    scf
     ret
 
 ;;-----------------------------------------------------------------
@@ -202,10 +217,15 @@ man_entity_create_object::
 ;;  Modified: AF, HL, IX
 ;;
 man_entity_create_portal::
+    push bc                         ;; creation clobbers the position and room
+    push de
     ld ix, #entities
     ld hl, #portal_template
     call sys_array_create_element
+    jr c, mecp_full
     ld__ix_hl
+    pop de
+    pop bc
     ld e_cmps(ix), #(c_cmp_render | c_cmp_collisionable)
     ld e_status(ix), #STATUS_PORTAL
     ld e_x(ix), b
@@ -214,6 +234,12 @@ man_entity_create_portal::
     ld e_height(ix), #16    ;; 2 tiles tall
     ld e_room(ix), d
     ld e_moved(ix), #1
+    or a
+    ret
+mecp_full:
+    pop de
+    pop bc
+    scf
     ret
 
 ;;-----------------------------------------------------------------

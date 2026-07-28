@@ -44,8 +44,8 @@ MAX_ENTITIES = 20
 .globl man_entity_init
 .globl man_entity_create_player_player
 .globl man_entity_create_patrol_enemy
-.globl man_entity_create_object      ;; B=x, C=y, D=room_id → IX=new entity
-.globl man_entity_create_portal      ;; B=x, C=y, D=room_id → IX=new entity
+.globl man_entity_create_object      ;; B=x, C=y, D=room_id → IX=new entity, carry=error
+.globl man_entity_create_portal      ;; B=x, C=y, D=room_id → IX=new entity, carry=error
                                      ;; after creation set destination fields:
                                      ;;   e_beh (2B)       = dest map ptr
                                      ;;   e_beh_timer      = dest room id
