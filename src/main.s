@@ -19,7 +19,6 @@
 ;; Include all CPCtelera constant definitions, macros and variables
 .include "cpctelera.h.s"
 .include "globals.inc"
-.include "game/config.h.s"
 .include "sys/system.h.s"
 
 ;;-----------------------------------------------------------------
@@ -30,9 +29,6 @@
 ;;  right after _CODE area contents.
 ;;
 .area _DATA
-
-_game_loaded_string: .asciz " GAME LOADED - V.071"      ;;27 chars, 54 bytes
-app_state:: .db APP_STATE_MENU
 
 ;; The transparency table must be 256-byte aligned at runtime, but it is NOT
 ;; emitted as an absolute area any more. Doing that made &0100 the binary's
@@ -111,14 +107,8 @@ _main::
 
    call cpct_setDrawCharM0_asm   ;; Set draw char colours
 
-   call game_menu_init           ;; Main menu is the initial application state
+   call game_app_init
    ;; Loop forever
 loop:
-   ld a, (app_state)
-   or a
-   jr z, loop_menu
-   call game_update
-   jr    loop
-loop_menu:
-   call game_menu_update
+   call game_app_update
    jr loop

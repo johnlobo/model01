@@ -13,6 +13,7 @@ reusable engine mechanisms.
   room graph, edge transitions, portal placement and teleportation.
 - `menu.s`: main-menu presentation and version text, key bindings and actions.
 - `game.s`: Model01 lifecycle, system order and quit-dialog flow.
+- `app.s`: application state and the init/update adapter used by `main.s`.
 - `config.h.s`: Model01 assets, application/entity states and sprite dimensions.
 
 Code under `src/sys/` may expose callbacks and generic actions used here, but
@@ -39,6 +40,8 @@ headers remain only where they provide constants, layouts or macros.
 World geometry and physics policy are compile-time parameters in
 `src/config.h.s`, preserving CPC performance while allowing a new game to tune
 gravity, terminal velocity and which component receives friction.
+The bootstrap depends only on `game_app_init` and `game_app_update`; menu/game
+state dispatch remains replaceable content in this directory.
 
 The former `src/man/` layer has been removed. The reusable entity schema/pool
 lives in `src/sys/entity.*`; lifecycle and concrete content live here.

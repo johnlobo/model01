@@ -65,6 +65,8 @@
 .globl entities
 .globl entity_array
 .globl game_beh_action_shoot
+.globl game_app_init
+.globl game_app_update
 .globl game_beh_bounce
 .globl game_beh_patrol
 .globl game_cancel_quit

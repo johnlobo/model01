@@ -44,7 +44,7 @@ cpct_rvm -as -f       # macOS
 
 `game_menu_version` in `src/game/menu.s` (e.g. `"VERSION - V.071"`) is displayed at the bottom of the main menu. **Bump this after every significant change.**
 
-There is also `_game_loaded_string` in `src/main.s` — keep it in sync.
+There is also `_game_loaded_string` in `src/game/app.s` — keep it in sync.
 
 ## Architecture
 
@@ -58,7 +58,11 @@ The enforced first boundary is that `src/sys` must not import `src/game`. New in
 
 ### Game Loop
 
-Entry point is `_main::` in `src/main.s`. After firmware disable and low-memory initialization it calls `game_menu_init`. The main loop dispatches by `app_state`: `APP_STATE_MENU` calls `game_menu_update`, while `APP_STATE_GAME` calls `game_update`.
+Entry point is `_main::` in `src/main.s`. After firmware disable and low-memory
+initialization it calls the game-owned `game_app_init`; each loop calls
+`game_app_update`. Model01's adapter in `src/game/app.s` owns `app_state` and
+dispatches `APP_STATE_MENU` to `game_menu_update` and `APP_STATE_GAME` to
+`game_update`, so the generic bootstrap knows no concrete game states.
 
 ### Main Menu
 
