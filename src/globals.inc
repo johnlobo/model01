@@ -143,6 +143,11 @@
 .globl sys_input_init
 .globl sys_input_wait4anykey
 .globl sys_input_waitKeyPressed
+.globl sys_interaction_find
+.globl sys_interaction_init
+.globl sys_interaction_set_filter
+.globl sys_interaction_set_handler
+.globl sys_interaction_try
 .globl sys_inventory_add
 .globl sys_inventory_contains
 .globl sys_inventory_count

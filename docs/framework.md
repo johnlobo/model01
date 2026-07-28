@@ -256,6 +256,35 @@ El inventario consume 9 bytes: un contador y ocho slots. No interpreta los
 objetos ni aplica sus efectos; esas reglas permanecen en el juego. Los flags
 pueden utilizarse además para recordar que el objeto ya desapareció del mundo.
 
+### Interacción con entidades
+
+`sys/interaction` busca entidades `c_cmp_collisionable` inmediatamente delante
+de un actor. Recibe `IX=actor` y `A=INTERACTION_RIGHT` o `INTERACTION_LEFT`; sólo
+considera candidatos de la misma habitación y nunca devuelve al propio actor.
+El alcance predeterminado es de dos bytes de modo 0.
+
+El juego puede registrar un filtro y un manejador. El filtro decide si una
+entidad candidata es realmente utilizable (`Z=1`); el manejador aplica la regla.
+Ambos reciben `IX=actor` e `IY=objetivo`, conservados por el dispatcher.
+
+```asm
+game_interaction_init:
+    call sys_interaction_init
+    ld hl, #game_can_interact
+    call sys_interaction_set_filter
+    ld hl, #game_use_entity
+    jp sys_interaction_set_handler
+
+game_input_use:                  ;; IX=jugador
+    ld a, (game_player_facing)
+    jp sys_interaction_try
+```
+
+`sys_interaction_find` permite localizar un objetivo sin ejecutar la acción;
+`sys_interaction_try` localiza el primero aceptado y llama al manejador. Ambos
+devuelven carry activo si no existe objetivo. Puertas, personajes, cofres y
+objetos siguen identificándose mediante estados definidos por cada juego.
+
 ### Texto, mensajes y bancos
 
 El subsistema de texto recibe del juego los recursos de fuente y números. El de

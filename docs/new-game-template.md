@@ -175,6 +175,43 @@ El objeto visible sigue siendo una entidad del juego. Al recogerlo, añade su ID
 al inventario, destruye la entidad sólo si la inserción tuvo éxito y activa un
 flag para no recrearla al volver a entrar en la habitación.
 
+Para que el jugador pueda usar puertas, personajes u objetos situados delante,
+registra los callbacks del sistema de interacción:
+
+```asm
+game_interaction_init::
+    call sys_interaction_init
+    ld hl, #game_interaction_filter
+    call sys_interaction_set_filter
+    ld hl, #game_interaction_use
+    jp sys_interaction_set_handler
+
+game_interaction_filter::       ;; IX=jugador, IY=candidato
+    ld a, e_status(iy)
+    cp #STATUS_ITEM             ;; Z=1 si se acepta
+    ret
+
+game_interaction_use::          ;; IX=jugador, IY=objeto
+    ld a, #ITEM_KEY
+    call sys_inventory_add
+    ret c
+    push ix
+    push iy
+    pop ix
+    call sys_collision_destroy_entity
+    pop ix
+    ret
+```
+
+La acción de input pasa la orientación explícitamente, ya que ésta es una regla
+del juego y no un nuevo campo de la entidad:
+
+```asm
+game_input_use:
+    ld a, (game_player_facing)   ;; 0=derecha, 1=izquierda
+    jp sys_interaction_try
+```
+
 ## 6. Crear una entidad
 
 En `src/game/entities.s`, define primero una animación y una plantilla:

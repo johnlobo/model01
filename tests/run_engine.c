@@ -18,6 +18,9 @@ enum {
     TEST_COLLISIONABLE = 0x2440,
     TEST_BEHAVIOR = 0x2500,
     TEST_BEHAVIOR_ENTITY = 0x2600,
+    TEST_INTERACTION_HANDLER = 0x2700,
+    TEST_INTERACTION_FILTER = 0x2710,
+    TEST_INTERACTION_MARKER = 0x2720,
     MAP_WIDTH = 16,
     MAP_HEIGHT = 20,
     MAX_STEPS = 1000000,
@@ -99,6 +102,11 @@ struct Symbols {
     uint16_t inventory_remove;
     uint16_t inventory_contains;
     uint16_t inventory_get;
+    uint16_t interaction_init;
+    uint16_t interaction_set_filter;
+    uint16_t interaction_set_handler;
+    uint16_t interaction_find;
+    uint16_t interaction_try;
 };
 
 struct Machine {
@@ -211,6 +219,11 @@ static uint16_t *symbol_slot(struct Symbols *symbols, const char *name) {
     if (!strcmp(name, "sys_inventory_remove")) return &symbols->inventory_remove;
     if (!strcmp(name, "sys_inventory_contains")) return &symbols->inventory_contains;
     if (!strcmp(name, "sys_inventory_get")) return &symbols->inventory_get;
+    if (!strcmp(name, "sys_interaction_init")) return &symbols->interaction_init;
+    if (!strcmp(name, "sys_interaction_set_filter")) return &symbols->interaction_set_filter;
+    if (!strcmp(name, "sys_interaction_set_handler")) return &symbols->interaction_set_handler;
+    if (!strcmp(name, "sys_interaction_find")) return &symbols->interaction_find;
+    if (!strcmp(name, "sys_interaction_try")) return &symbols->interaction_try;
     return NULL;
 }
 
@@ -849,6 +862,97 @@ static void test_inventory_contract(struct Machine *machine) {
            (af & 1) != 0 && (af >> 8) == 0);
 }
 
+static int call_interaction(struct Machine *machine, uint16_t routine,
+                            uint16_t actor, uint8_t direction) {
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regIX, actor);
+    z80ex_set_reg(machine->cpu, regAF, (uint16_t)direction << 8);
+    return run_routine(machine, routine);
+}
+
+static void register_interaction_callback(struct Machine *machine,
+                                          uint16_t setter, uint16_t callback) {
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regHL, callback);
+    run_routine(machine, setter);
+}
+
+static void prepare_interaction(struct Machine *machine, uint8_t candidate_x,
+                                uint8_t candidate_room, int reject_filter) {
+    uint16_t actor = machine->symbols.entity_array;
+    uint16_t candidate = actor + ENTITY_SIZE;
+
+    reset_fixture(machine);
+    memset(machine->memory + actor, 0, ENTITY_SIZE * 2);
+    machine->memory[machine->symbols.entities + ARRAY_COUNT] = 2;
+    machine->memory[actor + E_CMPS] = 0x04;
+    machine->memory[actor + E_X] = 10;
+    machine->memory[actor + E_Y] = 20;
+    machine->memory[actor + E_WIDTH] = 4;
+    machine->memory[actor + E_HEIGHT] = 16;
+    machine->memory[actor + E_ROOM] = 0;
+    machine->memory[candidate + E_CMPS] = 0x40;
+    machine->memory[candidate + E_X] = candidate_x;
+    machine->memory[candidate + E_Y] = 20;
+    machine->memory[candidate + E_WIDTH] = 2;
+    machine->memory[candidate + E_HEIGHT] = 8;
+    machine->memory[candidate + E_ROOM] = candidate_room;
+
+    /* Handler: marker = 0xa5; ret. */
+    machine->memory[TEST_INTERACTION_HANDLER] = 0x3e;
+    machine->memory[TEST_INTERACTION_HANDLER + 1] = 0xa5;
+    machine->memory[TEST_INTERACTION_HANDLER + 2] = 0x32;
+    machine->memory[TEST_INTERACTION_HANDLER + 3] = TEST_INTERACTION_MARKER & 0xff;
+    machine->memory[TEST_INTERACTION_HANDLER + 4] = TEST_INTERACTION_MARKER >> 8;
+    machine->memory[TEST_INTERACTION_HANDLER + 5] = 0xc9;
+    /* Reject filter: A=1, Z=0; ret. */
+    machine->memory[TEST_INTERACTION_FILTER] = 0x3e;
+    machine->memory[TEST_INTERACTION_FILTER + 1] = 0x01;
+    machine->memory[TEST_INTERACTION_FILTER + 2] = 0xb7;
+    machine->memory[TEST_INTERACTION_FILTER + 3] = 0xc9;
+
+    call_interaction(machine, machine->symbols.interaction_init, actor, 0);
+    register_interaction_callback(machine, machine->symbols.interaction_set_handler,
+                                  TEST_INTERACTION_HANDLER);
+    if (reject_filter)
+        register_interaction_callback(machine, machine->symbols.interaction_set_filter,
+                                      TEST_INTERACTION_FILTER);
+}
+
+static void test_interaction_contract(struct Machine *machine) {
+    uint16_t actor = machine->symbols.entity_array;
+    uint16_t candidate = actor + ENTITY_SIZE;
+    int carry;
+
+    prepare_interaction(machine, 14, 0, 0);
+    carry = call_interaction(machine, machine->symbols.interaction_try, actor, 0);
+    report("right-facing interaction dispatches the adjacent target",
+           !carry && machine->memory[TEST_INTERACTION_MARKER] == 0xa5 &&
+           z80ex_get_reg(machine->cpu, regIX) == actor &&
+           z80ex_get_reg(machine->cpu, regIY) == candidate);
+
+    prepare_interaction(machine, 8, 0, 0);
+    carry = call_interaction(machine, machine->symbols.interaction_find, actor, 1);
+    report("left-facing interaction finds the adjacent target",
+           !carry && z80ex_get_reg(machine->cpu, regIY) == candidate &&
+           machine->memory[TEST_INTERACTION_MARKER] == 0);
+
+    prepare_interaction(machine, 17, 0, 0);
+    carry = call_interaction(machine, machine->symbols.interaction_try, actor, 0);
+    report("entities beyond interaction reach are ignored",
+           carry && machine->memory[TEST_INTERACTION_MARKER] == 0);
+
+    prepare_interaction(machine, 14, 1, 0);
+    carry = call_interaction(machine, machine->symbols.interaction_try, actor, 0);
+    report("interaction ignores entities in another room",
+           carry && machine->memory[TEST_INTERACTION_MARKER] == 0);
+
+    prepare_interaction(machine, 14, 0, 1);
+    carry = call_interaction(machine, machine->symbols.interaction_try, actor, 0);
+    report("the game filter can reject an interaction candidate",
+           carry && machine->memory[TEST_INTERACTION_MARKER] == 0);
+}
+
 int main(int argc, char **argv) {
     struct Machine machine;
     if (argc != 3) {
@@ -875,6 +979,7 @@ int main(int argc, char **argv) {
     test_physics_contract(&machine);
     test_state_contract(&machine);
     test_inventory_contract(&machine);
+    test_interaction_contract(&machine);
     printf("1..%d\n", tests_run);
     z80ex_destroy(machine.cpu);
     if (tests_failed) {
