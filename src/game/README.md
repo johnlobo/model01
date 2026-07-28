@@ -29,6 +29,8 @@ The renderer exposes only its current queue-based API; obsolete zone flags tied
 to entities from an earlier game implementation have been removed.
 System-private constants now live beside their implementation instead of being
 exported transitively through `common.h.s`.
+All framework, game, asset and CPCtelera declarations are registered once in
+`src/globals.inc`, making duplicate declarations directly auditable.
 
 The former `src/man/` layer has been removed. The reusable entity schema/pool
 lives in `src/sys/entity.*`; lifecycle and concrete content live here.

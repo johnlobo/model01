@@ -5,10 +5,6 @@
 
 MAX_ENTITIES = 20
 
-.globl entities
-.globl entity_array
-.globl sys_entity_init
-.globl sys_entity_create            ;; HL=template -> IX=new entity, carry=error
 
 .mdelete DefineEntity
 .macro DefineEntity _cpms, _status, _x, _y, _a, _pa, _speed_x, _speed_y, _on_air, _width, _height, _color, _sprite, _room

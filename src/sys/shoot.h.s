@@ -44,5 +44,3 @@ ENEMY_BULLET_STRIDE  = 2   ;; frames between steps
 ;;===============================================================================
 ;; PUBLIC METHODS
 ;;===============================================================================
-.globl sys_shoot_init
-.globl sys_shoot_update

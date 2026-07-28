@@ -18,20 +18,7 @@
 ;;===============================================================================
 ;; PUBLIC VARIABLES
 ;;===============================================================================
-.globl string_buffer
 
 ;;===============================================================================
 ;; PUBLIC METHODS
 ;;===============================================================================
-.globl sys_util_h_times_e
-.globl sys_util_hl_div_c
-.globl sys_util_BCD_GetEnd
-.globl sys_util_BCD_Add
-.globl sys_util_BCD_Compare
-.globl sys_util_get_random_number
-.globl sys_util_delay
-.globl sys_util_fadeOut
-.globl sys_util_fadeIn
-.globl sys_util_temblor
-.globl sys_util_count_set_bits
-.globl sys_utiL_reduce_a

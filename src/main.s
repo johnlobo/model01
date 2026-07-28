@@ -33,7 +33,7 @@
 ;;
 .area _DATA
 
-_game_loaded_string: .asciz " GAME LOADED - V.066"      ;;27 chars, 54 bytes
+_game_loaded_string: .asciz " GAME LOADED - V.067"      ;;27 chars, 54 bytes
 app_state:: .db APP_STATE_MENU
 
 ;; The transparency table must be 256-byte aligned at runtime, but it is NOT
@@ -86,18 +86,6 @@ transparency_table_src:
 ;; Start of _CODE area
 ;; 
 .area _CODE
-
-;; 
-;; Declare all function entry points as global symbols for the compiler.
-;; (The linker will know what to do with them)
-;; WARNING: Every global symbol declared will be linked, so DO NOT declare 
-;; symbols for functions you do not use.
-;;
-.globl cpct_disableFirmware_asm
-.globl cpct_getScreenPtr_asm
-.globl cpct_setDrawCharM0_asm
-.globl cpct_drawStringM0_asm
-.globl cpct_setVideoMode_asm
 
 ;;
 ;; MAIN function. This is the entry point of the application.

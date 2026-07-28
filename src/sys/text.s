@@ -27,6 +27,7 @@ S_SMALL_NUMBERS_WIDTH = 2
 S_SMALL_NUMBERS_HEIGHT = 5
 
 
+
 ;;
 ;; Start of _DATA area 
 ;;  SDCC requires at least _DATA and _CODE areas to be declared, but you may use

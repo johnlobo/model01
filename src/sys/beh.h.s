@@ -37,34 +37,14 @@ BEH_MAX_ACTIONS_PER_TICK = 16
 ;;===============================================================================
 ;; PUBLIC METHODS
 ;;===============================================================================
-.globl sys_beh_actions_left       ;; remaining dispatch budget (diagnostics/tests)
-.globl sys_beh_init
-.globl sys_beh_update
-.globl sys_beh_run
-.globl sys_beh_next
-.globl sys_beh_check_conditions
-.globl sys_beh_call_hl
 
 ;;===============================================================================
 ;; ACTIONS
 ;;===============================================================================
-.globl beh_action_idle          ;; blocking — enter condition check immediately
-.globl beh_action_wait          ;; blocking — decrement beh_timer, then check
-.globl beh_action_set_timer     ;; arg: .db ticks
-.globl beh_action_set_vx        ;; arg: .db speed_x  (writes low byte only)
-.globl beh_action_set_vy        ;; arg: .db speed_y  (writes low byte only)
-.globl beh_action_set_animation ;; arg: .dw anim_descriptor_ptr
-.globl beh_action_set_moved     ;; mark entity dirty for renderer (no args)
-.globl beh_action_drive_vx     ;; blocking — re-apply speed each frame; arg: .db speed_x
 
 ;;===============================================================================
 ;; CONDITIONS
 ;;===============================================================================
-.globl beh_cond_true            ;; always true
-.globl beh_cond_timeout         ;; true when e_beh_timer == 0
-.globl beh_cond_on_ground       ;; true when e_on_air == 0
-.globl beh_cond_not_on_ground   ;; true when e_on_air != 0
-.globl beh_cond_edge_ahead      ;; true when tile below leading foot is passable
 
 ;;===============================================================================
 ;; DSL MACROS

@@ -37,10 +37,3 @@ MESSAGE_BUFFER_ADDRESS = 0x0300  ;; fixed low RAM: 0x0300..0x0EB7
 ;;------------------------------------------------------------------------------
 ;; Global routines
 ;;------------------------------------------------------------------------------
-
-.globl sys_messages_load_window_data
-.globl sys_messages_draw_window
-.globl sys_messages_show
-.globl sys_messages_draw_box
-.globl sys_messages_restore_message_background
-.globl sys_messages_close

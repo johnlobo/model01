@@ -17,41 +17,13 @@
 
 .module main
 
-
-.globl transparency_table
+.include "globals.inc"
 
 ;;===============================================================================
 ;; PUBLIC VARIBLES
 ;;===============================================================================
 
 
-
-;;===============================================================================
-;; CPCTELERA FUNCTIONS
-;;===============================================================================
-.globl cpct_disableFirmware_asm
-.globl cpct_getScreenPtr_asm
-.globl cpct_drawSprite_asm
-.globl cpct_setVideoMode_asm
-.globl cpct_setPalette_asm
-.globl cpct_scanKeyboard_if_asm
-.globl cpct_isKeyPressed_asm
-.globl cpct_waitHalts_asm
-.globl cpct_drawSolidBox_asm
-.globl cpct_setSeed_mxor_asm
-.globl cpct_isAnyKeyPressed_asm
-.globl cpct_setInterruptHandler_asm
-.globl cpct_waitVSYNC_asm
-.globl _cpct_keyboardStatusBuffer
-.globl cpct_waitVSYNCStart_asm
-.globl cpct_getScreenToSprite_asm
-.globl cpct_drawSpriteMaskedAlignedTable_asm
-.globl cpct_pens2pixelPatternPairM0_asm
-.globl sys_render_drawSpriteMaskedAlignedColorizeM0_asm
-.globl cpct_getRandom_mxor_u8_asm
-.globl cpct_etm_setDrawTilemap4x8_agf_asm
-.globl cpct_etm_drawTilemap4x8_agf_asm
-.globl cpct_px2byteM0_asm
 
 ;;===============================================================================
 ;; DEFINED CONSTANTS

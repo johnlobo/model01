@@ -22,6 +22,7 @@
 .include "game/map.h.s"
 .include "game/menu.h.s"
 
+
 .area _DATA
 
 game_quit_dialog_active: .db 0

@@ -21,10 +21,4 @@
 ;;------------------------------------------------------------------------------
 ;; Global routines
 ;;------------------------------------------------------------------------------
-.globl sys_input_init
-.globl sys_input_clean_buffer
-.globl sys_input_wait4anykey
-.globl sys_input_waitKeyPressed
-.globl sys_input_getKeyPressed
-.globl sys_input_generic_update
 

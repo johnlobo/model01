@@ -1,28 +1,8 @@
 ;; Model01-specific assets, states and entity dimensions.
 
-.globl _g_palette0
-.globl _s_font_0
-.globl _s_small_numbers_00
-.globl _s_monk_0
-.globl _s_monk_1
-.globl _s_monk_2
-.globl _s_monk_3
-.globl _s_monk_4
-.globl _s_monk_5
-.globl _s_monk_6
-.globl _s_obj_0
-.globl _s_obj_1
-.globl _s_obj_2
-.globl _s_tileset_00
-.globl _g_map01
-.globl _g_map02
-.globl _g_map03
-.globl _g_map04
-.globl _g_inside01
 
 APP_STATE_MENU = 0x00
 APP_STATE_GAME = 0x01
-.globl app_state
 
 STATUS_NORMAL        = 0x00
 STATUS_PORTAL        = 0x01
