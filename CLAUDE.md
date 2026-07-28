@@ -42,7 +42,7 @@ cpct_rvm -as -f       # macOS
 
 ## Version String
 
-`game_menu_version` in `src/game/menu.s` (e.g. `"VERSION - V.067"`) is displayed at the bottom of the main menu. **Bump this after every significant change.**
+`game_menu_version` in `src/game/menu.s` (e.g. `"VERSION - V.068"`) is displayed at the bottom of the main menu. **Bump this after every significant change.**
 
 There is also `_game_loaded_string` in `src/main.s` — keep it in sync.
 
