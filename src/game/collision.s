@@ -8,6 +8,7 @@
 .include "sys/collision.h.s"
 .include "sys/entity.h.s"
 .include "game/map.h.s"
+.include "game/config.h.s"
 
 COLLISION_BORDER_FLASH_FRAMES = 6
 

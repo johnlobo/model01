@@ -21,6 +21,9 @@
 .include "sys/util.h.s"
 .include "sys/render.h.s"
 
+.globl _s_font_0
+.globl _s_small_numbers_00
+
 
 ;;
 ;; Start of _DATA area 

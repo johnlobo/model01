@@ -6,6 +6,8 @@
 .include "sys/entity.h.s"
 .include "sys/shoot.h.s"
 .include "common.h.s"
+.include "../config.h.s"
+.include "game/config.h.s"
 
 .area _DATA
 

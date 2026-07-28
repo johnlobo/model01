@@ -18,6 +18,7 @@
 .include "sys/array.h.s"
 .include "cpctelera.h.s"
 .include "common.h.s"
+.include "config.h.s"
 .include "sys/physics.h.s"
 .include "sys/util.h.s"
 .include "sys/map.h.s"

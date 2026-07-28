@@ -18,46 +18,6 @@
 .module main
 
 
-;;===============================================================================
-;; SPRITES
-;;===============================================================================
-.globl _g_palette0
-.globl _s_font_0
-.globl _s_small_numbers_00
-.globl _s_small_numbers_01
-.globl _s_small_numbers_02
-.globl _s_small_numbers_03
-.globl _s_small_numbers_04
-.globl _s_small_numbers_05
-.globl _s_small_numbers_06
-.globl _s_small_numbers_07
-.globl _s_small_numbers_08
-.globl _s_small_numbers_09
-.globl _s_monk_0
-.globl _s_monk_1
-.globl _s_monk_2
-.globl _s_monk_3
-.globl _s_monk_4
-.globl _s_monk_5
-.globl _s_monk_6
-
-.globl _s_obj_0
-.globl _s_obj_1    ;; player bullet sprite
-.globl _s_obj_2    ;; enemy bullet sprite
-
-.globl _s_tileset_00
-.globl _g_map01
-.globl _g_map02
-.globl _g_map03
-.globl _g_map04
-.globl _g_inside01
-.globl map_origin_x    ;; map draw origin x on screen (bytes)
-.globl map_origin_y    ;; map draw origin y on screen (pixels)
-.globl current_room    ;; current room index (0=map01..3=map04, 4=inside01)
-
-MAP_WIDTH       = 16
-MAP_HEIGHT      = 20
-
 .globl transparency_table
 
 ;;===============================================================================
@@ -99,23 +59,6 @@ MAP_HEIGHT      = 20
 
 null_ptr = 0x0000
 
-APP_STATE_MENU = 0x00
-APP_STATE_GAME = 0x01
-.globl app_state
-
-;; entity status types
-STATUS_NORMAL = 0x00   ;; default entity status
-STATUS_PORTAL = 0x01   ;; portal entity — triggers room transition on AABB collision
-STATUS_PLAYER = 0x02
-STATUS_ENEMY = 0x03
-STATUS_PLAYER_BULLET = 0x04
-STATUS_ENEMY_BULLET = 0x05
-
-;; game status
-g_status_fight              = 0x00
-g_status_dead               = 0xff
-
-
 ;;tipos de componentes
 c_cmp_invalid = 0x00    ;; Type invalid
 c_cmp_render = 0x01     ;;entidad renderizable
@@ -142,20 +85,9 @@ SCORE_NUM_BYTES = 4
 S_SMALL_NUMBERS_WIDTH = 2
 S_SMALL_NUMBERS_HEIGHT = 5
 
-S_MONK_WIDTH = 5
-S_MONK_HEIGHT = 16
-
-S_BULLET_WIDTH = 4    ;; bytes (8px, mode 0 = 2px/byte)
-S_BULLET_HEIGHT = 8   ;; px
-
 ;; Font constants
 FONT_WIDTH = 2
 FONT_HEIGHT = 9
-
-;; GAME_CONSTANTS
-;; GROUND_LEVEL is in world coordinates (0 = map top): MAP_HEIGHT*8 - 1 = 159
-GROUND_LEVEL = MAP_HEIGHT * 8 - 1
-
 
 ;;===============================================================================
 ;; DEFINED MACROS

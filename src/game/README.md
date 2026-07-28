@@ -13,10 +13,14 @@ reusable engine mechanisms.
   room graph, edge transitions, portal placement and teleportation.
 - `menu.s`: main-menu presentation, key bindings and actions.
 - `game.s`: Model01 lifecycle, system order and quit-dialog flow.
+- `config.h.s`: Model01 assets, application/entity states and sprite dimensions.
 
 Code under `src/sys/` may expose callbacks and generic actions used here, but
 must not reference symbols from `src/game/`. A new game should be able to
 replace this directory without editing the corresponding system internals.
+Project-wide geometry used by generic systems lives in `src/config.h.s`, so a
+game can configure the framework without introducing a `sys` dependency on the
+game layer.
 
 The former `src/man/` layer has been removed. The reusable entity schema/pool
 lives in `src/sys/entity.*`; lifecycle and concrete content live here.

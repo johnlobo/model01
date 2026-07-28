@@ -18,6 +18,7 @@
 .include "sys/array.h.s"
 .include "cpctelera.h.s"
 .include "common.h.s"
+.include "config.h.s"
 .include "sys/shoot.h.s"
 .include "sys/map.h.s"
 .include "sys/entity.h.s"

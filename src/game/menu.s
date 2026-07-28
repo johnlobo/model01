@@ -4,6 +4,7 @@
 .include "game/menu.h.s"
 .include "cpctelera.h.s"
 .include "common.h.s"
+.include "game/config.h.s"
 .include "sys/render.h.s"
 .include "sys/text.h.s"
 .include "sys/input.h.s"

@@ -23,6 +23,8 @@
 .include "sys/text.h.s"
 .include "sys/input.h.s"
 
+.globl _g_palette0
+
 .module render_system
 
 ;;
@@ -34,7 +36,7 @@
 .area _DATA
 
 FONT_NUMBERS: .dw #0000
-_welcome_string:: .asciz "VERSION - V.061"   ;;
+_welcome_string:: .asciz "VERSION - V.062"   ;;
 
 
 sys_render_front_buffer: .db 0xc0
