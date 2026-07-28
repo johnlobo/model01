@@ -204,7 +204,36 @@ La detección entre entidades y la respuesta están separadas deliberadamente:
 otro juego puede implementar daño, coleccionables, puertas o conversaciones sin
 tocar `src/sys/collision.s`.
 
-## 9. Texto, mensajes y memoria extendida
+## 9. Estado, texto, mensajes y memoria extendida
+
+### Estado global
+
+`sys/state` ofrece 256 flags compactados en 32 bytes y 32 contadores de 8 bits.
+El juego asigna significado a sus identificadores; el framework sólo almacena y
+consulta valores. `sys_state_test_flag` devuelve `Z=1` cuando el flag está
+activo, de modo que puede usarse con la misma convención que una condición de
+IA. La suma y resta de contadores saturan en 255 y 0 respectivamente.
+
+Este estado está pensado para puertas, objetos recogidos, enemigos derrotados,
+salud, monedas o progreso persistente entre habitaciones. Requiere una llamada a
+`sys_state_init` al comenzar una partida nueva.
+
+```asm
+FLAG_CELLAR_OPEN = 0
+COUNTER_COINS    = 0
+
+ld a, #FLAG_CELLAR_OPEN
+call sys_state_set_flag
+
+ld a, #COUNTER_COINS
+ld b, #1
+call sys_state_add_counter
+```
+
+Los identificadores no se validan durante la ejecución para evitar coste en el
+Z80: flags válidos `0..255`, contadores válidos `0..31`.
+
+### Texto, mensajes y bancos
 
 El subsistema de texto recibe del juego los recursos de fuente y números. El de
 mensajes captura el fondo, dibuja una ventana y puede restaurarlo al cerrar. Su

@@ -180,6 +180,16 @@
 .globl sys_shoot_init
 .globl sys_shoot_update
 .globl sys_shoot_update_one_bullet
+.globl sys_state_add_counter
+.globl sys_state_clear_flag
+.globl sys_state_counters
+.globl sys_state_flags
+.globl sys_state_get_counter
+.globl sys_state_init
+.globl sys_state_set_counter
+.globl sys_state_set_flag
+.globl sys_state_sub_counter
+.globl sys_state_test_flag
 .globl sys_system_disable_firmware
 .globl sys_text_draw_char
 .globl sys_text_draw_small_char_number

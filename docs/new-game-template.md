@@ -111,6 +111,7 @@ utiliza entidades, entrada, física, mapa, animación y render:
 .area _CODE
 
 game_init::
+    call sys_state_init
     call sys_entity_init
     call sys_input_init
     call sys_collision_init
@@ -136,6 +137,22 @@ game_update::
 No es obligatorio usar todos los sistemas. Si incorporas proyectiles o IA,
 inicialízalos y añade `sys_shoot_update` o `sys_beh_update` en el lugar que
 corresponda a tus reglas.
+
+`sys_state_init` reserva una base limpia de 256 flags y 32 contadores para cada
+partida. Define sus identificadores en `game/config.h.s` y utilízalos para
+recordar cambios del mundo:
+
+```asm
+FLAG_EXIT_OPEN = 0
+COUNTER_KEYS   = 0
+
+    ld a, #FLAG_EXIT_OPEN
+    call sys_state_test_flag    ;; Z=1 si la salida está abierta
+
+    ld a, #COUNTER_KEYS
+    ld b, #1
+    call sys_state_add_counter  ;; saturación en 255
+```
 
 ## 6. Crear una entidad
 

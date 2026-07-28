@@ -82,6 +82,16 @@ struct Symbols {
     uint16_t walk_right_anim;
     uint16_t monk_0;
     uint16_t monk_2;
+    uint16_t state_flags;
+    uint16_t state_counters;
+    uint16_t state_init;
+    uint16_t state_set_flag;
+    uint16_t state_clear_flag;
+    uint16_t state_test_flag;
+    uint16_t state_get_counter;
+    uint16_t state_set_counter;
+    uint16_t state_add_counter;
+    uint16_t state_sub_counter;
 };
 
 struct Machine {
@@ -177,6 +187,16 @@ static uint16_t *symbol_slot(struct Symbols *symbols, const char *name) {
     if (!strcmp(name, "game_monk_walk_right_anim")) return &symbols->walk_right_anim;
     if (!strcmp(name, "_s_monk_0")) return &symbols->monk_0;
     if (!strcmp(name, "_s_monk_2")) return &symbols->monk_2;
+    if (!strcmp(name, "sys_state_flags")) return &symbols->state_flags;
+    if (!strcmp(name, "sys_state_counters")) return &symbols->state_counters;
+    if (!strcmp(name, "sys_state_init")) return &symbols->state_init;
+    if (!strcmp(name, "sys_state_set_flag")) return &symbols->state_set_flag;
+    if (!strcmp(name, "sys_state_clear_flag")) return &symbols->state_clear_flag;
+    if (!strcmp(name, "sys_state_test_flag")) return &symbols->state_test_flag;
+    if (!strcmp(name, "sys_state_get_counter")) return &symbols->state_get_counter;
+    if (!strcmp(name, "sys_state_set_counter")) return &symbols->state_set_counter;
+    if (!strcmp(name, "sys_state_add_counter")) return &symbols->state_add_counter;
+    if (!strcmp(name, "sys_state_sub_counter")) return &symbols->state_sub_counter;
     return NULL;
 }
 
@@ -690,6 +710,61 @@ static void test_physics_contract(struct Machine *machine) {
            machine->memory[entity + E_SPEED_Y] == 0);
 }
 
+static uint8_t call_state_value(struct Machine *machine, uint16_t routine,
+                                uint8_t id, uint8_t value) {
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regAF, (uint16_t)id << 8);
+    z80ex_set_reg(machine->cpu, regBC, (uint16_t)value << 8);
+    run_routine(machine, routine);
+    return z80ex_get_reg(machine->cpu, regAF) >> 8;
+}
+
+static void test_state_contract(struct Machine *machine) {
+    uint16_t af;
+
+    reset_fixture(machine);
+    memset(machine->memory + machine->symbols.state_flags, 0xff, 32);
+    memset(machine->memory + machine->symbols.state_counters, 0xff, 32);
+    run_routine(machine, machine->symbols.state_init);
+    report("state initialization clears flags and counters",
+           machine->memory[machine->symbols.state_flags] == 0 &&
+           machine->memory[machine->symbols.state_flags + 31] == 0 &&
+           machine->memory[machine->symbols.state_counters] == 0 &&
+           machine->memory[machine->symbols.state_counters + 31] == 0);
+
+    call_state_value(machine, machine->symbols.state_set_flag, 0, 0);
+    call_state_value(machine, machine->symbols.state_set_flag, 255, 0);
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regAF, (uint16_t)255 << 8);
+    run_routine(machine, machine->symbols.state_test_flag);
+    af = z80ex_get_reg(machine->cpu, regAF);
+    report("flags cover the complete 0 to 255 id range",
+           machine->memory[machine->symbols.state_flags] == 0x01 &&
+           machine->memory[machine->symbols.state_flags + 31] == 0x80 &&
+           (af & 0x40) != 0);
+
+    call_state_value(machine, machine->symbols.state_clear_flag, 255, 0);
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regAF, (uint16_t)255 << 8);
+    run_routine(machine, machine->symbols.state_test_flag);
+    af = z80ex_get_reg(machine->cpu, regAF);
+    report("cleared flags use Z false for condition-friendly tests",
+           machine->memory[machine->symbols.state_flags + 31] == 0 &&
+           (af & 0x40) == 0);
+
+    call_state_value(machine, machine->symbols.state_set_counter, 31, 250);
+    report("counter values can be set and read",
+           call_state_value(machine, machine->symbols.state_get_counter, 31, 0) == 250);
+
+    report("counter addition saturates at 255",
+           call_state_value(machine, machine->symbols.state_add_counter, 31, 10) == 255 &&
+           machine->memory[machine->symbols.state_counters + 31] == 255);
+
+    report("counter subtraction saturates at zero",
+           call_state_value(machine, machine->symbols.state_sub_counter, 31, 255) == 0 &&
+           machine->memory[machine->symbols.state_counters + 31] == 0);
+}
+
 int main(int argc, char **argv) {
     struct Machine machine;
     if (argc != 3) {
@@ -714,6 +789,7 @@ int main(int argc, char **argv) {
     test_behavior_contract(&machine);
     test_animation_set(&machine);
     test_physics_contract(&machine);
+    test_state_contract(&machine);
     printf("1..%d\n", tests_run);
     z80ex_destroy(machine.cpu);
     if (tests_failed) {
