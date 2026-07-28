@@ -228,6 +228,15 @@ man_entity_create_portal::
 ;;  Modified: AF, HL, IX
 ;;
 man_entity_create_player_bullet::
+    ;; Reject wrapped/edge spawns before touching the pool. A projectile must
+    ;; fit completely inside the 64-byte-wide world on its very first frame.
+    ld a, b
+    bit 7, a
+    jr nz, mecpb_invalid_spawn
+    add a, #S_BULLET_WIDTH
+    cp #(MAP_WIDTH * 4 + 1)
+    jr nc, mecpb_invalid_spawn
+
     push bc                 ;; save spawn x/y and room/speed — create_element
     push de                 ;; clobbers BC and DE (see its header)
     ld ix, #entities
@@ -251,7 +260,8 @@ man_entity_create_player_bullet::
 mecpb_full:
     pop de
     pop bc
-    scf                     ;; carry set: entity pool full
+mecpb_invalid_spawn:
+    scf                     ;; carry set: pool full or invalid spawn position
     ret
 
 ;;-----------------------------------------------------------------
@@ -263,6 +273,14 @@ mecpb_full:
 ;;  Input/Output/Modified: same as man_entity_create_player_bullet
 ;;
 man_entity_create_enemy_bullet::
+    ;; Apply the same first-frame bounds rule as player projectiles.
+    ld a, b
+    bit 7, a
+    jr nz, meceb_invalid_spawn
+    add a, #S_BULLET_WIDTH
+    cp #(MAP_WIDTH * 4 + 1)
+    jr nc, meceb_invalid_spawn
+
     push bc                 ;; save spawn x/y and room/speed — create_element
     push de                 ;; clobbers BC and DE (see its header)
     ld ix, #entities
@@ -286,5 +304,6 @@ man_entity_create_enemy_bullet::
 meceb_full:
     pop de
     pop bc
-    scf                     ;; carry set: entity pool full
+meceb_invalid_spawn:
+    scf                     ;; carry set: pool full or invalid spawn position
     ret
