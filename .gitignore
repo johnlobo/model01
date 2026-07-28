@@ -38,6 +38,10 @@ Debug/
 *.dsk
 *.sna
 
+# Host-only Z80 test runner and downloaded emulator dependency
+tests/.cache/
+tests/run_engine
+
 # Debug files
 *.dSYM/
 *.su
