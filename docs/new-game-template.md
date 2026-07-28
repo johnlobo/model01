@@ -1,37 +1,33 @@
-# New game template
+# Tutorial: crear un juego nuevo con el framework
 
-This project is both a game and an example of the framework under `src/sys/`.
-A new game replaces the content under `src/game/`, keeps the framework, and
-provides the two entry points consumed by `src/main.s`:
+Este tutorial parte de Model01 y termina con la estructura de un juego nuevo.
+La estrategia más segura es mantener el framework funcionando y sustituir el
+contenido en pasos pequeños, compilando después de cada uno.
 
-```asm
-game_app_init::
-game_app_update::
+## 1. Preparar la copia
+
+Duplica el repositorio, cambia el nombre del proyecto en
+`cfg/build_config.mk` y comprueba primero la base:
+
+```make
+PROJNAME := mijuego
+Z80CODELOC := 0x4000
 ```
 
-All link-visible symbols must be declared exactly once in `src/globals.inc`.
-Running `make test` verifies that declarations are unique and that framework
-code never imports the game layer.
+```sh
+export CPCT_PATH=/ruta/a/cpctelera
+make
+make test
+```
 
-## Recommended game files
+No cambies `Z80CODELOC` sin rediseñar el mapa de memoria y el sistema bancario.
+Conserva inicialmente `src/sys/`, `src/main.s`, los tests y la infraestructura
+de `cfg/`.
 
-| File | Responsibility |
-|---|---|
-| `game/app.s` | Application states and the two bootstrap entry points |
-| `game/config.h.s` | Status values, sprite dimensions and game constants |
-| `game/game.s` | Lifecycle and per-frame system order |
-| `game/entities.s` | Templates, animations and entity factories |
-| `game/input.s` | Key/action table and player actions |
-| `game/behaviors.s` | Behaviour bytecode and custom AI callbacks |
-| `game/collision.s` | Collision-pair rules registered with the framework |
-| `game/map.s` | Tileset, collision table, rooms and transitions |
+## 2. Definir la frontera del juego
 
-Only create a `.h.s` when it contains constants, layouts or macros. Public
-symbol declarations belong in `globals.inc`.
-
-## 1. Application adapter
-
-A game with a single state can use tail jumps and pay no extra call depth:
+Elimina o reemplaza el contenido de `src/game/`, pero conserva estas dos
+funciones públicas, que son el único contrato del arranque:
 
 ```asm
 .module game_app
@@ -46,55 +42,90 @@ game_app_update::
     jp game_update
 ```
 
-Games with menus can store an `app_state` byte and dispatch from
-`game_app_update`, as Model01 does in `src/game/app.s`.
+Si necesitas menú, pausa o pantalla final, añade un byte de estado y despacha
+desde `game_app_update`, como hace `src/game/app.s`. Un juego de una sola escena
+puede usar los dos saltos anteriores.
 
-## 2. Project configuration
+Registra `game_app_init`, `game_app_update`, `game_init` y `game_update` una sola
+vez en `src/globals.inc`. Toda función o dato referenciado desde otro módulo debe
+aparecer en ese registro; una etiqueta privada puede usar `:` en lugar de `::`.
 
-Set world and physics policy in `src/config.h.s`. These values are resolved at
-assembly time and introduce no runtime indirection:
+## 3. Configurar mundo y física
+
+Edita `src/config.h.s`:
 
 ```asm
 MAP_WIDTH        = 16
 MAP_HEIGHT       = 20
 GROUND_LEVEL     = MAP_HEIGHT * 8 - 1
-PHYSICS_GRAVITY  = 1
-PHYSICS_MAX_FALL_SPEED = 8
-PHYSICS_FRICTION_COMPONENT_BIT = 2
+
+PHYSICS_GRAVITY                = 1
+PHYSICS_MAX_FALL_SPEED         = 8
+PHYSICS_FRICTION_COMPONENT_BIT = 2  ;; c_cmp_input
 ```
 
-Map width may range from 1 to 20 columns (four Mode 0 bytes per tile), and map
-height from 1 to 25 rows. Width 16 uses a specialized four-shift indexer; other
-widths are expanded at assembly time and require no runtime multiplier.
+Cada tile mide 4 bytes x 8 píxeles. Los límites son 1..20 columnas y 1..25
+filas. El ancho 16 es el más rápido; otros anchos siguen evitando una
+multiplicación en runtime.
 
-Keep game-only status values and asset dimensions in `game/config.h.s`.
-
-## 3. Lifecycle and frame order
-
-Initialize only the systems the game uses. A typical lifecycle is:
+Crea `src/game/config.h.s` para valores exclusivos del juego:
 
 ```asm
+STATUS_PLAYER = 1
+STATUS_ENEMY  = 2
+STATUS_EXIT   = 3
+
+PLAYER_WIDTH  = 4       ;; bytes de pantalla: 8 píxeles en modo 0
+PLAYER_HEIGHT = 16      ;; píxeles
+```
+
+## 4. Crear los recursos
+
+Guarda los PNG y TMX editables en `assets/`. Declara su conversión en
+`cfg/image_conversion.mk` y `cfg/tilemap_conversion.mk`. Por ejemplo:
+
+```make
+$(eval $(call IMG2SP, CONVERT, assets/player.png, 8, 16, s_player, ,))
+$(eval $(call TMX2C,assets/map/room01.tmx,g_room01,src/assets/sprites/,))
+```
+
+Para el mapa, configura `IMG_FORMAT` como `zgtiles`: el render ETM necesita
+orden zigzag y Gray-code. Un sprite normal no puede usarse directamente como
+tile ETM ni viceversa.
+
+Después de ejecutar `make`, CPCtelera genera símbolos como `_s_player_0` o
+`_g_room01`. Añádelos a `src/globals.inc` si se usan desde ensamblador.
+
+## 5. Construir el juego mínimo
+
+Crea `src/game/game.s` con la inicialización y el orden del frame. Esta versión
+utiliza entidades, entrada, física, mapa, animación y render:
+
+```asm
+.module my_game
+
+.include "cpctelera.h.s"
+.include "globals.inc"
+.include "sys/entity.h.s"
+
+.area _CODE
+
 game_init::
-    call sys_mem_init
     call sys_entity_init
     call sys_input_init
     call sys_collision_init
-    call game_collision_init
     call game_entity_create_player
+
+    ld hl, #_g_palette0
+    call sys_render_init
     call game_map_init
-    call sys_shoot_init
     call sys_map_draw
     ret
-```
 
-Prepare rendering before VSYNC and draw after it:
-
-```asm
 game_update::
     call sys_physics_update
-    call sys_shoot_update
+    ld ix, #entity_array
     call game_input_update
-    call sys_beh_update
     call sys_collision_update
     call sys_anim_update
     call sys_render_prepare
@@ -102,113 +133,255 @@ game_update::
     jp sys_render_update
 ```
 
-## 4. Entity template and factory
+No es obligatorio usar todos los sistemas. Si incorporas proyectiles o IA,
+inicialízalos y añade `sys_shoot_update` o `sys_beh_update` en el lugar que
+corresponda a tus reglas.
 
-Templates are immutable defaults copied into the reusable entity pool:
+## 6. Crear una entidad
+
+En `src/game/entities.s`, define primero una animación y una plantilla:
 
 ```asm
+.module game_entities
+.include "globals.inc"
+.include "sys/entity.h.s"
+.include "game/config.h.s"
+
+.area _DATA
+
+player_idle_anim::
+    .db 1, 0
+    .dw _s_player_0
+
+player_walk_anim::
+    .db 2, 6
+    .dw _s_player_1, _s_player_2
+
 player_template:
-DefineEntity c_cmp_invalid, 0, 8, 16, 0, 0, 0, 0, 0, 5, 16, 15, _player_sprite, 0
+DefineEntity c_cmp_invalid, STATUS_PLAYER, 8, 16, 0, 0, 0, 0, 1, PLAYER_WIDTH, PLAYER_HEIGHT, 15, _s_player_0, 0
+```
+
+La plantilla no está activa porque su máscara es `c_cmp_invalid`. La fábrica
+copia la plantilla y configura la entidad resultante:
+
+```asm
+.area _CODE
 
 game_entity_create_player::
     ld hl, #player_template
-    call sys_entity_create       ;; IX=new entity; carry set when pool is full
+    call sys_entity_create
     ret c
-    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_input | c_cmp_animated)
+
+    ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_input | c_cmp_animated | c_cmp_collider)
     ld e_moved(ix), #1
+    ld hl, #player_idle_anim
+    ld e_anim(ix), l
+    ld e_anim+1(ix), h
     or a
     ret
 ```
 
-Always handle carry from `sys_entity_create`. Dynamic factories should leave
-templates unchanged and configure only the returned entity.
+Comprueba siempre el carry de `sys_entity_create`. No escribas sobre la
+plantilla para configurar una instancia: eso modificaría también las futuras.
 
-## 5. Animation
+## 7. Añadir controles
 
-An animation descriptor contains frame count, tick speed and sprite pointers:
-
-```asm
-player_walk_anim:
-    .db 2, 6
-    .dw _player_walk_0, _player_walk_1
-```
-
-Assign it with `sys_anim_set` or store its address in `e_anim`, then add
-`c_cmp_animated`.
-
-## 6. Input
-
-Use a null-terminated table of CPC key constants and callbacks:
+En `src/game/input.s`, declara una tabla de teclas terminada por cero:
 
 ```asm
+.module game_input
+.include "cpctelera.h.s"
+.include "globals.inc"
+.include "sys/entity.h.s"
+
+.area _DATA
+
 game_key_actions:
     .dw Key_O, game_input_left
     .dw Key_P, game_input_right
+    .dw Key_Q, game_input_jump
     .dw 0
+
+.area _CODE
 
 game_input_update::
     ld iy, #game_key_actions
-    jp sys_input_generic_update  ;; callbacks receive IX=current player
+    jp sys_input_generic_update
+
+game_input_left:
+    ld e_speed_x(ix), #-2
+    ret
+
+game_input_right:
+    ld e_speed_x(ix), #2
+    ret
+
+game_input_jump:
+    ld a, e_on_air(ix)
+    or a
+    ret nz
+    ld e_speed_y(ix), #-6
+    ld e_on_air(ix), #1
+    ret
 ```
 
-## 7. Behaviour and AI
+Los callbacks reciben `IX=jugador`. Si una acción cambia de escena o utiliza
+rutinas que destruyen `IY`, registra una petición y aplícala cuando
+`sys_input_generic_update` haya retornado.
 
-Behaviour programs are game data interpreted by `sys_beh_update`:
+## 8. Inicializar el mapa
+
+En `src/game/map.s`, asocia cada índice de tile con su propiedad y entrega los
+recursos al sistema:
 
 ```asm
-enemy_patrol_right:
-    DRIVE_VX #1, #2
-      CONDITION edge_ahead, enemy_patrol_left
-      CONDITIONS_END
-enemy_patrol_left:
-    DRIVE_VX #-1, #2
-      CONDITION edge_ahead, enemy_patrol_right
-      CONDITIONS_END
+.module game_map
+.include "globals.inc"
+
+.area _DATA
+
+game_tile_properties::
+    .db 0  ;; tile 0: atravesable
+    .db 1  ;; tile 1: sólido
+    .db 2  ;; tile 2: plataforma de un solo sentido
+
+.area _CODE
+
+game_map_init::
+    ld hl, #_s_tileset_00
+    ld de, #_g_room01
+    ld ix, #game_tile_properties
+    jp sys_map_init
 ```
 
-Use `ACTION callback` and `CONDITION_FN callback, target` for game-specific
-extensions. Register callbacks in `globals.inc`; the framework needs no AI
-registry or game import.
+El mapa TMX debe tener exactamente `MAP_WIDTH x MAP_HEIGHT`. Las coordenadas de
+entidad se expresan desde la esquina del mapa: X en bytes y Y en píxeles.
 
-## 8. Collision rules
+Para varias habitaciones, crea una tabla con `DefineRoomConnections` y conserva
+la transición en la capa de juego. Cambia de mapa con `sys_map_set`, actualiza
+`current_room` y asigna esa misma habitación a las entidades que deban aparecer.
 
-Register one game callback; the framework retains AABB detection:
+## 9. Activar animaciones
+
+Una entidad necesita `c_cmp_animated` y un puntero válido en `e_anim`. Para
+cambiar de animación sin reiniciarla en cada frame:
+
+```asm
+    ld hl, #player_walk_anim
+    jp sys_anim_set              ;; IX=entidad
+```
+
+El descriptor contiene número de frames, velocidad y una tabla de punteros. Una
+velocidad `0` avanza en cada tick. Marca `e_moved` cuando una modificación visual
+no lo haga automáticamente.
+
+## 10. Añadir un enemigo con IA
+
+Incluye `sys/beh.h.s`, define un programa en `_DATA` y asigna su dirección a
+`e_beh`:
+
+```asm
+enemy_patrol::
+    SET_ANIMATION enemy_right_anim
+enemy_go_right:
+    DRIVE_VX #1, #3
+    CONDITION edge_ahead, enemy_turn_left
+    CONDITIONS_END
+enemy_turn_left:
+    SET_ANIMATION enemy_left_anim
+    DRIVE_VX #-1, #3
+    CONDITION edge_ahead, enemy_patrol
+    CONDITIONS_END
+```
+
+La entidad debe llevar `c_cmp_behavior`. Añade `sys_beh_update` al frame. Para
+una acción propia, emite su puntero con `ACTION callback`; el callback recibe
+`IX=entidad` y `DE=argumentos`, consume sus bytes y termina normalmente con
+`jp sys_beh_next`. Consulta [behaviour-system.md](behaviour-system.md) para el
+contrato completo.
+
+## 11. Añadir colisiones entre entidades
+
+Registra una respuesta manteniendo la detección en el framework:
 
 ```asm
 game_collision_init::
     ld hl, #game_collision_on_hit
     jp sys_collision_set_handler
 
-game_collision_on_hit::          ;; IX=active, IY=passive
-    ;; Inspect game status values and apply the rule.
-    ret
+game_collision_on_hit::          ;; IX=collider, IY=collisionable
+    ld a, e_status(ix)
+    cp #STATUS_PLAYER
+    ret nz
+    ld a, e_status(iy)
+    cp #STATUS_EXIT
+    ret nz
+    jp game_go_to_next_level
 ```
 
-## 9. Map content
+El actor activo necesita `c_cmp_collider` y el objetivo
+`c_cmp_collisionable`. Si ambos deben iniciar colisiones, asigna las dos máscaras
+según corresponda. La colisión con el escenario es responsabilidad de física y
+mapa, no de este callback.
 
-`game_map_init` supplies the tileset, initial map and tile-property table:
+## 12. Añadir proyectiles
+
+Una fábrica de proyectil sigue el mismo patrón que cualquier entidad, pero usa:
 
 ```asm
-game_map_init::
-    ld hl, #_tileset
-    ld de, #_room_0
-    ld ix, #game_tile_solid_table
-    jp sys_map_init
+ld e_cmps(ix), #(c_cmp_render | c_cmp_projectile | c_cmp_collider)
+ld e_speed_x(ix), #2             ;; bytes por paso, con signo
+ld e_speed_x+1(ix), #2           ;; stride: frames entre pasos
+ld e_beh_timer(ix), #1           ;; stride - 1
 ```
 
-Tile properties are `0` passable, `1` fully solid and `2` one-way platform.
-Room graphs and transition policy stay in the game layer.
+Añade `sys_shoot_init` a la inicialización y `sys_shoot_update` al frame. El
+sistema destruye el proyectil en límites y tiles sólidos; el juego crea la
+instancia y responde a sus colisiones con otras entidades.
 
-## 10. Completion checklist
+## 13. Añadir mensajes o memoria extendida
 
-1. Replace the files under `src/game/` and configure assets under `cfg/`.
-2. Set world and physics constants in `src/config.h.s`.
-3. Register every public function, data symbol and generated asset once in
-   `src/globals.inc`.
-4. Keep dependencies one-way: `game -> sys`.
-5. Run `make test`; all architecture and Z80 tests must pass.
-6. Check `obj/<project>.bin.log` for the highest occupied address.
+Para usar texto llama primero a `sys_text_init` con `HL=fuente` y `DE=sprites de
+números`. `sys_messages_show` puede guardar el fondo de una ventana y
+`sys_messages_close` restaurarlo. El buffer está en memoria baja fija y no
+aumenta el binario.
 
-The test suite performs the last check automatically for Model01 and rejects a
-highest address above `0x7FFF`, because code beyond the banking window would be
-unsafe when extra RAM is switched in.
+Llama a `sys_mem_init` si necesitas detectar 128 KB o copiar bancos. Utiliza las
+rutinas de copia de alto nivel; no banques directamente desde código situado en
+`0x4000..0x7FFF`.
+
+## 14. Probar durante el desarrollo
+
+Ejecuta tras cada paso:
+
+```sh
+make test
+```
+
+La suite detecta:
+
+- imports del juego desde el framework;
+- `.globl` duplicados o símbolos públicos no registrados;
+- valores de mapa y física fuera de rango;
+- roturas del indexador con ancho genérico o ancho 16;
+- un binario que invada memoria por encima de `0x7FFF`;
+- regresiones de entidades, arrays, colisiones, proyectiles, IA, animación y
+  física ejecutando el Z80 real.
+
+Los tests viven en el host y no consumen RAM del juego.
+
+## 15. Lista final
+
+Antes de considerar terminada una primera versión:
+
+1. `game_app_init` y `game_app_update` existen y están registrados.
+2. `src/sys/` no importa ningún símbolo de `src/game/`.
+3. Cada símbolo público aparece una sola vez en `src/globals.inc`.
+4. Cada llamada a `sys_entity_create` trata el carry.
+5. Todos los mapas tienen las dimensiones configuradas y tabla de propiedades.
+6. Todas las entidades tienen habitación, dimensiones y máscara coherentes.
+7. El orden de sistemas del frame refleja las reglas del juego.
+8. `make test` termina correctamente.
+9. El mayor address de `obj/<juego>.bin.log` no supera `0x7FFF`.
+10. El juego se prueba finalmente en emulador o hardware real para validar vídeo,
+    temporización y controles.

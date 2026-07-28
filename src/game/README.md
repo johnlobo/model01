@@ -1,7 +1,8 @@
 # model01 game layer
 
-See `docs/new-game-template.md` for a copyable guide to replacing this layer
-with a new game.
+See [`docs/framework.md`](../../docs/framework.md) for the framework architecture
+and [`docs/new-game-template.md`](../../docs/new-game-template.md) for a
+step-by-step guide to replacing this layer with a new game.
 
 This directory contains rules and content that define **model01**, rather than
 reusable engine mechanisms.

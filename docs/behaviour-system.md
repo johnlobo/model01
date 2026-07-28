@@ -4,8 +4,9 @@ The behaviour system (`src/sys/beh.s`, `src/sys/beh.h.s`) gives entities a
 scriptable, frame-driven state machine.  Each AI-controlled entity holds a
 pointer (`e_beh`) to its **current position** inside a behaviour program — a
 flat table of action function pointers and inline data living in `.area _DATA`.
-Every frame, `sys_beh_update` advances the program for every `c_cmp_ai` entity
-that has `e_beh != 0`.
+Every frame, `sys_beh_update` advances the program for every
+`c_cmp_behavior` entity that has `e_beh != 0`. `c_cmp_ai` remains available as
+a compatibility alias.
 
 ---
 
@@ -143,16 +144,6 @@ in any condition table:
       CONDITION off_screen_right, my_reset_label
       CONDITIONS_END
 ```
-
----
-
-## Shared behaviours (`beh.s`)
-
-### `beh_bounce_behavior`
-
-A simple left-right patrol.  The entity moves right at speed 2 for 60 frames,
-then left at speed −2 for 60 frames, repeating indefinitely.  Requires the
-entity to have `c_cmp_movable` so physics applies the velocity.
 
 ---
 
