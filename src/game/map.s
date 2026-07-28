@@ -37,6 +37,9 @@ game_tile_solid_table::
     .db 0   ;; 17: door decoration
     .db 0   ;; 18: decoration
 
+game_map_new_pos: .db 0
+game_map_portal_dest_y: .db 0
+
 .area _CODE
 
 game_map_init::
@@ -62,4 +65,150 @@ game_map_init::
     ld e_speed_x+1(ix), #144
     ld e_on_air(ix), #1
     or a
+    ret
+
+;; Applies Model01's room graph when the player reaches a map edge.
+game_map_update_transition::
+    ld ix, #entity_array
+    ld a, (current_room)
+    ld l, a
+    ld h, #0
+    add hl, hl
+    add hl, hl
+    ld d, h
+    ld e, l
+    add hl, hl
+    add hl, de
+    ld de, #room_connections
+    add hl, de
+
+    ld a, e_x(ix)
+    or a
+    jr nz, gmut_check_east
+    ld a, #room_info_w
+    call gmut_load_connection
+    jr z, gmut_check_east
+    ld a, #MAP_WIDTH*4
+    sub e_width(ix)
+    dec a
+    ld c, a
+    jp gmut_do_horizontal
+
+gmut_check_east:
+    ld a, e_x(ix)
+    add a, e_width(ix)
+    cp #MAP_WIDTH*4
+    jr c, gmut_check_north
+    ld a, #room_info_e
+    call gmut_load_connection
+    jr z, gmut_check_north
+    ld c, #1
+    jp gmut_do_horizontal
+
+gmut_check_north:
+    ld a, e_y(ix)
+    or a
+    jr nz, gmut_check_south
+    ld a, #room_info_n
+    call gmut_load_connection
+    jr z, gmut_check_south
+    ld a, #MAP_HEIGHT*8
+    sub e_height(ix)
+    dec a
+    ld c, a
+    jp gmut_do_vertical
+
+gmut_check_south:
+    ld a, e_y(ix)
+    add a, e_height(ix)
+    cp #MAP_HEIGHT*8
+    ret c
+    ld a, #room_info_s
+    call gmut_load_connection
+    ret z
+    ld c, #1
+    jp gmut_do_vertical
+
+;; HL=room row, A=direction offset -> DE=map, B=room id, Z=no map.
+gmut_load_connection:
+    push hl
+    ld d, #0
+    ld e, a
+    add hl, de
+    ld e, (hl)
+    inc hl
+    ld d, (hl)
+    inc hl
+    ld b, (hl)
+    pop hl
+    ld a, d
+    or e
+    ret
+
+gmut_do_horizontal:
+    ld a, c
+    ld (game_map_new_pos), a
+    ld a, b
+    ld (current_room), a
+    ex de, hl
+    call sys_map_set
+    ld ix, #entity_array
+    ld a, (current_room)
+    ld e_room(ix), a
+    ld a, (game_map_new_pos)
+    ld e_x(ix), a
+    xor a
+    ld e_speed_x(ix), a
+    ld e_speed_x+1(ix), a
+    ld e_moved(ix), #1
+    ld e_p_address(ix), a
+    ld e_p_address+1(ix), a
+    ret
+
+gmut_do_vertical:
+    ld a, c
+    ld (game_map_new_pos), a
+    ld a, b
+    ld (current_room), a
+    ex de, hl
+    call sys_map_set
+    ld ix, #entity_array
+    ld a, (current_room)
+    ld e_room(ix), a
+    ld a, (game_map_new_pos)
+    ld e_y(ix), a
+    xor a
+    ld e_speed_y(ix), a
+    ld e_speed_y+1(ix), a
+    ld e_moved(ix), #1
+    ld e_p_address(ix), a
+    ld e_p_address+1(ix), a
+    ret
+
+;; Teleports the player using destination fields encoded in IY=portal.
+game_map_do_portal_transition::
+    ld a, e_speed_x(iy)
+    ld (game_map_new_pos), a
+    ld a, e_speed_x+1(iy)
+    ld (game_map_portal_dest_y), a
+    ld a, e_beh_timer(iy)
+    ld (current_room), a
+    ld l, e_beh(iy)
+    ld h, e_beh+1(iy)
+    call sys_map_set
+    ld ix, #entity_array
+    ld a, (current_room)
+    ld e_room(ix), a
+    ld a, (game_map_new_pos)
+    ld e_x(ix), a
+    ld a, (game_map_portal_dest_y)
+    ld e_y(ix), a
+    xor a
+    ld e_speed_x(ix), a
+    ld e_speed_x+1(ix), a
+    ld e_speed_y(ix), a
+    ld e_speed_y+1(ix), a
+    ld e_moved(ix), #1
+    ld e_p_address(ix), a
+    ld e_p_address+1(ix), a
     ret

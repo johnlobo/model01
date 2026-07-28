@@ -69,7 +69,7 @@ Menu input uses `sys_input_generic_update`, like gameplay input, plus a release 
 `man_game_update` runs each frame in this order:
 1. `sys_physics_update` — gravity, friction, tile collision
 2. `sys_shoot_update` — advance bullets, destroy them off map bounds
-3. `man_game_check_transition` — room-edge transitions
+3. `game_map_update_transition` — Model01 room-edge transitions
 4. `game_input_update` — Model01 keyboard actions using the generic input dispatcher (IX = player entity)
 5. `sys_beh_update` — bytecode behavior state machine
 6. `game_collision_update_effects` — game-owned hit feedback
@@ -134,7 +134,7 @@ Five rooms: `_g_map01`–`_g_map04` (rooms 0–3, linked left-to-right) + `_g_in
 
 `sys_map_draw` draws the map once at init via CPCtelera ETM 4×8 engine. During play only tiles under moved entities are redrawn via `sys_map_restore_tiles_at`. Use `sys_map_set` (HL = tilemap ptr) to switch rooms — it redraws the full map and updates `current_room` and `current_map_data`.
 
-**Room connections** are Model01 content declared in `room_connections` (`src/game/map.s`) with `DefineRoomConnections`. `man_game_check_transition` checks all four edges and calls `mgct_do_horizontal` / `mgct_do_vertical` when the player crosses a boundary; the player is repositioned one step from the opposite edge to prevent instant re-trigger.
+**Room connections** are Model01 content declared in `room_connections` (`src/game/map.s`) with `DefineRoomConnections`. `game_map_update_transition` checks all four edges and moves the player to the connected room when an edge is crossed; the player is repositioned one step from the opposite edge to prevent instant re-trigger.
 
 **Tile collision types** (`game_tile_solid_table` in `src/game/map.s`) are supplied to the generic map system during `game_map_init`:
 | Value | Meaning |

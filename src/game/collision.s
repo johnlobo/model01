@@ -7,7 +7,7 @@
 .include "cpctelera.h.s"
 .include "sys/collision.h.s"
 .include "man/entity.h.s"
-.include "man/game.h.s"
+.include "game/map.h.s"
 
 COLLISION_BORDER_FLASH_FRAMES = 6
 
@@ -60,7 +60,7 @@ gcoh_check_portal:
     ld a, e_on_air(iy)
     or a
     ret z
-    jp man_game_do_portal_transition
+    jp game_map_do_portal_transition
 
 game_collision_update_effects::
     ld a, (game_collision_border_flash)
