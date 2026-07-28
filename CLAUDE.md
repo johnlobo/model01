@@ -13,8 +13,11 @@ This is an Amstrad CPC game called `model01`, written entirely in **Z80 assembly
 | Range | Contents |
 |-------|----------|
 | `0x0000–0x003F` | RST vectors. `0x0038` = IM1 interrupt entry |
-| `0x0100–0x01FF` | `transparency_table` (`main.s`, `.area _ABS`). Must stay 256-byte aligned |
-| `0x0200–0x3FFF` | Free low RAM. `sys_mem_init` copies the 19-byte banking stub to `0x0200` |
+| `0x0100–0x01FF` | Runtime `transparency_table` copied by `main.s`. Must stay 256-byte aligned |
+| `0x0200–0x0213` | 19-byte banking stub plus its 1-byte RAM-detection pattern |
+| `0x0214–0x02FF` | Free low RAM |
+| `0x0300–0x0EB7` | Fixed 3000-byte message background buffer (`message_buffer`) |
+| `0x0EB8–0x3FFF` | Free low RAM |
 | `0x4000–0x7FFF` | `_CODE`, then `_DATA` — **and the 128K banking window** |
 | `0x8000–0xBFFF` | Back buffer (declared, unused) + the firmware stack (~`0xBFxx`) |
 | `0xC000–0xFFFF` | Front buffer — everything currently draws here |

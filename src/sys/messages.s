@@ -463,4 +463,7 @@ down_line:
     ret
 width: .db #0
 height: .db #0
-message_buffer: .ds MESSAGE_BUFFER_SIZE
+;; Fixed low-RAM workspace. Keeping this out of _CODE recovers 3000 bytes in
+;; the 0x4000-0x7FFF banking window. It does not overlap the transparency table
+;; (0x0100-0x01FF) or the banking stub/detection byte (0x0200-0x0213).
+message_buffer = MESSAGE_BUFFER_ADDRESS
