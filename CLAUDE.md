@@ -52,7 +52,7 @@ There is also `_game_loaded_string` in `src/main.s` — keep it in sync.
 
 - `src/sys/` contains reusable mechanisms: array storage, behavior bytecode interpretation, AABB detection/dispatch, physics, animation, rendering, maps, input primitives, messages and memory banking. System code must not reference `src/game` symbols.
 - `src/game/` contains replaceable model01 rules and content. It currently owns the monk behavior programs, the projectile-firing behavior action, collision responses, portal policy and damage-border feedback.
-- `src/man/` is transitional orchestration left from the original layout. It still owns the entity pool/schema and remaining legacy `sys → man` callbacks; do not treat it as framework API. Concrete entity templates/factories live in `src/game/entities.s`.
+- `src/man/` is transitional game-loop orchestration left from the original layout; do not treat it as framework API. The reusable entity schema/pool lives in `src/sys/entity.*`, while concrete templates/factories live in `src/game/entities.s`.
 
 The enforced first boundary is that `src/sys` must not import `src/game`. New integration follows `game → sys`; generic systems expose callbacks or function-pointer bytecode entries instead of calling new game rules directly.
 
@@ -92,7 +92,7 @@ Entities use **world coordinates** (origin = map top-left):
 
 ### Entity Component System
 
-Entities live in a flat array (`entities` in `src/man/entity.s`, max 20). Each has a bitmask `e_cmps`:
+Entities live in a flat array (`entities` in `src/sys/entity.s`, max 20). Each has a bitmask `e_cmps`:
 
 | Flag | Value | Meaning |
 |------|-------|---------|
@@ -105,7 +105,7 @@ Entities live in a flat array (`entities` in `src/man/entity.s`, max 20). Each h
 | `c_cmp_collisionable` | 0x40 | Passive collision target (inner loop) |
 | `c_cmp_projectile` | 0x80 | Bullet — moved by `sys_shoot_update`, not physics |
 
-The entity struct (`e`) is defined with `BeginStruct`/`Field`/`EndStruct` in `src/man/entity.h.s`. Fields in order: `e_cmps`, `e_status`, `e_x`, `e_y`, `e_p_x` (2B), `e_p_y` (2B), `e_address` (2B), `e_p_address` (2B), `e_speed_x` (2B), `e_speed_y` (2B), `e_on_air`, `e_width`, `e_height`, `e_color`, `e_sprite` (2B), `e_moved`, `e_anim` (2B), `e_anim_frame`, `e_anim_timer`, `e_beh` (2B), `e_beh_timer`, `e_room`.
+The entity struct (`e`) is defined with `BeginStruct`/`Field`/`EndStruct` in `src/sys/entity.h.s`. Fields in order: `e_cmps`, `e_status`, `e_x`, `e_y`, `e_p_x` (2B), `e_p_y` (2B), `e_address` (2B), `e_p_address` (2B), `e_speed_x` (2B), `e_speed_y` (2B), `e_on_air`, `e_width`, `e_height`, `e_color`, `e_sprite` (2B), `e_moved`, `e_anim` (2B), `e_anim_frame`, `e_anim_timer`, `e_beh` (2B), `e_beh_timer`, `e_room`.
 
 **All systems skip entities whose `e_room != current_room`.**
 

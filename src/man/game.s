@@ -32,7 +32,7 @@
 .include "game/input.h.s"
 .include "game/map.h.s"
 .include "game/menu.h.s"
-.include "man/entity.h.s"
+.include "sys/entity.h.s"
 
 .area _DATA
 
@@ -47,7 +47,7 @@ man_game_init::
     ld (man_game_quit_dialog_active), a
     ld (man_game_quit_dialog_response), a
     call sys_mem_init
-    call man_entity_init
+    call sys_entity_init
     call sys_input_init
     call game_input_init
     call sys_collision_init

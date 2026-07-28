@@ -17,6 +17,6 @@ Code under `src/sys/` may expose callbacks and generic actions used here, but
 must not reference symbols from `src/game/`. A new game should be able to
 replace this directory without editing the corresponding system internals.
 
-`src/man/` is currently transitional: it owns the entity pool/schema and game
-orchestration. Concrete entity content now lives here in `src/game/`; the
-remaining old `sys -> man` callbacks will move behind this boundary later.
+`src/man/` is currently transitional and contains only game-loop orchestration.
+The reusable entity schema/pool lives in `src/sys/entity.*`; concrete entity
+content lives here in `src/game/`.

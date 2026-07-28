@@ -6,7 +6,7 @@
 .include "game/collision.h.s"
 .include "cpctelera.h.s"
 .include "sys/collision.h.s"
-.include "man/entity.h.s"
+.include "sys/entity.h.s"
 .include "game/map.h.s"
 
 COLLISION_BORDER_FLASH_FRAMES = 6

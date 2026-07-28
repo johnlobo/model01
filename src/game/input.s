@@ -5,7 +5,7 @@
 .include "game/entities.h.s"
 .include "cpctelera.h.s"
 .include "common.h.s"
-.include "man/entity.h.s"
+.include "sys/entity.h.s"
 .include "man/game.h.s"
 .include "sys/anim.h.s"
 .include "sys/input.h.s"

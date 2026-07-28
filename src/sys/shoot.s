@@ -20,7 +20,7 @@
 .include "common.h.s"
 .include "sys/shoot.h.s"
 .include "sys/map.h.s"
-.include "man/entity.h.s"
+.include "sys/entity.h.s"
 
 ;;
 ;; Start of _DATA area

@@ -5,7 +5,7 @@
 .include "common.h.s"
 .include "sys/collision.h.s"
 .include "sys/map.h.s"
-.include "man/entity.h.s"
+.include "sys/entity.h.s"
 
 ;;
 ;; Start of _DATA area

@@ -3,7 +3,7 @@
 
 .include "game/entities.h.s"
 .include "game/behaviors.h.s"
-.include "man/entity.h.s"
+.include "sys/entity.h.s"
 .include "sys/shoot.h.s"
 .include "common.h.s"
 
@@ -52,7 +52,7 @@ DefineEntity c_cmp_invalid, 0, 0, 0, 0, 0, 0, 0, 0, S_BULLET_WIDTH, S_BULLET_HEI
 
 game_entity_create_player::
     ld hl, #game_player_template
-    call man_entity_create
+    call sys_entity_create
     ret c
     ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_collider | c_cmp_collisionable | c_cmp_input | c_cmp_animated)
     ld e_status(ix), #STATUS_PLAYER
@@ -65,7 +65,7 @@ game_entity_create_player::
 
 game_entity_create_patrol_enemy::
     ld hl, #game_patrol_enemy_template
-    call man_entity_create
+    call sys_entity_create
     ret c
     ld e_cmps(ix), #(c_cmp_render | c_cmp_movable | c_cmp_behavior | c_cmp_animated | c_cmp_collisionable)
     ld e_status(ix), #STATUS_ENEMY
@@ -83,7 +83,7 @@ game_entity_create_object::
     push bc
     push de
     ld hl, #game_object_template
-    call man_entity_create
+    call sys_entity_create
     jr c, gec_object_full
     pop de
     pop bc
@@ -104,7 +104,7 @@ game_entity_create_portal::
     push bc
     push de
     ld hl, #game_portal_template
-    call man_entity_create
+    call sys_entity_create
     jr c, gec_portal_full
     pop de
     pop bc
@@ -157,7 +157,7 @@ game_entity_create_bullet:
 
     push bc
     push de
-    call man_entity_create
+    call sys_entity_create
     jr c, gec_bullet_full
     pop de
     pop bc

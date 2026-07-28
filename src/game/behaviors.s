@@ -6,7 +6,7 @@
 .include "game/behaviors.h.s"
 .include "game/entities.h.s"
 .include "common.h.s"
-.include "man/entity.h.s"
+.include "sys/entity.h.s"
 .include "sys/shoot.h.s"
 
 .area _DATA

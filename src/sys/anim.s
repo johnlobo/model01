@@ -5,7 +5,7 @@
 .include "cpctelera.h.s"
 .include "common.h.s"
 .include "sys/anim.h.s"
-.include "man/entity.h.s"
+.include "sys/entity.h.s"
 
 ;;
 ;; Start of _DATA area

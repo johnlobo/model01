@@ -18,7 +18,7 @@
 .include "sys/map.h.s"
 .include "cpctelera.h.s"
 .include "common.h.s"
-.include "man/entity.h.s"
+.include "sys/entity.h.s"
 .include "sys/array.h.s"
 .include "sys/text.h.s"
 .include "sys/input.h.s"
@@ -34,7 +34,7 @@
 .area _DATA
 
 FONT_NUMBERS: .dw #0000
-_welcome_string:: .asciz "VERSION - V.059"   ;;
+_welcome_string:: .asciz "VERSION - V.060"   ;;
 
 
 sys_render_front_buffer: .db 0xc0

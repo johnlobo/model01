@@ -21,7 +21,7 @@
 .include "sys/physics.h.s"
 .include "sys/util.h.s"
 .include "sys/map.h.s"
-.include "man/entity.h.s"
+.include "sys/entity.h.s"
 
 ;;
 ;; Start of _DATA area 
