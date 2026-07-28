@@ -20,6 +20,9 @@
 .include "cpctelera.h.s"
 .include "../common.h.s"
 
+BUFFER_SIZE = 10
+ZERO_KEYS_ACTIVATED = 0xFF
+
 ;;
 ;; Start of _DATA area 
 ;;  SDCC requires at least _DATA and _CODE areas to be declared, but you may use

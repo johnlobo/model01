@@ -21,6 +21,11 @@
 .include "sys/util.h.s"
 .include "sys/render.h.s"
 
+FONT_WIDTH = 2
+FONT_HEIGHT = 9
+S_SMALL_NUMBERS_WIDTH = 2
+S_SMALL_NUMBERS_HEIGHT = 5
+
 
 ;;
 ;; Start of _DATA area 

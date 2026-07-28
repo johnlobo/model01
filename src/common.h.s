@@ -57,8 +57,6 @@
 ;; DEFINED CONSTANTS
 ;;===============================================================================
 
-null_ptr = 0x0000
-
 ;;tipos de componentes
 c_cmp_invalid = 0x00    ;; Type invalid
 c_cmp_render = 0x01     ;;entidad renderizable
@@ -73,21 +71,6 @@ c_cmp_projectile = 0x80     ;;bala: movida en linea recta por sys_shoot_update (
 c_cmp_default = c_cmp_render | c_cmp_movable | c_cmp_collider  ;;componente por defecto
 
 x_cmps = 0
-
-;; Keyboard constants
-BUFFER_SIZE = 10
-ZERO_KEYS_ACTIVATED = #0xFF
-
-;; Score constants
-SCORE_NUM_BYTES = 4
-
-;; Sprites sizes
-S_SMALL_NUMBERS_WIDTH = 2
-S_SMALL_NUMBERS_HEIGHT = 5
-
-;; Font constants
-FONT_WIDTH = 2
-FONT_HEIGHT = 9
 
 ;;===============================================================================
 ;; DEFINED MACROS
@@ -106,28 +89,4 @@ FONT_HEIGHT = 9
 .mdelete EndStruct
 .macro EndStruct struct
     sizeof_'struct = struct'_offset
-.endm
-
-.mdelete ld__hl__hl_with_a
-.macro ld__hl__hl_with_a
-    ld a,(hl)
-    inc hl
-    ld h,(hl)
-    ld l,a
-.endm
-
-.mdelete test_hl_0
-.macro test_hl_0
-    ld a, l
-    or h
-.endm
-
-.mdelete m_msg_w_background
-.macro m_msg_w_background bk
-    ld h, #(bk)                         ;;
-    ld l, #(bk)                         ;;
-    call cpct_px2byteM0_asm             ;;
-    ex af, af'                          ;;
-    ld a, l                             ;;
-    ex af, af'                          ;;
 .endm

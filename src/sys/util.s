@@ -18,6 +18,8 @@
 .include "cpctelera.h.s"
 .include "sys/util.h.s"
 .include "../common.h.s"
+
+SCORE_NUM_BYTES = 4
 ;;
 ;; Start of _DATA area 
 ;;  SDCC requires at least _DATA and _CODE areas to be declared, but you may use

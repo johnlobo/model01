@@ -27,6 +27,8 @@ Likewise, `sys_text_init` receives the font in `HL` and the small-number sprite
 set in `DE`, keeping concrete text assets in the game layer.
 The renderer exposes only its current queue-based API; obsolete zone flags tied
 to entities from an earlier game implementation have been removed.
+System-private constants now live beside their implementation instead of being
+exported transitively through `common.h.s`.
 
 The former `src/man/` layer has been removed. The reusable entity schema/pool
 lives in `src/sys/entity.*`; lifecycle and concrete content live here.

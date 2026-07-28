@@ -8,6 +8,8 @@
 .include "sys/entity.h.s"
 .include "sys/map.h.s"
 
+null_ptr = 0x0000
+
 ;;
 ;; Start of _DATA area
 ;;
