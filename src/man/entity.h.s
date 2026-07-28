@@ -71,7 +71,7 @@ MAX_ENTITIES = 20
     .dw _a              ;; address
     .dw _pa             ;; previous address
     .dw _speed_x        ;; speed_x
-    .dw _speed_x        ;; speed_y
+    .dw _speed_y        ;; speed_y
     .db _on_air         ;; on_air
     .db _width          ;; width
     .db _height         ;; height
