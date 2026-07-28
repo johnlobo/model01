@@ -3,6 +3,7 @@
 project_root=${1:-..}
 src_dir="$project_root/src"
 globals_file="$src_dir/globals.inc"
+config_file="$src_dir/config.h.s"
 failures=0
 test_number=0
 
@@ -44,12 +45,44 @@ global_definitions_are_registered() {
     test -z "$missing"
 }
 
+config_value() {
+    awk -F= -v name="$1" '
+        $1 ~ "^[[:space:]]*" name "[[:space:]]*$" {
+            value=$2
+            sub(/;.*/, "", value)
+            gsub(/[[:space:]]/, "", value)
+            print value
+        }' "$config_file"
+}
+
+map_width_matches_tilemap_indexer() {
+    test "$(config_value MAP_WIDTH)" = 16
+}
+
+map_height_fits_cpc_screen() {
+    value=$(config_value MAP_HEIGHT)
+    test "$value" -ge 1 2>/dev/null && test "$value" -le 25
+}
+
+gravity_fits_signed_velocity() {
+    value=$(config_value PHYSICS_GRAVITY)
+    test "$value" -ge 0 2>/dev/null && test "$value" -le 127
+}
+
+fall_speed_fits_signed_velocity() {
+    value=$(config_value PHYSICS_MAX_FALL_SPEED)
+    test "$value" -ge 1 2>/dev/null && test "$value" -le 127
+}
+
 echo "TAP version 13"
 report framework_has_no_game_imports "framework does not import the game layer"
 report globals_are_centralized "global declarations are centralized"
 report globals_are_unique "global declarations contain no duplicates"
 report global_definitions_are_registered "global definitions are registered"
+report map_width_matches_tilemap_indexer "map width matches the 16-column tile indexer"
+report map_height_fits_cpc_screen "map height fits the 200-pixel CPC screen"
+report gravity_fits_signed_velocity "gravity fits signed 8-bit velocity"
+report fall_speed_fits_signed_velocity "fall speed fits signed 8-bit velocity"
 echo "1..$test_number"
 
 test "$failures" -eq 0
-

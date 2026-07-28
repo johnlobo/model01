@@ -63,6 +63,9 @@ PHYSICS_MAX_FALL_SPEED = 8
 PHYSICS_FRICTION_COMPONENT_BIT = 2
 ```
 
+The current tile indexer requires `MAP_WIDTH = 16`; `make test` enforces it.
+Map height may range from 1 to 25 rows so an 8-pixel tilemap fits the screen.
+
 Keep game-only status values and asset dimensions in `game/config.h.s`.
 
 ## 3. Lifecycle and frame order
@@ -204,3 +207,7 @@ Room graphs and transition policy stay in the game layer.
 4. Keep dependencies one-way: `game -> sys`.
 5. Run `make test`; all architecture and Z80 tests must pass.
 6. Check `obj/<project>.bin.log` for the highest occupied address.
+
+The test suite performs the last check automatically for Model01 and rejects a
+highest address above `0x7FFF`, because code beyond the banking window would be
+unsafe when extra RAM is switched in.
