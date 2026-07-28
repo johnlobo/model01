@@ -38,11 +38,15 @@ cpct_winape -as -f    # Linux/Windows
 cpct_rvm -as -f       # macOS
 ```
 
+`make test` first validates the framework/game import boundary and centralized
+global registry, then runs the headless Z80 engine tests. These architecture
+checks execute on the host and add nothing to the CPC binary.
+
 `CPCT_PATH` must be set to the CPCtelera installation directory. VSCode tasks for `make`, `clean`, `cleanall`, and `run` are in [.vscode/tasks.json](.vscode/tasks.json).
 
 ## Version String
 
-`game_menu_version` in `src/game/menu.s` (e.g. `"VERSION - V.071"`) is displayed at the bottom of the main menu. **Bump this after every significant change.**
+`game_menu_version` in `src/game/menu.s` (e.g. `"VERSION - V.073"`) is displayed at the bottom of the main menu. **Bump this after every significant change.**
 
 There is also `_game_loaded_string` in `src/game/app.s` — keep it in sync.
 

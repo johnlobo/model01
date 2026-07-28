@@ -42,6 +42,8 @@ World geometry and physics policy are compile-time parameters in
 gravity, terminal velocity and which component receives friction.
 The bootstrap depends only on `game_app_init` and `game_app_update`; menu/game
 state dispatch remains replaceable content in this directory.
+`tests/check_architecture.sh` enforces this one-way boundary and validates the
+central global registry before the Z80 tests run.
 
 The former `src/man/` layer has been removed. The reusable entity schema/pool
 lives in `src/sys/entity.*`; lifecycle and concrete content live here.

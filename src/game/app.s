@@ -6,7 +6,7 @@
 
 .area _DATA
 
-_game_loaded_string: .asciz " GAME LOADED - V.072"
+_game_loaded_string: .asciz " GAME LOADED - V.073"
 app_state:: .db APP_STATE_MENU
 
 .area _CODE
@@ -19,4 +19,3 @@ game_app_update::
     or a
     jp z, game_menu_update
     jp game_update
-

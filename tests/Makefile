@@ -16,11 +16,14 @@ Z80EX_CFLAGS := -I$(Z80EX_DIR) -I$(Z80EX_DIR)/include \
 	-DZ80EX_API_REVISION=1 -DZ80EX_VERSION_MAJOR=1 \
 	-DZ80EX_VERSION_MINOR=21 -DZ80EX_RELEASE_TYPE=
 
-.PHONY: test game clean
+.PHONY: test architecture game clean
 
-test: game
+test: architecture game
 	$(MAKE) $(RUNNER)
 	./$(RUNNER) $(GAME_BIN) $(GAME_NOI)
+
+architecture:
+	sh ./check_architecture.sh ..
 
 game:
 	$(MAKE) -C ..
