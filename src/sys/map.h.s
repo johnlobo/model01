@@ -40,3 +40,21 @@ EndStruct room_info        ;; sizeof_room_info = 12
 ;;===============================================================================
 ;; PUBLIC METHODS
 ;;===============================================================================
+
+;; sys_map_get_tile
+;;   Input:  B=row, C=column
+;;   Output: A=tile id and carry clear; A=0 and carry set when out of bounds
+;;
+;; sys_map_set_tile
+;;   Input:  B=row, C=column, A=tile id
+;;   Output: carry clear on success, carry set when out of bounds
+;;   Changes map data only; collision queries immediately see the new tile id.
+;;
+;; sys_map_redraw_tile
+;;   Input:  B=row, C=column
+;;   Output: carry clear on success, carry set when out of bounds
+;;   Redraws current map data without changing it.
+;;
+;; sys_map_set_tile_and_redraw
+;;   Input:  B=row, C=column, A=tile id
+;;   Output: carry clear on success, carry set when out of bounds

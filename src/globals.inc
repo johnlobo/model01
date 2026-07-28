@@ -156,12 +156,16 @@
 .globl sys_inventory_items
 .globl sys_inventory_remove
 .globl sys_map_draw
+.globl sys_map_get_tile
 .globl sys_map_init
 .globl sys_map_is_landable_at
 .globl sys_map_is_solid_at
+.globl sys_map_redraw_tile
 .globl sys_map_restore_tiles_at
 .globl sys_map_set
 .globl sys_map_set_collision_table
+.globl sys_map_set_tile
+.globl sys_map_set_tile_and_redraw
 .globl sys_mem_bank_in
 .globl sys_mem_bank_out
 .globl sys_mem_copy_from_bank

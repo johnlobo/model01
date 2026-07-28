@@ -112,6 +112,68 @@ sys_map_draw::
     ret
 
 ;;-----------------------------------------------------------------
+;; Dynamic tile access. Coordinates are tile row/column, not world pixels.
+
+;; B=row, C=column -> HL=&current_map_data[row][column], carry=invalid.
+;; BC is preserved so callers can redraw after changing the value.
+smta_get_address:
+    ld a, b
+    cp #MAP_HEIGHT
+    jr nc, smta_invalid
+    ld a, c
+    cp #MAP_WIDTH
+    jr nc, smta_invalid
+    ld l, b
+    ld h, #0
+    map_row_offset_hl
+    ld e, c
+    ld d, #0
+    add hl, de
+    ld de, (current_map_data)
+    add hl, de
+    or a
+    ret
+smta_invalid:
+    scf
+    ret
+
+sys_map_get_tile::
+    call smta_get_address
+    jr c, smgt_invalid
+    ld a, (hl)
+    or a
+    ret
+smgt_invalid:
+    xor a
+    scf
+    ret
+
+sys_map_set_tile::
+    push af
+    call smta_get_address
+    jr c, smst_invalid
+    pop af
+    ld (hl), a
+    or a
+    ret
+smst_invalid:
+    pop af
+    scf
+    ret
+
+sys_map_redraw_tile::
+    call smta_get_address
+    ret c
+    call smrsa_draw_one_tile
+    or a
+    ret
+
+sys_map_set_tile_and_redraw::
+    call sys_map_set_tile
+    ret c
+    jp sys_map_redraw_tile
+
+;;-----------------------------------------------------------------
 ;;
 ;; sys_map_is_solid_at / sys_map_is_landable_at
 ;;

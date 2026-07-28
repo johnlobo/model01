@@ -64,7 +64,13 @@ struct Symbols {
     uint16_t current_map_data;
     uint16_t current_room;
     uint16_t tile_solid_table;
+    uint16_t tileset;
+    uint16_t map_init;
     uint16_t map_set_collision_table;
+    uint16_t map_get_tile;
+    uint16_t map_set_tile;
+    uint16_t map_set_tile_and_redraw;
+    uint16_t map_is_solid;
     uint16_t array_init;
     uint16_t array_remove;
     uint16_t array_get;
@@ -181,7 +187,13 @@ static uint16_t *symbol_slot(struct Symbols *symbols, const char *name) {
     if (!strcmp(name, "current_map_data")) return &symbols->current_map_data;
     if (!strcmp(name, "current_room")) return &symbols->current_room;
     if (!strcmp(name, "game_tile_solid_table")) return &symbols->tile_solid_table;
+    if (!strcmp(name, "_s_tileset_00")) return &symbols->tileset;
+    if (!strcmp(name, "sys_map_init")) return &symbols->map_init;
     if (!strcmp(name, "sys_map_set_collision_table")) return &symbols->map_set_collision_table;
+    if (!strcmp(name, "sys_map_get_tile")) return &symbols->map_get_tile;
+    if (!strcmp(name, "sys_map_set_tile")) return &symbols->map_set_tile;
+    if (!strcmp(name, "sys_map_set_tile_and_redraw")) return &symbols->map_set_tile_and_redraw;
+    if (!strcmp(name, "sys_map_is_solid_at")) return &symbols->map_is_solid;
     if (!strcmp(name, "sys_array_init")) return &symbols->array_init;
     if (!strcmp(name, "sys_array_remove_element")) return &symbols->array_remove;
     if (!strcmp(name, "sys_array_get_element")) return &symbols->array_get;
@@ -953,6 +965,57 @@ static void test_interaction_contract(struct Machine *machine) {
            carry && machine->memory[TEST_INTERACTION_MARKER] == 0);
 }
 
+static uint16_t call_map_tile(struct Machine *machine, uint16_t routine,
+                              uint8_t row, uint8_t column, uint8_t tile) {
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regAF, (uint16_t)tile << 8);
+    z80ex_set_reg(machine->cpu, regBC, ((uint16_t)row << 8) | column);
+    run_routine(machine, routine);
+    return z80ex_get_reg(machine->cpu, regAF);
+}
+
+static void prepare_dynamic_map(struct Machine *machine) {
+    reset_fixture(machine);
+    memset(machine->memory + TEST_MAP_ADDRESS, 0, MAP_WIDTH * MAP_HEIGHT);
+    z80ex_set_reg(machine->cpu, regHL, machine->symbols.tileset);
+    z80ex_set_reg(machine->cpu, regDE, TEST_MAP_ADDRESS);
+    z80ex_set_reg(machine->cpu, regIX, machine->symbols.tile_solid_table);
+    run_routine(machine, machine->symbols.map_init);
+}
+
+static void test_dynamic_map_contract(struct Machine *machine) {
+    enum { FRONT_TILE_0 = 0xc000 + 80 * 2 + 8 };
+    uint16_t af;
+    uint8_t expected;
+
+    prepare_dynamic_map(machine);
+    af = call_map_tile(machine, machine->symbols.map_set_tile, 3, 5, 7);
+    report("a map tile can be changed and read back",
+           (af & 1) == 0 &&
+           machine->memory[TEST_MAP_ADDRESS + 3 * MAP_WIDTH + 5] == 7 &&
+           (call_map_tile(machine, machine->symbols.map_get_tile, 3, 5, 0) >> 8) == 7);
+
+    af = call_map_tile(machine, machine->symbols.map_set_tile, MAP_HEIGHT, 0, 9);
+    report("dynamic map access rejects out-of-bounds coordinates",
+           (af & 1) != 0 &&
+           (call_map_tile(machine, machine->symbols.map_get_tile, 0, MAP_WIDTH, 0) & 1) != 0);
+
+    call_map_tile(machine, machine->symbols.map_set_tile, 3, 5, 2);
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regBC, ((uint16_t)(3 * 8) << 8) | (5 * 4));
+    run_routine(machine, machine->symbols.map_is_solid);
+    report("tile changes immediately affect map collision queries",
+           (z80ex_get_reg(machine->cpu, regAF) & 0x40) == 0);
+
+    expected = machine->memory[machine->symbols.tileset + 32];
+    machine->memory[FRONT_TILE_0] = expected ^ 0xff;
+    af = call_map_tile(machine, machine->symbols.map_set_tile_and_redraw, 0, 0, 1);
+    report("a changed tile can be redrawn without drawing the full map",
+           (af & 1) == 0 &&
+           machine->memory[TEST_MAP_ADDRESS] == 1 &&
+           machine->memory[FRONT_TILE_0] == expected);
+}
+
 int main(int argc, char **argv) {
     struct Machine machine;
     if (argc != 3) {
@@ -980,6 +1043,7 @@ int main(int argc, char **argv) {
     test_state_contract(&machine);
     test_inventory_contract(&machine);
     test_interaction_contract(&machine);
+    test_dynamic_map_contract(&machine);
     printf("1..%d\n", tests_run);
     z80ex_destroy(machine.cpu);
     if (tests_failed) {

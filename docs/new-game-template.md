@@ -336,6 +336,24 @@ Para varias habitaciones, crea una tabla con `DefineRoomConnections` y conserva
 la transición en la capa de juego. Cambia de mapa con `sys_map_set`, actualiza
 `current_room` y asigna esa misma habitación a las entidades que deban aparecer.
 
+Una interacción puede cambiar una puerta o un elemento del escenario sin
+redibujar la habitación completa:
+
+```asm
+game_open_door:
+    ld a, #FLAG_DOOR_OPEN
+    call sys_state_set_flag
+    ld b, #12                    ;; fila del tile
+    ld c, #7                     ;; columna del tile
+    ld a, #TILE_OPEN_DOOR
+    jp sys_map_set_tile_and_redraw
+```
+
+Usa `sys_map_set_tile` si vas a modificar varias casillas y redibújalas después
+con `sys_map_redraw_tile`, o llama una sola vez a `sys_map_draw`. El ID nuevo se
+aplica también a las consultas de colisión. Al entrar de nuevo en la habitación,
+consulta `FLAG_DOOR_OPEN` y reconstruye su aspecto persistente.
+
 ## 9. Activar animaciones
 
 Una entidad necesita `c_cmp_animated` y un puntero válido en `e_anim`. Para

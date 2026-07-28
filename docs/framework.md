@@ -129,6 +129,25 @@ entre habitaciones, portales y reglas de transición pertenecen al juego.
 `map_origin_y` debe ser múltiplo de 8: la restauración rápida de tiles depende
 de comenzar en una fila de carácter del CPC.
 
+El mapa activo puede modificarse durante el juego mediante coordenadas de tile:
+
+```asm
+ld b, #10                       ;; fila
+ld c, #6                        ;; columna
+ld a, #TILE_OPEN_DOOR
+call sys_map_set_tile_and_redraw
+```
+
+`sys_map_get_tile` y `sys_map_set_tile` permiten consultar o cambiar datos sin
+redibujar; `sys_map_redraw_tile` actualiza sólo la celda indicada. Las cuatro
+operaciones devuelven carry activo fuera de los límites. Como la colisión
+consulta el ID almacenado en el mapa activo, el cambio de tile altera también su
+comportamiento físico inmediatamente.
+
+Esto modifica la copia activa en RAM, no el diseño TMX ni los flags persistentes.
+Una puerta que deba continuar abierta al volver a crear una habitación debe
+guardar además un flag y reaplicar el cambio al cargarla.
+
 ## 5. Renderizado y animación
 
 El render actual dibuja sobre la pantalla frontal en `0xC000`. Antes del VSYNC,
