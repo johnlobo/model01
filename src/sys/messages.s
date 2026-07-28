@@ -42,6 +42,7 @@ _window_h: .db #00
 _window_message: .dw #0000
 _window_wait_for_key: .db #01
 _window_background_color: .db #00
+_window_valid: .db #00
 
 _press_any_key_string: .asciz "PRESS ANY KEY"
 
@@ -55,6 +56,7 @@ w_h = 5
 w_message = 6
 w_wait_for_key = 8
 w_b_color = 9
+w_valid = 10
 
 
 ;;
@@ -78,39 +80,76 @@ w_b_color = 9
 
 sys_messages_load_window_data::
     ld iy, #_window_data
+    ld w_valid(iy), #0                ;; invalid until every bound is checked
     ex af, af'                      ;;
     ld w_b_color(iy), a             ;; bring background color froam a'
     ex af, af'                      ;;
     ld w_message(iy), l
     ld w_message+1(iy), h
-    ;;ld w_w(iy), c
     ld w_h(iy), b
-    ;;ld w_x(iy), e             
     ld w_y(iy), d
-    ld w_wait_for_key(iy), a  
-    ld h, w_message+1(iy)           ;; calculate length of the string
-    ld l, w_message(iy)             ;;
-    call sys_text_str_length        ;;
-    sla a                           ;; multiply string length by 2 to obtain bytes
-    inc a                           ;;
-    inc a                           ;; add three of bytes as padding
+    ld w_wait_for_key(iy), a
 
-    cp #MINIMUM_WINDOW_WIDTH        ;; compare calculated width with minimun width
-    jp p, width_ok                  ;;
-    ld a, #MINIMUM_WINDOW_WIDTH     ;;
-    
-width_ok:
-    ld w_w(iy), a                   ;; store this information as total width
-    inc w_w(iy)                     ;;
-    inc w_w(iy)                     ;;
-    inc w_w(iy)                     ;; width a little bit wider
-    
-    ld b, a                         ;; move string bytes to b
-    ld a, #80                       ;; move screen width to a
-    sub b                           ;; substract string length
-    sra a                           ;; divide a to obtain x
+    ;; Height must be drawable and fit the optional PRESS ANY KEY line.
+    ld a, b
+    cp #MINIMUM_WINDOW_HEIGHT
+    jr c, _smlwd_invalid
+    cp #(MAXIMUM_WINDOW_HEIGHT + 1)
+    jr nc, _smlwd_invalid
+    ld a, w_wait_for_key(iy)
+    cp #1
+    jr nz, _smlwd_height_ok
+    ld a, w_h(iy)
+    cp #WAIT_WINDOW_MIN_HEIGHT
+    jr c, _smlwd_invalid
+_smlwd_height_ok:
+
+    ;; Reject y + height > 200, including 8-bit addition overflow.
+    ld a, w_y(iy)
+    add a, w_h(iy)
+    jr c, _smlwd_invalid
+    cp #(MAXIMUM_WINDOW_HEIGHT + 1)
+    jr nc, _smlwd_invalid
+
+    ;; Bounded scan prevents width overflow and unterminated strings.
+    ld h, w_message+1(iy)
+    ld l, w_message(iy)
+    ld b, #(MAXIMUM_MESSAGE_CHARS + 1)
+    ld c, #0
+_smlwd_strlen:
+    ld a, (hl)
+    or a
+    jr z, _smlwd_strlen_done
+    inc hl
+    inc c
+    djnz _smlwd_strlen
+    jr _smlwd_invalid
+_smlwd_strlen_done:
+    ld a, c
+    sla a                            ;; two screen bytes per character
+    add a, #5                        ;; border and horizontal padding
+    cp #(MINIMUM_WINDOW_WIDTH + 3)   ;; preserve previous effective minimum
+    jr nc, _smlwd_width_min_ok
+    ld a, #(MINIMUM_WINDOW_WIDTH + 3)
+_smlwd_width_min_ok:
+    cp #(MAXIMUM_WINDOW_WIDTH + 1)
+    jr nc, _smlwd_invalid
+    ld w_w(iy), a
+
+    ;; Captured background is width*height bytes in the fixed buffer.
+    ld e, w_w(iy)
+    ld h, w_h(iy)
+    call sys_util_h_times_e          ;; HL = width * height
+    ld de, #(MESSAGE_BUFFER_SIZE + 1)
+    or a
+    sbc hl, de
+    jr nc, _smlwd_invalid            ;; product >= 3001
+
+    ;; Horizontal centering guarantees x + width <= 80.
+    ld a, #MAXIMUM_WINDOW_WIDTH
+    sub w_w(iy)
+    srl a
     ld w_x(iy), a
-    dec w_x(iy)                     ;; x adjust
     
     ld c, w_x(iy)                   ;; c = x
     ld b, w_y(iy)                   ;; b = y
@@ -123,6 +162,13 @@ width_ok:
     
     ld w_address(iy), l             ;; keep address in memory
     ld w_address+1(iy), h           ;;
+    ld a, #1
+    ld w_valid(iy), a
+    or a                             ;; clear carry: valid
+    ret
+
+_smlwd_invalid:
+    scf                              ;; caller must not capture or draw
     ret
 
 ;;-----------------------------------------------------------------
@@ -136,6 +182,10 @@ width_ok:
 ;;
 
 sys_messages_draw_window::
+
+    ld a, w_valid(iy)
+    or a
+    ret z
 
     ;; Draw Back window
     ld e, w_address(iy)                 ;; keep background information in message_buffer
@@ -191,6 +241,9 @@ sys_messages_draw_window::
 ;;  Modified: af, hl, de, bc
 ;;
 sys_messages_restore_message_background::
+    ld a, w_valid(iy)
+    or a
+    ret z
     ld e, w_address(iy)                 ;; keep background information in message_buffer
     ld d, w_address+1(iy)               ;;
     ld hl, #message_buffer              ;;
@@ -221,6 +274,7 @@ sys_messages_close::
 sys_messages_show::
 
     call sys_messages_load_window_data
+    ret c                               ;; invalid geometry/string: safe no-op
 
     ld l, w_address(iy)                 ;; restore background information from message_buffer
     ld h, w_address+1(iy)               ;;
@@ -251,7 +305,7 @@ sys_messages_show::
     ld a, #10                       ;; B = y + 10
     jr y_coord
 no_wait4key:
-    ld a, #15                       ;; B = y + 15
+    ld a, #7                        ;; centered in a 22px single-line window
 y_coord:
     add b                           ;;
     ld b, a                         ;;
@@ -409,4 +463,4 @@ down_line:
     ret
 width: .db #0
 height: .db #0
-message_buffer: .ds 3000
+message_buffer: .ds MESSAGE_BUFFER_SIZE

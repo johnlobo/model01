@@ -22,6 +22,12 @@
 ;;------------------------------------------------------------------------------
 
 MINIMUM_WINDOW_WIDTH = 30
+MAXIMUM_WINDOW_WIDTH = 80
+MAXIMUM_WINDOW_HEIGHT = 200
+MINIMUM_WINDOW_HEIGHT = 5
+WAIT_WINDOW_MIN_HEIGHT = 39
+MAXIMUM_MESSAGE_CHARS = 37       ;; 37*2 + 5 = 79 screen bytes
+MESSAGE_BUFFER_SIZE = 3000
 
 ;;------------------------------------------------------------------------------
 ;; Global variables
