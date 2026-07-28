@@ -19,6 +19,7 @@ game_menu_selected: .db MENU_OPTION_START
 game_menu_start_requested: .db 0
 game_menu_input_locked: .db 0
 game_menu_title: .asciz "MODEL 01"
+game_menu_version: .asciz "VERSION - V.063"
 game_menu_help: .asciz "HELP"
 game_menu_start: .asciz "START"
 
@@ -40,6 +41,7 @@ game_menu_init::
     ld (game_menu_input_locked), a
     ld a, #MENU_OPTION_START
     ld (game_menu_selected), a
+    ld hl, #_g_palette0
     call sys_render_init
     call game_menu_draw
     ret
@@ -103,7 +105,7 @@ game_menu_draw:
     cpctm_screenPtr_asm DE, FRONT_BUFFER, 31, 40
     call sys_text_draw_string
     ld c, #0
-    ld hl, #_welcome_string
+    ld hl, #game_menu_version
     cpctm_screenPtr_asm DE, FRONT_BUFFER, 25, 184
     call sys_text_draw_string
     jp game_menu_draw_options

@@ -41,6 +41,7 @@ game_init::
     call game_collision_init
     call game_entity_create_player
     call game_entity_create_patrol_enemy
+    ld hl, #_g_palette0
     call sys_render_init
     call game_map_init
     call sys_shoot_init

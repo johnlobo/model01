@@ -35,7 +35,6 @@ FRONT_BUFFER = 0xc000
 .globl sys_render_back_buffer
 .globl sys_render_front_buffer
 .globl sys_render_touched_zones
-.globl _welcome_string
 
 ;;===============================================================================
 ;; PUBLIC METHODS

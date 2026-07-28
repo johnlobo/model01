@@ -11,7 +11,7 @@ reusable engine mechanisms.
   jump, shooting and quit-dialog responses.
 - `map.s`: tileset and initial map configuration, tile collision properties,
   room graph, edge transitions, portal placement and teleportation.
-- `menu.s`: main-menu presentation, key bindings and actions.
+- `menu.s`: main-menu presentation and version text, key bindings and actions.
 - `game.s`: Model01 lifecycle, system order and quit-dialog flow.
 - `config.h.s`: Model01 assets, application/entity states and sprite dimensions.
 
@@ -21,6 +21,8 @@ replace this directory without editing the corresponding system internals.
 Project-wide geometry used by generic systems lives in `src/config.h.s`, so a
 game can configure the framework without introducing a `sys` dependency on the
 game layer.
+The render system receives the active 16-colour palette from the game in `HL`;
+it does not reference a concrete asset itself.
 
 The former `src/man/` layer has been removed. The reusable entity schema/pool
 lives in `src/sys/entity.*`; lifecycle and concrete content live here.

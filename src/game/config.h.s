@@ -1,5 +1,6 @@
 ;; Model01-specific assets, states and entity dimensions.
 
+.globl _g_palette0
 .globl _s_monk_0
 .globl _s_monk_1
 .globl _s_monk_2
@@ -36,4 +37,3 @@ S_MONK_HEIGHT = 16
 
 S_BULLET_WIDTH  = 4
 S_BULLET_HEIGHT = 8
-

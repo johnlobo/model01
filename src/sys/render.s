@@ -23,8 +23,6 @@
 .include "sys/text.h.s"
 .include "sys/input.h.s"
 
-.globl _g_palette0
-
 .module render_system
 
 ;;
@@ -36,7 +34,6 @@
 .area _DATA
 
 FONT_NUMBERS: .dw #0000
-_welcome_string:: .asciz "VERSION - V.062"   ;;
 
 
 sys_render_front_buffer: .db 0xc0
@@ -89,7 +86,7 @@ ret
 ;;
 ;;  Clears the back buffer to black (all zeros).
 ;;  Code taken from Miss Input.
-;;  Input:
+;;  Input:  HL = 16-colour CPC hardware palette
 ;;  Output:
 ;;  Modified: AF, BC, DE, HL
 ;;
@@ -127,11 +124,11 @@ sys_render_clear_front_buffer::
 ;;  Modified: AF, BC, DE, HL
 ;;
 sys_render_init::
-
+   push hl
    ld c,#0                                 ;; Set video mode
    call cpct_setVideoMode_asm              ;;
-    
-   ld hl, #_g_palette0                     ;; Set palette
+
+   pop hl                                  ;; Set caller-provided palette
    ld de, #16                              ;;
    call cpct_setPalette_asm                ;;
     cpctm_setBorder_asm HW_BLACK             ;; Blend the hardware border into the background

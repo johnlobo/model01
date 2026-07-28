@@ -6,6 +6,7 @@
 .include "common.h.s"
 .include "sys/anim.h.s"
 .include "sys/entity.h.s"
+.include "sys/map.h.s"
 
 ;;
 ;; Start of _DATA area
