@@ -43,15 +43,15 @@ V_SYNC       = 07
 ;; 
 .area _CODE
 
-;;-----------------------------------------------------------------;; 
-;;  sys_util_h_times_e
+;;-----------------------------------------------------------------
 ;;
-;; Inputs:
-;;   H and E
-;; Outputs:
-;;   HL is the product
-;;   D is 0
-;;   A,E,B,C are preserved
+;; sys_util_h_times_e
+;;
+;;  Multiplies two unsigned 8-bit values without using a general multiplier.
+;;  Input: H = multiplicand; E = multiplier
+;;  Output: HL = product; D = 0; A, BC and E preserved
+;;  Modified: F, D, H, L
+;;
 ;; 36 bytes
 ;; min: 190cc
 ;; max: 242cc
@@ -117,8 +117,8 @@ sys_util_hl_div_c::
 ;;  Input:  b: number of bytes of the bcd number
 ;;          de: source for the first bcd bnumber
 ;;          hl: source for the second bcd number
-;;  Output: 
-;;  Destroyed: af, bc,de, hl
+;;  Output:
+;;  Modified: af, bc,de, hl
 ;;
 ;;  Chibi Akumas BCD code (https://www.chibiakumas.com/z80/advanced.php#LessonA1)
 ;;
@@ -143,10 +143,19 @@ sys_util_BCD_GetEnd::
 ;;   Add two BCD numbers
 ;;  Input:  hl: Number to add to de
 ;;          de: Number to store the sum 
-;;  Output: 
-;;  Destroyed: af, bc,de, hl
+;;  Output:
+;;  Modified: af, bc,de, hl
 ;;
 ;;  Chibi Akumas BCD code (https://www.chibiakumas.com/z80/advanced.php#LessonA1)
+;;
+;;-----------------------------------------------------------------
+;;
+;; sys_util_BCD_Add
+;;
+;;  Adds one little-endian packed-BCD value into another.
+;;  Input: HL = source BCD; DE = destination BCD; B = byte count
+;;  Output: DE contains the sum
+;;  Modified: AF, B, DE, HL
 ;;
 sys_util_BCD_Add::
     or a
@@ -167,8 +176,8 @@ BCD_Add_Again:
 ;;  Compare two BCD numbers
 ;;  Input:  hl: BCD Number 1
 ;;          de: BCD Number 2
-;;  Output: 
-;;  Destroyed: af, bc,de, hl
+;;  Output:
+;;  Modified: af, bc,de, hl
 ;;
 ;;  Chibi Akumas BCD code (https://www.chibiakumas.com/z80/advanced.php#LessonA1)
 ;;
@@ -193,7 +202,7 @@ BCD_cp_direct:
 ;;  Returns a random number between 0 and <end>
 ;;  Input:  a: <end>
 ;;  Output: a: random number
-;;  Destroyed: af, bc,de, hl
+;;  Modified: af, bc,de, hl
 
 sys_util_get_random_number::
   inc a                               ;; Increment a to make the modulus calculation work
@@ -218,8 +227,8 @@ ret
 ;;
 ;;  Waits a determined number of frames 
 ;;  Input:  b: number of frames
-;;  Output: 
-;;  Destroyed: af, bc
+;;  Output:
+;;  Modified: af, bc
 ;;
 sys_util_delay::
   push bc
@@ -362,8 +371,17 @@ crt_delay:
 ; Affected Registers:
 ;   A, B, C, F (Flags)
 
+;;-----------------------------------------------------------------
+;;
+;; sys_util_count_set_bits
+;;
+;;  Counts set bits in an 8-bit value; B must be zero on entry.
+;;  Input: A = value; B = 0
+;;  Output: B = population count of the input value; C = 0
+;;  Modified: AF, B, C
+;;
 sys_util_count_set_bits::
-    XOR B           ; Initialize '1's counter (register B) to zero.
+    XOR B           ; B must be 0: preserve A and clear carry before rotating.
     LD C, #8         ; Initialize bit counter (register C) to 8 (for 8 bits).
 
 BIT_LOOP:

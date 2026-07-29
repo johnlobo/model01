@@ -21,12 +21,16 @@
 ;;  divided into four 16KB banks (extra banks 0–3). The Gate Array maps
 ;;  one extra bank at a time into the &4000–&7FFF window via I/O port &7F00.
 ;;
-;;  Memory map (Z80CODELOC = &4000):
+;;  Common 64K memory map (Z80CODELOC = &4000):
 ;;    &0000–&003F   RST vectors (&0038 = IM1 interrupt entry)
+;;    &0040–&00FF   Reserved low RAM
 ;;    &0100–&01FF   Transparency table (256-byte aligned)
-;;    &0200–&3FFF   Free low RAM — holds the banking stub (see below)
-;;    &4000–&7FFF   Game code + data — AND the banking WINDOW
-;;    &8000–&BFFF   Back buffer / firmware stack
+;;    &0200–&0214   Banking stub + detection scratch bytes
+;;    &0215–&02FF   Free low RAM
+;;    &0300–&0EB7   Message background buffer
+;;    &0EB8–&3FFF   Shared streaming workspace (64K and 128K content)
+;;    &4000–&7FFF   Game code + data — AND the 128K banking WINDOW
+;;    &8000–&BFFF   Reserved back buffer / current stack near &BFxx
 ;;    &C000–&FFFF   Front buffer
 ;;
 ;;  Banking window: &4000–&7FFF  (16KB, banking configs 4–7)
@@ -58,30 +62,60 @@ SYS_MEM_NUM_EXTRA_BANKS  = 4       ;; number of switchable extra banks
 SYS_MEM_WINDOW_START     = 0x4000  ;; start of the banking window
 SYS_MEM_WINDOW_SIZE      = 0x4000  ;; size of each bank / the window (16KB)
 
+;; Machine capability returned by sys_mem_detect and stored in
+;; sys_mem_is_128k. Values are deliberately boolean for cheap OR/JR tests.
+SYS_MEM_CAPACITY_64K     = 0
+SYS_MEM_CAPACITY_128K    = 1
+
+;; Stable regions in the common 64K address space. Games may subdivide the
+;; streaming workspace, but must not overlap the fixed users around it.
+SYS_MEM_RST_START        = 0x0000
+SYS_MEM_RST_SIZE         = 0x0040
+SYS_MEM_TRANSPARENCY_ADDR = 0x0100
+SYS_MEM_TRANSPARENCY_SIZE = 0x0100
+SYS_MEM_LOW_FREE_START   = 0x0215
+SYS_MEM_LOW_FREE_SIZE    = 0x00EB
+SYS_MEM_MESSAGE_START    = 0x0300
+SYS_MEM_MESSAGE_SIZE     = 3000
+SYS_MEM_STREAM_START     = SYS_MEM_MESSAGE_START + SYS_MEM_MESSAGE_SIZE ;; &0EB8
+SYS_MEM_STREAM_SIZE      = SYS_MEM_WINDOW_START - SYS_MEM_STREAM_START  ;; &3148
+SYS_MEM_BACK_BUFFER      = 0x8000
+SYS_MEM_FRONT_BUFFER     = 0xC000
+
 ;; Fixed address for the banking stub, in the free low RAM just above the
 ;; transparency table (&0100–&01FF) and far below _CODE (&4000). Must stay
 ;; outside &4000–&7FFF so it survives the bank switch it performs.
 SYS_MEM_STUB_ADDR        = 0x0200
 
 ;; The banking stub is 19 bytes (see mem.s — 17 for the copy, +2 for DI/EI).
-;; The detection pattern byte is written at &0213 during sys_mem_init only.
+;; Detection uses &0213 for its pattern and &0214 to preserve the byte that
+;; bank 0 normally exposes at _smem_test_byte. Both remain outside the window.
 SYS_MEM_STUB_SIZE        = 19
 SYS_MEM_DET_PATTERN_ADDR = SYS_MEM_STUB_ADDR + SYS_MEM_STUB_SIZE  ;; &0213
+SYS_MEM_DET_SAVE_ADDR    = SYS_MEM_DET_PATTERN_ADDR + 1            ;; &0214
 
 ;;------------------------------------------------------------------------------
 ;; Public variables
 ;;------------------------------------------------------------------------------
 
 ;; 1 if the machine has 128KB RAM (CPC 6128 or compatible), 0 if 64KB only.
-;; Set by sys_mem_init. Check before calling copy routines on 64K machines.
+;; Set by sys_mem_init/sys_mem_detect. Copy routines also check it themselves.
 
 ;;------------------------------------------------------------------------------
 ;; Public routines
 ;;------------------------------------------------------------------------------
 
 ;; sys_mem_init
-;;   Install the banking stub at SYS_MEM_STUB_ADDR and detect 128KB RAM.
-;;   Must be called ONCE at startup before any other sys_mem routine.
+;;   Compatibility initialization entry point. Calls sys_mem_detect.
+;;   Call once at startup before any other sys_mem routine.
+
+;; sys_mem_detect
+;;   Install/refresh the low-RAM banking stub and detect available RAM.
+;;   Safe to call more than once; restores the test byte in normal RAM.
+;;   Output: A=SYS_MEM_CAPACITY_128K and Z=0 on 128K machines;
+;;           A=SYS_MEM_CAPACITY_64K and Z=1 on 64K machines;
+;;           carry clear in both cases. Also updates sys_mem_is_128k.
+;;   Modified: AF, BC, DE, HL
 
 ;; sys_mem_copy_from_bank
 ;;   Copy BC bytes from extra RAM bank A into normal RAM.
@@ -91,6 +125,7 @@ SYS_MEM_DET_PATTERN_ADDR = SYS_MEM_STUB_ADDR + SYS_MEM_STUB_SIZE  ;; &0213
 ;;           HL = source address in bank (&4000–&7FFF range)
 ;;           DE = destination in normal RAM
 ;;           BC = byte count (1–16384)
+;;   Output: carry clear on success; carry set on 64K or invalid bank
 ;;   Modified: AF, BC, DE, HL
 
 ;; sys_mem_copy_to_bank
@@ -101,6 +136,7 @@ SYS_MEM_DET_PATTERN_ADDR = SYS_MEM_STUB_ADDR + SYS_MEM_STUB_SIZE  ;; &0213
 ;;           HL = source in normal RAM
 ;;           DE = destination address in bank (&4000–&7FFF range)
 ;;           BC = byte count (1–16384)
+;;   Output: carry clear on success; carry set on 64K or invalid bank
 ;;   Modified: AF, BC, DE, HL
 
 ;; sys_mem_bank_in  [LOW-LEVEL — UNSAFE FROM &4000–&7FFF CODE]

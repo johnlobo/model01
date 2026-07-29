@@ -38,6 +38,9 @@
 ;; sys_shoot_init
 ;;
 ;;  Initializes the shooting system (currently a no-op).
+;;  Input:
+;;  Output:
+;;  Modified: None
 ;;
 sys_shoot_init::
     ret

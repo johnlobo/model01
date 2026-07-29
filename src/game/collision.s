@@ -17,6 +17,15 @@ game_collision_border_flash: .db 0
 
 .area _CODE
 
+;;-----------------------------------------------------------------
+;;
+;; game_collision_init
+;;
+;;  Clears collision feedback and registers the Model01 collision callback.
+;;  Input:
+;;  Output:
+;;  Modified: AF, HL
+;;
 game_collision_init::
     xor a
     ld (game_collision_border_flash), a
@@ -24,6 +33,15 @@ game_collision_init::
     jp sys_collision_set_handler
 
 ;; IX=collider, IY=collisionable. The engine dispatcher preserves both.
+;;-----------------------------------------------------------------
+;;
+;; game_collision_on_hit
+;;
+;;  Applies projectile, player, enemy and portal collision rules.
+;;  Input: IX = collider; IY = collisionable entity
+;;  Output:
+;;  Modified: AF, BC, DE, HL
+;;
 game_collision_on_hit::
     ld a, e_status(ix)
     cp #STATUS_PLAYER_BULLET
@@ -63,6 +81,15 @@ gcoh_check_portal:
     ret z
     jp game_map_do_portal_transition
 
+;;-----------------------------------------------------------------
+;;
+;; game_collision_update_effects
+;;
+;;  Advances the timed red/black damage-border flash.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC
+;;
 game_collision_update_effects::
     ld a, (game_collision_border_flash)
     or a

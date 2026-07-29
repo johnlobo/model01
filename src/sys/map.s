@@ -72,6 +72,15 @@ sys_map_init::
     call cpct_etm_setDrawTilemap4x8_agf_asm
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_map_set_collision_table
+;;
+;;  Registers the tile-id to collision-type lookup table.
+;;  Input: HL = collision table address
+;;  Output:
+;;  Modified: None
+;;
 sys_map_set_collision_table::
     ld (tile_solid_table_ptr), hl
     ret
@@ -116,6 +125,15 @@ sys_map_draw::
 
 ;; B=row, C=column -> HL=&current_map_data[row][column], carry=invalid.
 ;; BC is preserved so callers can redraw after changing the value.
+;;-----------------------------------------------------------------
+;;
+;; smta_get_address
+;;
+;;  Resolves tile coordinates into the active tilemap.
+;;  Input: B = tile row; C = tile column
+;;  Output: HL = tile address and carry clear; carry set when out of bounds; BC preserved
+;;  Modified: AF, DE, HL
+;;
 smta_get_address:
     ld a, b
     cp #MAP_HEIGHT
@@ -137,6 +155,15 @@ smta_invalid:
     scf
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_map_get_tile
+;;
+;;  Reads a tile using tile row and column coordinates.
+;;  Input: B = tile row; C = tile column
+;;  Output: A = tile id and carry clear; A = 0 and carry set when out of bounds
+;;  Modified: AF, DE, HL
+;;
 sys_map_get_tile::
     call smta_get_address
     jr c, smgt_invalid
@@ -148,6 +175,15 @@ smgt_invalid:
     scf
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_map_set_tile
+;;
+;;  Changes a tile in the active tilemap without redrawing it.
+;;  Input: A = tile id; B = tile row; C = tile column
+;;  Output: Carry clear on success; carry set when out of bounds
+;;  Modified: AF, DE, HL
+;;
 sys_map_set_tile::
     push af
     call smta_get_address
@@ -161,6 +197,15 @@ smst_invalid:
     scf
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_map_redraw_tile
+;;
+;;  Redraws one tile from the active tilemap.
+;;  Input: B = tile row; C = tile column
+;;  Output: Carry clear on success; carry set when out of bounds
+;;  Modified: AF, DE, HL, IX
+;;
 sys_map_redraw_tile::
     call smta_get_address
     ret c
@@ -168,6 +213,15 @@ sys_map_redraw_tile::
     or a
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_map_set_tile_and_redraw
+;;
+;;  Changes one tile and immediately redraws it.
+;;  Input: A = tile id; B = tile row; C = tile column
+;;  Output: Carry clear on success; carry set when out of bounds
+;;  Modified: AF, DE, HL, IX
+;;
 sys_map_set_tile_and_redraw::
     call sys_map_set_tile
     ret c
@@ -175,15 +229,12 @@ sys_map_set_tile_and_redraw::
 
 ;;-----------------------------------------------------------------
 ;;
-;; sys_map_is_solid_at / sys_map_is_landable_at
+;; sys_map_is_solid_at
 ;;
-;;  Returns whether the tile at the given screen position blocks movement.
-;;  sys_map_is_solid_at:    NZ if fully solid (value=1). Jumpable tiles (value=2)
-;;                          are passable — use for ceiling and horizontal checks.
-;;  sys_map_is_landable_at: NZ if solid (1) or jumpable (2). Use for floor checks
-;;                          so entities can land on one-way platforms.
-;;  Input: B = pixel_y, C = pixel_x (in bytes, 0..79)
-;;  Output: NZ if blocked, Z if passable or out of bounds
+;;  Tests whether a world position contains a fully solid tile.
+;;  Input: B = world Y in pixels; C = world X in bytes
+;;  Output: NZ and A = 1 for a fully solid tile; Z and A = 0 for a
+;;          one-way tile, passable tile or out-of-bounds position
 ;;  Modified: AF, DE, HL
 ;;
 sys_map_is_solid_at::
@@ -194,12 +245,30 @@ sys_map_is_solid_at::
     or a                        ;; A=1, set NZ
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_map_is_landable_at
+;;
+;;  Tests whether a world position contains a solid or one-way landable tile.
+;;  Input: B = world Y in pixels; C = world X in bytes
+;;  Output: NZ when landable; Z when passable or out of bounds; A = tile collision type
+;;  Modified: AF, DE, HL
+;;
 sys_map_is_landable_at::
     call smisa_get_type         ;; A = tile type: 0→Z, 1 or 2→NZ
     ret                         ;; return flags as-is
 
 ;; Internal: look up tile type at (B=pixel_y, C=pixel_x)
-;;  Returns: A = tile_solid_table value (0/1/2), or A=0,Z via smisa_passable
+;;  Output: A = tile_solid_table value (0/1/2), or A=0,Z via smisa_passable
+;;-----------------------------------------------------------------
+;;
+;; smisa_get_type
+;;
+;;  Looks up the collision type at a world position.
+;;  Input: B = world Y in pixels; C = world X in bytes
+;;  Output: A = collision type; Z when passable or out of bounds, NZ when blocked
+;;  Modified: AF, DE, HL
+;;
 smisa_get_type:
     ;; B = world pixel_y (0 = map top), C = world pixel_x (bytes, 0 = map left)
     ld a, b
@@ -333,6 +402,15 @@ smrsa_done:
 ;;  Draws one map tile at the given tile grid position to the screen.
 ;;  Input: B = tile_row (0-based), C = tile_col (0-based)
 ;;  Modified: AF, BC, DE, HL, IX
+;;
+;;-----------------------------------------------------------------
+;;
+;; smrsa_draw_one_tile
+;;
+;;  Draws one gray-code 4x8 tile from the active map.
+;;  Input: B = tile row; C = tile column; HL = tile address
+;;  Output:
+;;  Modified: AF, DE, HL, IX
 ;;
 smrsa_draw_one_tile:
     ;; Bounds check: skip if outside map grid (also catches underflow wrapping to 255+)

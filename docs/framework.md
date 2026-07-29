@@ -19,6 +19,14 @@ Model01 es una implementación concreta que demuestra plataformas, animaciones,
 habitaciones conectadas, proyectiles, colisiones, IA dirigida por bytecode,
 mensajes y un menú.
 
+Los procedimientos para crear objetos, portales, scripts, acciones,
+condiciones y habitaciones se recopilan en
+[Recetas para crear contenido](content-cookbook.md).
+La distribución común y la estrategia de contenido opcional para CPC de 64 y
+128 KB se detallan en [Memoria para 64 y 128 KB](memory-layout.md).
+El orden completo desde `_main` hasta una habitación activa se documenta en
+[Proceso de inicialización](initialization.md).
+
 ## 2. Arquitectura
 
 ```text
@@ -202,6 +210,11 @@ El DSL incluye acciones como `SET_VX`, `SET_VY`, `SET_ANIMATION`, `DRIVE_VX`,
 `WAIT` y `GOTO`, además de condiciones como `timeout`, `on_ground` y
 `edge_ahead`. El juego puede añadir acciones y condiciones mediante punteros de
 función sin modificar el intérprete.
+
+Model01 demuestra esa extensión con persecución horizontal del jugador,
+patrulla entre límites X configurados y vuelo vertical entre dos alturas. Los
+dos primeros usan física normal; el volador mueve su Y desde el comportamiento
+y no incluye `c_cmp_movable`, por lo que no recibe gravedad.
 
 Para evitar que un ciclo de acciones inmediatas congele la máquina, el motor
 limita cada entidad a `BEH_MAX_ACTIONS_PER_TICK` despachos por actualización.

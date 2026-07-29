@@ -26,7 +26,7 @@ collision_handler: .dw sys_collision_noop
 ;;  Initializes the collision system with a no-op response handler.
 ;;  Input:
 ;;  Output:
-;;  Modified:
+;;  Modified: HL
 ;;
 sys_collision_init::
     ld hl, #sys_collision_noop
@@ -37,6 +37,15 @@ sys_collision_init::
 ;; Register the game callback invoked for every detected collision.
 ;; Input: HL = handler (IX=collider, IY=collisionable), or 0 for no-op.
 ;; The dispatcher preserves IX and IY around the callback.
+;;-----------------------------------------------------------------
+;;
+;; sys_collision_set_handler
+;;
+;;  Registers the collision callback; a null pointer restores the no-op handler.
+;;  Input: HL = handler address or 0
+;;  Output:
+;;  Modified: AF, HL
+;;
 sys_collision_set_handler::
     ld a, h
     or l
@@ -49,6 +58,15 @@ scsh_store:
 ;;-----------------------------------------------------------------
 ;; Erase an entity's last rendered sprite and invalidate its pool slot.
 ;; Input: IX = entity. IX is preserved.
+;;-----------------------------------------------------------------
+;;
+;; sys_collision_destroy_entity
+;;
+;;  Marks an entity invalid so its pool slot can be reused.
+;;  Input: IX = entity
+;;  Output:
+;;  Modified: AF
+;;
 sys_collision_destroy_entity::
     ld a, e_p_address(ix)
     or e_p_address+1(ix)

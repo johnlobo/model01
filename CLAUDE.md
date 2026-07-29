@@ -14,8 +14,8 @@ This is an Amstrad CPC game called `model01`, written entirely in **Z80 assembly
 |-------|----------|
 | `0x0000–0x003F` | RST vectors. `0x0038` = IM1 interrupt entry |
 | `0x0100–0x01FF` | Runtime `transparency_table` copied by `main.s`. Must stay 256-byte aligned |
-| `0x0200–0x0213` | 19-byte banking stub plus its 1-byte RAM-detection pattern |
-| `0x0214–0x02FF` | Free low RAM |
+| `0x0200–0x0214` | 19-byte banking stub plus 2 RAM-detection scratch bytes |
+| `0x0215–0x02FF` | Free low RAM |
 | `0x0300–0x0EB7` | Fixed 3000-byte message background buffer (`message_buffer`) |
 | `0x0EB8–0x3FFF` | Free low RAM |
 | `0x4000–0x7FFF` | `_CODE`, then `_DATA` — **and the 128K banking window** |
@@ -48,7 +48,7 @@ linked binary crosses `0x7FFF`, the end of the live banking window.
 
 ## Version String
 
-`game_menu_version` in `src/game/menu.s` (e.g. `"VERSION - V.084"`) is displayed at the bottom of the main menu. **Bump this after every significant change.**
+`game_menu_version` in `src/game/menu.s` (e.g. `"VERSION - V.085"`) is displayed at the bottom of the main menu. **Bump this after every significant change.**
 
 There is also `_game_loaded_string` in `src/game/app.s` — keep it in sync.
 
@@ -275,14 +275,15 @@ The stack (~`&BFxx`, left by the firmware) is outside the window, so the stub's 
 
 | Routine | Input | Notes |
 |---------|-------|-------|
-| `sys_mem_init` | — | Call once at startup; detects 128K, installs stub |
+| `sys_mem_init` | — | Compatibility init; installs stub and calls detection |
+| `sys_mem_detect` | — | A=0/Z=1 for 64K, A=1/Z=0 for 128K; updates `sys_mem_is_128k` |
 | `sys_mem_is_128k` | — | Byte variable: 1=128K, 0=64K |
-| `sys_mem_copy_from_bank` | A=bank(0-3), HL=src in bank, DE=dst, BC=count | Safe from anywhere. DE must not be in `&4000–&7FFF` |
-| `sys_mem_copy_to_bank` | A=bank(0-3), HL=src, DE=dst in bank, BC=count | Safe from anywhere. HL must not be in `&4000–&7FFF` |
+| `sys_mem_copy_from_bank` | A=bank(0-3), HL=src in bank, DE=dst, BC=count | Carry set on 64K/invalid bank. DE must not be in `&4000–&7FFF` |
+| `sys_mem_copy_to_bank` | A=bank(0-3), HL=src, DE=dst in bank, BC=count | Carry set on 64K/invalid bank. HL must not be in `&4000–&7FFF` |
 | `sys_mem_bank_in` | A=bank(0-3) | LOW-LEVEL. Only safe from code at `&8000+` |
 | `sys_mem_bank_out` | — | LOW-LEVEL. Only safe from code at `&8000+` |
 
-**Detection:** `sys_mem_init` detects 128K by writing `&AA` to `_smem_test_byte` in normal RAM, then using the stub to write `&55` to that same address with extra bank 0 mapped in. If the byte still reads `&AA` afterward, the banks are independent → 128K confirmed. The `&55` pattern byte is placed at `&0213` (just past the stub), outside the window, so it survives the bank switch.
+**Detection:** `sys_mem_detect` (also called by `sys_mem_init`) detects 128K by writing `&AA` to `_smem_test_byte` in normal RAM, then using the stub to write `&55` to that same address with extra bank 0 mapped in. If the byte still reads `&AA` afterward, the banks are independent → 128K confirmed. The `&55` pattern byte is placed at `&0213` (just past the stub), outside the window, so it survives the bank switch.
 
 `_smem_test_byte` sits in `_DATA`, which the linker places right after `_CODE` — i.e. **inside** `&4000–&7FFF`. That is load-bearing, not incidental: the test works precisely because writing there while a bank is in lands in the extra bank rather than in normal RAM. Move it below `&4000` and the write goes to normal RAM, the byte reads back as `&55`, and the machine always reports 64K.
 

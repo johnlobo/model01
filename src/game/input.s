@@ -35,6 +35,15 @@ game_input_direction_pressed: .db 0
 
 .area _CODE
 
+;;-----------------------------------------------------------------
+;;
+;; game_input_init
+;;
+;;  Resets jump, facing, shooting cooldown and direction-latch state.
+;;  Input:
+;;  Output:
+;;  Modified: AF
+;;
 game_input_init::
     xor a
     ld (game_input_jump_boost_left), a
@@ -43,6 +52,15 @@ game_input_init::
     ld (game_input_direction_pressed), a
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; game_input_left
+;;
+;;  Applies leftward player movement and walk animation.
+;;  Input: IX = player entity
+;;  Output:
+;;  Modified: AF, DE, HL
+;;
 game_input_left:
     ld e_speed_x(ix), #-2
     ld a, #1
@@ -51,6 +69,15 @@ game_input_left:
     ld hl, #game_monk_walk_left_anim
     jp sys_anim_set
 
+;;-----------------------------------------------------------------
+;;
+;; game_input_right
+;;
+;;  Applies rightward player movement and walk animation.
+;;  Input: IX = player entity
+;;  Output:
+;;  Modified: AF, DE, HL
+;;
 game_input_right:
     ld e_speed_x(ix), #2
     xor a
@@ -60,6 +87,15 @@ game_input_right:
     ld hl, #game_monk_walk_right_anim
     jp sys_anim_set
 
+;;-----------------------------------------------------------------
+;;
+;; game_input_jump
+;;
+;;  Starts a jump or extends a held jump while rising.
+;;  Input: IX = player entity
+;;  Output:
+;;  Modified: AF
+;;
 game_input_jump:
     ld a, e_on_air(ix)
     or a
@@ -88,6 +124,15 @@ game_input_jump_boost:
     ld (game_input_jump_boost_left), a
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; game_input_shoot
+;;
+;;  Creates a facing-dependent player projectile when cooldown permits.
+;;  Input: IX = player entity
+;;  Output:
+;;  Modified: AF, BC, DE, HL
+;;
 game_input_shoot:
     ld a, (game_input_shoot_cooldown)
     or a
@@ -120,12 +165,30 @@ game_input_shoot_done:
     pop ix
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; game_input_update
+;;
+;;  Ticks the shooting cooldown, dispatches gameplay keys and selects the idle animation when stationary.
+;;  Input: IX = player entity
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IY
+;;
 game_input_update::
     ld a, (game_input_shoot_cooldown)
     or a
     jr z, game_input_no_cooldown
     dec a
     ld (game_input_shoot_cooldown), a
+;;-----------------------------------------------------------------
+;;
+;; game_input_no_cooldown
+;;
+;;  Dispatches gameplay keys and restores idle animation when no direction was pressed.
+;;  Input: IX = player entity
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IY
+;;
 game_input_no_cooldown:
     xor a
     ld (game_input_direction_pressed), a
@@ -137,6 +200,15 @@ game_input_no_cooldown:
     ld hl, #game_monk_idle_anim
     jp sys_anim_set
 
+;;-----------------------------------------------------------------
+;;
+;; game_input_quit_dialog_update
+;;
+;;  Dispatches the Y and N bindings used by the quit dialog.
+;;  Input: IX = player entity
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IY
+;;
 game_input_quit_dialog_update::
     ld iy, #game_input_quit_actions
     jp sys_input_generic_update

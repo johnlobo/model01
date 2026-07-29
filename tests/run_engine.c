@@ -60,9 +60,13 @@ struct Symbols {
     uint16_t object_template;
     uint16_t portal_template;
     uint16_t player_bullet_template;
+    uint16_t create_player;
     uint16_t create_object;
     uint16_t create_portal;
     uint16_t create_player_bullet;
+    uint16_t create_chaser_enemy;
+    uint16_t create_position_patrol_enemy;
+    uint16_t create_flying_enemy;
     uint16_t shoot_update_one_bullet;
     uint16_t current_map_data;
     uint16_t current_room;
@@ -122,6 +126,9 @@ struct Symbols {
     uint16_t script_start;
     uint16_t script_update;
     uint16_t script_is_running;
+    uint16_t mem_is_128k;
+    uint16_t mem_detect;
+    uint16_t mem_copy_from_bank;
 };
 
 struct Machine {
@@ -189,9 +196,13 @@ static uint16_t *symbol_slot(struct Symbols *symbols, const char *name) {
     if (!strcmp(name, "game_object_template")) return &symbols->object_template;
     if (!strcmp(name, "game_portal_template")) return &symbols->portal_template;
     if (!strcmp(name, "game_player_bullet_template")) return &symbols->player_bullet_template;
+    if (!strcmp(name, "game_entity_create_player")) return &symbols->create_player;
     if (!strcmp(name, "game_entity_create_object")) return &symbols->create_object;
     if (!strcmp(name, "game_entity_create_portal")) return &symbols->create_portal;
     if (!strcmp(name, "game_entity_create_player_bullet")) return &symbols->create_player_bullet;
+    if (!strcmp(name, "game_entity_create_chaser_enemy")) return &symbols->create_chaser_enemy;
+    if (!strcmp(name, "game_entity_create_position_patrol_enemy")) return &symbols->create_position_patrol_enemy;
+    if (!strcmp(name, "game_entity_create_flying_enemy")) return &symbols->create_flying_enemy;
     if (!strcmp(name, "sys_shoot_update_one_bullet")) return &symbols->shoot_update_one_bullet;
     if (!strcmp(name, "current_map_data")) return &symbols->current_map_data;
     if (!strcmp(name, "current_room")) return &symbols->current_room;
@@ -251,6 +262,9 @@ static uint16_t *symbol_slot(struct Symbols *symbols, const char *name) {
     if (!strcmp(name, "sys_script_start")) return &symbols->script_start;
     if (!strcmp(name, "sys_script_update")) return &symbols->script_update;
     if (!strcmp(name, "sys_script_is_running")) return &symbols->script_is_running;
+    if (!strcmp(name, "sys_mem_is_128k")) return &symbols->mem_is_128k;
+    if (!strcmp(name, "sys_mem_detect")) return &symbols->mem_detect;
+    if (!strcmp(name, "sys_mem_copy_from_bank")) return &symbols->mem_copy_from_bank;
     return NULL;
 }
 
@@ -306,6 +320,7 @@ static int run_routine(struct Machine *machine, uint16_t address) {
 
 static int call_factory(struct Machine *machine, uint16_t routine,
                         uint8_t x, uint8_t y, uint8_t room, uint8_t speed) {
+    z80ex_reset(machine->cpu);
     z80ex_set_reg(machine->cpu, regBC, ((uint16_t)x << 8) | y);
     z80ex_set_reg(machine->cpu, regDE, ((uint16_t)room << 8) | speed);
     return run_routine(machine, routine);
@@ -636,6 +651,59 @@ static void test_behavior_contract(struct Machine *machine) {
     report("behavior dispatch budget yields an immediate action cycle",
            get_word(machine->memory, TEST_BEHAVIOR_ENTITY + E_BEH) == TEST_BEHAVIOR &&
            machine->memory[machine->symbols.beh_actions_left] == 0);
+}
+
+static uint16_t create_behavior_enemy_fixture(struct Machine *machine,
+                                              uint16_t factory,
+                                              uint8_t player_x,
+                                              uint8_t enemy_x,
+                                              uint8_t enemy_y) {
+    uint16_t player = machine->symbols.entity_array;
+    uint16_t enemy = player + ENTITY_SIZE;
+    reset_fixture(machine);
+    machine->memory[machine->symbols.current_room] = 0;
+    if (call_factory(machine, machine->symbols.create_player, 0, 0, 0, 0))
+        die("test player creation failed", NULL);
+    machine->memory[player + E_X] = player_x;
+    if (call_factory(machine, factory, enemy_x, enemy_y, 0, 0))
+        die("test behavior enemy creation failed", NULL);
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regIX, enemy);
+    run_routine(machine, machine->symbols.beh_update_one);
+    return enemy;
+}
+
+static void test_game_enemy_behaviors(struct Machine *machine) {
+    uint16_t enemy;
+
+    enemy = create_behavior_enemy_fixture(machine,
+                                           machine->symbols.create_chaser_enemy,
+                                           10, 40, 24);
+    report("a chasing enemy moves toward a player on its left",
+           machine->memory[enemy + E_SPEED_X] == 0xff &&
+           machine->memory[enemy + E_CMPS] == 0x5b);
+
+    enemy = create_behavior_enemy_fixture(machine,
+                                           machine->symbols.create_chaser_enemy,
+                                           50, 20, 24);
+    report("a chasing enemy moves toward a player on its right",
+           machine->memory[enemy + E_SPEED_X] == 1);
+
+    enemy = create_behavior_enemy_fixture(machine,
+                                           machine->symbols.create_position_patrol_enemy,
+                                           10, 48, 24);
+    report("a position patrol reverses at its configured right limit",
+           machine->memory[enemy + E_SPEED_X] == 0xff &&
+           machine->memory[enemy + E_SPEED_X + 1] == 1);
+
+    enemy = create_behavior_enemy_fixture(machine,
+                                           machine->symbols.create_flying_enemy,
+                                           10, 30, 24);
+    report("a flying enemy moves without the gravity component",
+           machine->memory[enemy + E_Y] == 25 &&
+           machine->memory[enemy + E_SPEED_Y] == 1 &&
+           machine->memory[enemy + E_ON_AIR] == 1 &&
+           machine->memory[enemy + E_CMPS] == 0x59);
 }
 
 static void test_animation_set(struct Machine *machine) {
@@ -1143,6 +1211,39 @@ static void test_script_contract(struct Machine *machine) {
            af == 0);
 }
 
+static void test_memory_capacity_contract(struct Machine *machine) {
+    uint16_t af;
+    int carry;
+
+    /* The test host models one flat 64K address space and ignores Gate Array
+       writes, so the detector must select the 64K path. */
+    reset_fixture(machine);
+    machine->memory[machine->symbols.mem_is_128k + 1] = 0xa7;
+    carry = run_routine(machine, machine->symbols.mem_detect);
+    af = z80ex_get_reg(machine->cpu, regAF);
+    report("memory detection reports the emulated 64K machine",
+           !carry && (af >> 8) == 0 && (af & 0x40) != 0 &&
+           machine->memory[machine->symbols.mem_is_128k] == 0 &&
+           machine->memory[machine->symbols.mem_is_128k + 1] == 0xa7);
+
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regAF, 0);          /* bank 0 */
+    z80ex_set_reg(machine->cpu, regHL, 0x4000);
+    z80ex_set_reg(machine->cpu, regDE, TEST_SCRIPT_MARKER);
+    z80ex_set_reg(machine->cpu, regBC, 1);
+    report("bank copies fail safely on a 64K machine",
+           run_routine(machine, machine->symbols.mem_copy_from_bank));
+
+    machine->memory[machine->symbols.mem_is_128k] = 1;
+    z80ex_reset(machine->cpu);
+    z80ex_set_reg(machine->cpu, regAF, 4u << 8);    /* first invalid bank */
+    z80ex_set_reg(machine->cpu, regHL, 0x4000);
+    z80ex_set_reg(machine->cpu, regDE, TEST_SCRIPT_MARKER);
+    z80ex_set_reg(machine->cpu, regBC, 1);
+    report("bank copies reject bank ids outside zero to three",
+           run_routine(machine, machine->symbols.mem_copy_from_bank));
+}
+
 int main(int argc, char **argv) {
     struct Machine machine;
     if (argc != 3) {
@@ -1165,6 +1266,7 @@ int main(int argc, char **argv) {
     test_array_contract(&machine);
     test_collision_handler_contract(&machine);
     test_behavior_contract(&machine);
+    test_game_enemy_behaviors(&machine);
     test_animation_set(&machine);
     test_physics_contract(&machine);
     test_state_contract(&machine);
@@ -1172,6 +1274,7 @@ int main(int argc, char **argv) {
     test_interaction_contract(&machine);
     test_dynamic_map_contract(&machine);
     test_script_contract(&machine);
+    test_memory_capacity_contract(&machine);
     printf("1..%d\n", tests_run);
     z80ex_destroy(machine.cpu);
     if (tests_failed) {

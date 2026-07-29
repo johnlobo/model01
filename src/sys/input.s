@@ -45,9 +45,9 @@ ZERO_KEYS_ACTIVATED = 0xFF
 ;; sys_input_clean_buffer
 ;;
 ;;  Waits until de key buffer is clean
-;;  Input: 
+;;  Input:
 ;;  Output:
-;;  Modified: 
+;;  Modified: AF
 ;;
 sys_input_clean_buffer::
     call cpct_isAnyKeyPressed_asm
@@ -59,9 +59,9 @@ sys_input_clean_buffer::
 ;; sys_input_wait4anykey
 ;;
 ;;   Reads input and wait for any key press
-;;  Input: 
+;;  Input:
 ;;  Output: hl: number of loops
-;;  Modified: 
+;;  Modified: AF, HL
 ;;
 sys_input_wait4anykey::
     ld hl, #0
@@ -145,9 +145,9 @@ sys_input_waitKeyPressed::
 ;; sys_input_init
 ;;
 ;;   Initializes input
-;;  Input: 
+;;  Input:
 ;;  Output:
-;;  Modified: 
+;;  Modified: None
 ;;
 sys_input_init::
     ret

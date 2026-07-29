@@ -4,6 +4,10 @@ Este tutorial parte de Model01 y termina con la estructura de un juego nuevo.
 La estrategia más segura es mantener el framework funcionando y sustituir el
 contenido en pasos pequeños, compilando después de cada uno.
 
+Para recetas centradas en contenido concreto —objetos, portales, habitaciones,
+scripts, acciones y condiciones propias— consulta también
+[Recetas para crear contenido](content-cookbook.md).
+
 ## 1. Preparar la copia
 
 Duplica el repositorio, cambia el nombre del proyecto en
@@ -426,6 +430,23 @@ una acción propia, emite su puntero con `ACTION callback`; el callback recibe
 `IX=entidad` y `DE=argumentos`, consume sus bytes y termina normalmente con
 `jp sys_beh_next`. Consulta [behaviour-system.md](behaviour-system.md) para el
 contrato completo.
+
+Model01 incluye además tres patrones copiables:
+
+```asm
+GAME_CHASE_PLAYER #1, #2
+CONDITIONS_END
+
+GAME_PATROL_X #12, #48, #1, #3
+CONDITIONS_END
+
+GAME_FLY_Y #24, #96, #1, #2
+CONDITIONS_END
+```
+
+Las patrullas usan coordenadas de mundo. El volador debe omitir
+`c_cmp_movable`, porque su acción modifica Y directamente para evitar la
+gravedad. Las fábricas de ejemplo reciben `B=x`, `C=y` y `D=habitación`.
 
 ## 11. Añadir colisiones entre entidades
 

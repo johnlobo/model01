@@ -28,7 +28,7 @@ null_ptr = 0x0000
 ;;  Initializes the animation system
 ;;  Input:
 ;;  Output:
-;;  Modified:
+;;  Modified: None
 ;;
 sys_anim_init::
     ret

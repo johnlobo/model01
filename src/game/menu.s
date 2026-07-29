@@ -16,7 +16,7 @@ game_menu_selected: .db MENU_OPTION_START
 game_menu_start_requested: .db 0
 game_menu_input_locked: .db 0
 game_menu_title: .asciz "MODEL 01"
-game_menu_version: .asciz "VERSION - V.084"
+game_menu_version: .asciz "VERSION - V.085"
 game_menu_help: .asciz "HELP"
 game_menu_start: .asciz "START"
 
@@ -31,6 +31,15 @@ game_menu_key_actions:
 
 .area _CODE
 
+;;-----------------------------------------------------------------
+;;
+;; game_menu_init
+;;
+;;  Resets and draws the main menu in its default selection state.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX, IY
+;;
 game_menu_init::
     xor a
     ld (app_state), a
@@ -46,6 +55,15 @@ game_menu_init::
     call game_menu_draw
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; game_menu_update
+;;
+;;  Processes one menu frame and starts a new game when requested.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX, IY
+;;
 game_menu_update::
     call cpct_waitVSYNC_asm
     call game_menu_input_update
@@ -60,6 +78,15 @@ game_menu_update::
     ld (app_state), a
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; game_menu_input_update
+;;
+;;  Releases the menu input latch or dispatches the menu key table.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IY
+;;
 game_menu_input_update:
     ld a, (game_menu_input_locked)
     or a
@@ -72,23 +99,59 @@ gmiu_scan:
     ld iy, #game_menu_key_actions
     jp sys_input_generic_update
 
+;;-----------------------------------------------------------------
+;;
+;; game_menu_input_lock
+;;
+;;  Locks menu actions until all keys have been released.
+;;  Input:
+;;  Output:
+;;  Modified: AF
+;;
 game_menu_input_lock:
     ld a, #1
     ld (game_menu_input_locked), a
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; game_menu_select_previous
+;;
+;;  Selects the HELP menu option and redraws both options.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX, IY
+;;
 game_menu_select_previous:
     xor a
     ld (game_menu_selected), a
     call game_menu_input_lock
     jp game_menu_draw_options
 
+;;-----------------------------------------------------------------
+;;
+;; game_menu_select_next
+;;
+;;  Selects the START menu option and redraws both options.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX, IY
+;;
 game_menu_select_next:
     ld a, #MENU_OPTION_START
     ld (game_menu_selected), a
     call game_menu_input_lock
     jp game_menu_draw_options
 
+;;-----------------------------------------------------------------
+;;
+;; game_menu_activate
+;;
+;;  Activates the selected option; START queues a new game.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL
+;;
 game_menu_activate:
     call game_menu_input_lock
     ld a, (game_menu_selected)
@@ -98,6 +161,15 @@ game_menu_activate:
     ld (game_menu_start_requested), a
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; game_menu_draw
+;;
+;;  Clears and draws the complete main-menu presentation.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX, IY
+;;
 game_menu_draw:
     call sys_render_clear_front_buffer
     ld c, #0
@@ -110,6 +182,15 @@ game_menu_draw:
     call sys_text_draw_string
     jp game_menu_draw_options
 
+;;-----------------------------------------------------------------
+;;
+;; game_menu_draw_options
+;;
+;;  Redraws HELP and START using colors for the current selection.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX, IY
+;;
 game_menu_draw_options:
     ld a, (game_menu_selected)
     or a

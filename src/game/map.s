@@ -43,6 +43,15 @@ game_map_portal_dest_y: .db 0
 
 .area _CODE
 
+;;-----------------------------------------------------------------
+;;
+;; game_map_init
+;;
+;;  Initializes map origins, collision data, room content and portal entities.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX, IY
+;;
 game_map_init::
     ;; Configure the generic tilemap engine with Model01 resources.
     ld hl, #_s_tileset_00
@@ -69,6 +78,15 @@ game_map_init::
     ret
 
 ;; Applies Model01's room graph when the player reaches a map edge.
+;;-----------------------------------------------------------------
+;;
+;; game_map_update_transition
+;;
+;;  Checks the player against room edges and performs any connected-room transition.
+;;  Input: IX = player entity
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX, IY
+;;
 game_map_update_transition::
     ld ix, #entity_array
     ld a, (current_room)
@@ -130,7 +148,16 @@ gmut_check_south:
     ld c, #1
     jp gmut_do_vertical
 
-;; HL=room row, A=direction offset -> DE=map, B=room id, Z=no map.
+;;-----------------------------------------------------------------
+;;
+;; gmut_load_connection
+;;
+;;  Reads one directional connection from the current room descriptor.
+;;  Input: HL = room descriptor; A = direction-field offset
+;;  Output: DE = destination map; B = destination room id;
+;;          Z = 1 when the map pointer is null, Z = 0 otherwise; HL preserved
+;;  Modified: AF, B, DE
+;;
 gmut_load_connection:
     push hl
     ld d, #0
@@ -187,6 +214,15 @@ gmut_do_vertical:
     ret
 
 ;; Teleports the player using destination fields encoded in IY=portal.
+;;-----------------------------------------------------------------
+;;
+;; game_map_do_portal_transition
+;;
+;;  Moves the player through an active portal to its configured map and position.
+;;  Input: IX = player; IY = portal entity
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX, IY
+;;
 game_map_do_portal_transition::
     ld a, e_speed_x(iy)
     ld (game_map_new_pos), a

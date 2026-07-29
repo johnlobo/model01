@@ -25,6 +25,15 @@ game_quit_message: .asciz "QUIT TO MAIN MENU?  Y / N"
 
 .area _CODE
 
+;;-----------------------------------------------------------------
+;;
+;; game_init
+;;
+;;  Resets game state and initializes every gameplay system and initial entity.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX, IY
+;;
 game_init::
     xor a
     ld (game_quit_dialog_active), a
@@ -47,6 +56,15 @@ game_init::
     call sys_map_draw
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; game_update
+;;
+;;  Runs one gameplay frame or the modal quit-dialog update path.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX, IY
+;;
 game_update::
     ld a, (game_quit_dialog_active)
     or a
@@ -92,6 +110,15 @@ game_apply_quit_confirm:
     call cpct_waitVSYNC_asm
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; game_request_quit
+;;
+;;  Opens the quit confirmation dialog and clears any pending response.
+;;  Input:
+;;  Output:
+;;  Modified: AF
+;;
 game_request_quit::
     ld a, #1
     ld (game_quit_dialog_active), a
@@ -99,6 +126,15 @@ game_request_quit::
     ld (game_quit_dialog_response), a
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; game_draw_quit_dialog
+;;
+;;  Displays the modal quit confirmation message and saves its background.
+;;  Input:
+;;  Output: Does not return directly; tail-calls sys_messages_show
+;;  Modified: AF, AF', BC, DE, HL, IX, IY
+;;
 game_draw_quit_dialog:
     xor a
     ex af, af'
@@ -109,11 +145,29 @@ game_draw_quit_dialog:
     ld hl, #game_quit_message
     jp sys_messages_show
 
+;;-----------------------------------------------------------------
+;;
+;; game_cancel_quit
+;;
+;;  Queues cancellation of the quit confirmation dialog.
+;;  Input:
+;;  Output:
+;;  Modified: AF
+;;
 game_cancel_quit::
     ld a, #1
     ld (game_quit_dialog_response), a
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; game_confirm_quit
+;;
+;;  Queues confirmation of the quit request.
+;;  Input:
+;;  Output:
+;;  Modified: AF
+;;
 game_confirm_quit::
     ld a, #2
     ld (game_quit_dialog_response), a

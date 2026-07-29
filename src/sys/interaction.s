@@ -18,6 +18,15 @@ interaction_zone_bottom: .db 0
 
 .area _CODE
 
+;;-----------------------------------------------------------------
+;;
+;; sys_interaction_init
+;;
+;;  Restores the accept-all filter and no-op interaction handler.
+;;  Input:
+;;  Output:
+;;  Modified: HL
+;;
 sys_interaction_init::
     ld hl, #interaction_accept_all
     ld (interaction_filter), hl
@@ -25,6 +34,15 @@ sys_interaction_init::
     ld (interaction_handler), hl
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_interaction_set_filter
+;;
+;;  Registers the candidate filter; a null pointer restores the accept-all filter.
+;;  Input: HL = filter address or 0
+;;  Output:
+;;  Modified: AF, HL
+;;
 sys_interaction_set_filter::
     ld a, h
     or l
@@ -34,6 +52,15 @@ interaction_store_filter:
     ld (interaction_filter), hl
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_interaction_set_handler
+;;
+;;  Registers the interaction handler; a null pointer restores the no-op handler.
+;;  Input: HL = handler address or 0
+;;  Output:
+;;  Modified: AF, HL
+;;
 sys_interaction_set_handler::
     ld a, h
     or l
@@ -44,6 +71,15 @@ interaction_store_handler:
     ret
 
 ;; Build a narrow AABB immediately to the left or right of IX=actor.
+;;-----------------------------------------------------------------
+;;
+;; interaction_build_zone
+;;
+;;  Builds the narrow interaction AABB immediately in front of an actor.
+;;  Input: IX = actor; A = facing (0 right, nonzero left)
+;;  Output:
+;;  Modified: AF
+;;
 interaction_build_zone:
     or a
     jr nz, interaction_zone_left
@@ -68,6 +104,15 @@ interaction_zone_store_x:
     ld (interaction_zone_bottom), a
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_interaction_find
+;;
+;;  Finds the first eligible entity overlapping the forward interaction zone.
+;;  Input: IX = actor; A = facing (0 right, nonzero left)
+;;  Output: IY = target and carry clear when found; carry set when no target is found
+;;  Modified: AF, BC, DE, HL, IY
+;;
 sys_interaction_find::
     call interaction_build_zone
 
@@ -152,6 +197,15 @@ interaction_not_found:
     scf
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_interaction_try
+;;
+;;  Finds a forward target and dispatches the registered interaction handler.
+;;  Input: IX = actor; A = facing (0 right, nonzero left)
+;;  Output: IY = target and carry clear on success; carry set when no target is found
+;;  Modified: AF, BC, DE, HL, IY
+;;
 sys_interaction_try::
     call sys_interaction_find
     ret c
@@ -159,6 +213,15 @@ sys_interaction_try::
     or a
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; interaction_call_filter
+;;
+;;  Calls the registered candidate filter while preserving both entity pointers.
+;;  Input: IX = actor; IY = candidate
+;;  Output: Filter result in AF; Z = 1 accepts, Z = 0 rejects
+;;  Modified: AF, BC, DE, HL as modified by the callback; IX and IY preserved
+;;
 interaction_call_filter:
     push ix
     push iy
@@ -171,6 +234,15 @@ interaction_filter_return:
     pop ix
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; interaction_call_handler
+;;
+;;  Calls the registered interaction handler while preserving both entity pointers.
+;;  Input: IX = actor; IY = target
+;;  Output: Callback-defined
+;;  Modified: AF, BC, DE, HL as modified by the callback; IX and IY preserved
+;;
 interaction_call_handler:
     push ix
     push iy
@@ -183,9 +255,27 @@ interaction_handler_return:
     pop ix
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; interaction_accept_all
+;;
+;;  Default filter that accepts every interaction candidate.
+;;  Input: IX = actor; IY = candidate
+;;  Output: Z = 1; A = 0
+;;  Modified: AF
+;;
 interaction_accept_all:
     xor a
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; interaction_noop
+;;
+;;  Default interaction handler that performs no action.
+;;  Input: IX = actor; IY = target
+;;  Output:
+;;  Modified: None
+;;
 interaction_noop:
     ret

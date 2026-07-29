@@ -72,7 +72,7 @@ _smem_test_save:    .db 0       ;; saves the original value of the test byte
 ;;  CRITICAL: the STACK must not live in &4000-&7FFF. The `push bc`/`pop bc`
 ;;  pair straddles the bank switch, so a stack inside the window would be
 ;;  swapped out between them and `pop bc` would read garbage from the extra
-;;  bank. SP is set to &4000 in _main, so the stack sits below the window.
+;;  bank. The current firmware stack is near &BFxx, outside the window.
 ;;
 _sys_mem_stub_src::
     .db 0xF3                ;; di
@@ -97,6 +97,19 @@ _sys_mem_stub_end::         ;; _sys_mem_stub_end - _sys_mem_stub_src = 19 bytes
 ;;
 ;; sys_mem_init
 ;;
+;;  Compatibility initialization entry point. Installs the stub, detects the
+;;  machine capacity and returns the same result as sys_mem_detect.
+;;  Input:
+;;  Output: A = 0 and Z = 1 for 64K; A = 1 and Z = 0 for 128K; carry clear
+;;  Modified: AF, BC, DE, HL
+;;
+sys_mem_init::
+    jp sys_mem_detect
+
+;;-----------------------------------------------------------------
+;;
+;; sys_mem_detect
+;;
 ;;  Step 1 — Install the banking stub:
 ;;    Copy _sys_mem_stub_src (19 bytes) to SYS_MEM_STUB_ADDR (&0200).
 ;;    This is a plain LDIR with no banking; always safe.
@@ -106,6 +119,8 @@ _sys_mem_stub_end::         ;; _sys_mem_stub_end - _sys_mem_stub_src = 19 bytes
 ;;      _CODE — i.e. inside &4000–&7FFF, the banking window. That is deliberate.
 ;;    Write &55 to SYS_MEM_DET_PATTERN_ADDR (&0213) — outside the window,
 ;;      one byte past the installed stub.
+;;    Preserve the byte currently held by extra bank 0 at the test address in
+;;      SYS_MEM_DET_SAVE_ADDR (&0214), also outside the window.
 ;;    Call the stub to copy that &55 byte into _smem_test_byte via extra bank 0.
 ;;      · While the stub executes: &4000–&7FFF = extra bank 0.
 ;;      · DE (_smem_test_byte) is in the window → the write lands IN EXTRA BANK.
@@ -114,11 +129,14 @@ _sys_mem_stub_end::         ;; _sys_mem_stub_end - _sys_mem_stub_src = 19 bytes
 ;;    If _smem_test_byte still holds &AA → extra bank is independent → 128K. ✓
 ;;    If it holds &55  → no independent banking → 64K only.
 ;;
-;;  Input:  -
-;;  Output: sys_mem_is_128k = 1 if 128K, 0 if 64K
+;;  Safe to call repeatedly: both the normal-RAM byte and bank 0 byte used by
+;;  the probe are restored before return.
+;;  Input:
+;;  Output: A = 0 and Z = 1 for 64K; A = 1 and Z = 0 for 128K;
+;;          carry clear; sys_mem_is_128k receives the same boolean value
 ;;  Modified: AF, BC, DE, HL
 ;;
-sys_mem_init::
+sys_mem_detect::
     ;; --- Step 1: copy stub to free low RAM at &0200 ---
     ld hl, #_sys_mem_stub_src
     ld de, #SYS_MEM_STUB_ADDR
@@ -129,6 +147,14 @@ sys_mem_init::
     ;; Save the current value of the test byte so we can restore it
     ld a, (_smem_test_byte)
     ld (_smem_test_save), a
+
+    ;; Preserve the byte at the same address in bank 0. On a 64K machine the
+    ;; Gate Array mapping aliases normal RAM, which is also safe and restored.
+    ld a, #SYS_MEM_BANK_CONFIG_BASE
+    ld hl, #_smem_test_byte
+    ld de, #SYS_MEM_DET_SAVE_ADDR
+    ld bc, #1
+    call SYS_MEM_STUB_ADDR
 
     ;; Write detection pattern &AA into normal RAM at the test byte
     ld a, #0xAA
@@ -150,15 +176,28 @@ sys_mem_init::
     ;; &55 → write went to normal RAM (same physical memory) → 64K only
     ld a, (_smem_test_byte)
     cp #0xAA
-    ld a, #0
+    ld a, #SYS_MEM_CAPACITY_64K
     jr nz, _smi_no128k
-    inc a                               ;; a = 1: 128K confirmed
+    ld a, #SYS_MEM_CAPACITY_128K
 _smi_no128k:
     ld (sys_mem_is_128k), a
+    ld b, a                             ;; preserve result while restoring test byte
 
     ;; Restore the original test byte value
     ld a, (_smem_test_save)
     ld (_smem_test_byte), a
+
+    ;; Restore the byte touched in bank 0. On a 64K machine this simply writes
+    ;; the original normal-RAM byte back to the same physical location.
+    push bc
+    ld a, #SYS_MEM_BANK_CONFIG_BASE
+    ld hl, #SYS_MEM_DET_SAVE_ADDR
+    ld de, #_smem_test_byte
+    ld bc, #1
+    call SYS_MEM_STUB_ADDR
+    pop bc
+    ld a, b
+    or a                                ;; publish Z according to capacity, clear carry
     ret
 
 ;;-----------------------------------------------------------------
@@ -182,12 +221,20 @@ _smi_no128k:
 ;;          HL = source address in bank (&4000–&7FFF range)
 ;;          DE = destination in normal RAM (must not be &4000–&7FFF)
 ;;          BC = byte count
-;;  Output: -
+;;  Output: carry clear on success; carry set on 64K or invalid bank
 ;;  Modified: AF, BC, DE, HL
 ;;
 sys_mem_copy_from_bank::
+    cp #SYS_MEM_NUM_EXTRA_BANKS
+    jr nc, _smem_copy_unavailable
+    push af
+    ld a, (sys_mem_is_128k)
+    or a
+    jr z, _smem_copy_unavailable_pop
+    pop af
     add a, #SYS_MEM_BANK_CONFIG_BASE   ;; A = &C4..&C7
     call SYS_MEM_STUB_ADDR
+    or a                               ;; success: carry clear
     ret
 
 ;;-----------------------------------------------------------------
@@ -204,17 +251,31 @@ sys_mem_copy_from_bank::
 ;;          HL = source in normal RAM (must not be &4000–&7FFF)
 ;;          DE = destination address in bank (&4000–&7FFF range)
 ;;          BC = byte count
-;;  Output: -
+;;  Output: carry clear on success; carry set on 64K or invalid bank
 ;;  Modified: AF, BC, DE, HL
 ;;
 sys_mem_copy_to_bank::
+    cp #SYS_MEM_NUM_EXTRA_BANKS
+    jr nc, _smem_copy_unavailable
+    push af
+    ld a, (sys_mem_is_128k)
+    or a
+    jr z, _smem_copy_unavailable_pop
+    pop af
     add a, #SYS_MEM_BANK_CONFIG_BASE   ;; A = &C4..&C7
     call SYS_MEM_STUB_ADDR
+    or a                               ;; success: carry clear
+    ret
+
+_smem_copy_unavailable_pop:
+    pop af
+_smem_copy_unavailable:
+    scf
     ret
 
 ;;-----------------------------------------------------------------
 ;;
-;; sys_mem_bank_in  [LOW-LEVEL]
+;; sys_mem_bank_in
 ;;
 ;;  Map extra bank A into &4000–&7FFF and return.
 ;;  !! ONLY SAFE when this routine is NOT in the &4000–&7FFF region. !!
@@ -239,7 +300,7 @@ sys_mem_bank_in::
 
 ;;-----------------------------------------------------------------
 ;;
-;; sys_mem_bank_out  [LOW-LEVEL]
+;; sys_mem_bank_out
 ;;
 ;;  Restore normal banking (&4000–&7FFF = normal game RAM).
 ;;  !! Only safe when called from code NOT executing from the &4000–&7FFF

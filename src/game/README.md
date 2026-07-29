@@ -7,7 +7,8 @@ step-by-step guide to replacing this layer with a new game.
 This directory contains rules and content that define **model01**, rather than
 reusable engine mechanisms.
 
-- `behaviors.s`: concrete enemy bytecode and the game-specific shoot action.
+- `behaviors.s`: concrete patrol, chase and flying-enemy bytecode plus
+  game-specific movement and shoot actions.
 - `collision.s`: status-pair responses, portal activation and hit feedback.
 - `entities.s`: concrete animation tables, templates and factories for players,
   enemies, objects, portals and projectiles.

@@ -20,6 +20,12 @@ introducir dependencias del framework hacia el juego.
 - [Tutorial para crear un juego](docs/new-game-template.md): recorrido práctico
   desde una copia del proyecto hasta entidades, mapas, controles, animación, IA
   y colisiones.
+- [Recetas para crear contenido](docs/content-cookbook.md): cómo añadir objetos,
+  portales, habitaciones, scripts, acciones, condiciones e interacciones.
+- [Memoria para 64 y 128 KB](docs/memory-layout.md): mapa común, detección,
+  bancos del 6128, fallback y carga de contenido por zonas.
+- [Proceso de inicialización](docs/initialization.md): arranque del CPC,
+  detección de memoria, nueva partida, carga de habitaciones y orden del frame.
 - [Sistema de comportamientos](docs/behaviour-system.md): referencia detallada
   del bytecode utilizado para la IA.
 - [Capa de Model01](src/game/README.md): qué contenido concreto implementa el

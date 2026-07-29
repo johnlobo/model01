@@ -48,6 +48,15 @@ sys_text_small_numbers: .dw 0
 ;; Register the game-provided text assets.
 ;; Input: HL = font sprite base, DE = small-number sprite base
 ;; Modified: none
+;;-----------------------------------------------------------------
+;;
+;; sys_text_init
+;;
+;;  Registers the game-provided font and small-number sprite bases.
+;;  Input: HL = font sprite base; DE = small-number sprite base
+;;  Output:
+;;  Modified: None
+;;
 sys_text_init::
     ld (sys_text_font), hl
     ld (sys_text_small_numbers), de
@@ -57,9 +66,8 @@ sys_text_init::
 ;; sys_text_reset_aux_txt
 ;;  Resets the aux string buffer
 ;; Input:
-;; Returns: 
-;; Destroys:
-;;  bc, hl
+;;  Output:
+;;  Modified: B, HL
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 sys_text_reset_aux_txt::
     ld b, #20
@@ -77,13 +85,21 @@ _tr_loop:
 ;;      Counts the number of characters of a string
 ;; Input:
 ;;  hl : address of the string
-;; Returns: 
+;;  Output:
 ;;  a : number of characters
-;; Destroys:
-;;  a, b, hl
+;;  Modified: AF, B, HL
 ;;      
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;-----------------------------------------------------------------
+;;
+;; sys_text_str_length
+;;
+;;  Counts characters up to the terminating zero byte.
+;;  Input: HL = zero-terminated string
+;;  Output: A = character count
+;;  Modified: AF, B, HL
+;;
 sys_text_str_length::
     ld b, #0
 str_length_loop:
@@ -103,13 +119,21 @@ str_length_exit:
 ;; Input:
 ;;  hl : address of the origin string
 ;;  de : address of the destination string
-;; Returns: 
+;;  Output:
 ;;  Nothing
-;; Destroys:
-;;  a, b, hl
+;;  Modified: AF, BC, DE, HL
 ;;      
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;-----------------------------------------------------------------
+;;
+;; sys_text_str_copy
+;;
+;;  Copies the nonzero characters of a string to a destination buffer.
+;;  Input: HL = source string; DE = destination buffer
+;;  Output: DE points one byte past copied data; no terminator is appended
+;;  Modified: AF, BC, DE, HL
+;;
 sys_text_str_copy::
     ld (str_copy_savehl), hl    ;; [3] | Save HL before modifying them
     call sys_text_str_length
@@ -126,14 +150,22 @@ str_copy_savehl = .+1           ;; Constant to retrive HL value
 ;; Input:
 ;;  hl : address of the string 1
 ;;  de : address of the string 2
-;; Returns: 
+;;  Output:
 ;;  a : 1 if strings are the same
 ;;      0 in other case
-;; Destroys:
-;;  a, b, hl, de
+;;  Modified: AF, BC, DE, HL
 ;;      
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;-----------------------------------------------------------------
+;;
+;; sys_text_str_cmp
+;;
+;;  Compares two zero-terminated strings.
+;;  Input: HL = first string; DE = second string
+;;  Output: A = 1 when equal, A = 0 otherwise
+;;  Modified: AF, BC, DE, HL
+;;
 sys_text_str_cmp::
     ld a, (hl)
     or a
@@ -169,13 +201,21 @@ str_cmp_exit_false:
 ;;  a : color
 ;;  c : width of the sprite
 ;;  b : height of the sprite
-;; Returns: 
+;;  Output:
 ;;  Nothing
-;; Destroys:
-;;  a, b, hl, de, ix
+;;  Modified: AF, BC, DE, HL, IX
 ;;  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;-----------------------------------------------------------------
+;;
+;; sys_text_draw_char
+;;
+;;  Recolors and draws one font glyph with masked transparency.
+;;  Input: HL = glyph sprite; DE = video address; A = color; C = width; B = height
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX
+;;
 sys_text_draw_char::
     push de
     push bc
@@ -267,13 +307,21 @@ _char_buffer:: .db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 ;;  hl : address of the string
 ;;  de : video memory address
 ;;  c : color
-;; Returns: 
+;;  Output:
 ;;  Nothing
-;; Destroys:
-;;  a, b, hl, de
+;;  Modified: AF, BC, DE, HL, IX, IY
 ;;      
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;-----------------------------------------------------------------
+;;
+;; sys_text_draw_string
+;;
+;;  Draws a zero-terminated string with the configured font.
+;;  Input: HL = string; DE = video address; C = color
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX, IY
+;;
 sys_text_draw_string::
     cpctm_push ix, iy
     ld a,c
@@ -331,11 +379,10 @@ _string_color: .db 0
 ;; Input:
 ;;  hl : number to convert
 ;;  de : string address
-;;  
-;; Returns: 
+;;
+;;  Output:
 ;;  Nothing
-;; Destroys:
-;;  af, bc, hl, de
+;;  Modified: AF, BC, DE, HL
 ;;      
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 sys_text_num2str8::
@@ -344,7 +391,17 @@ sys_text_num2str8::
 	ld	c,#-10
 	call _ns8_Num1
 	ld	c,b
-_ns8_Num1:	
+;;-----------------------------------------------------------------
+;;
+;; _ns8_Num1
+;;
+;;  Extracts and stores one decimal digit using repeated subtraction.
+;;  Input: HL = remaining value; BC = negative decimal divisor;
+;;         DE = destination character address
+;;  Output: HL = remainder; DE points after the stored ASCII digit
+;;  Modified: AF, DE, HL
+;;
+_ns8_Num1:
     ld	a,#('0'-1)
 _ns8_Num2:
     inc	a
@@ -359,16 +416,15 @@ _ns8_Num2:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; sys_text_draw_small_char_number
-;;  draws a two digit number with small characters
+;;  Draws one small numeric glyph with masked colorization.
 ;; Input:
 ;;  a : number to draw
 ;;  de : screen address
 ;;  b : color
-;;  
-;; Returns: 
+;;
+;;  Output:
 ;;  Nothing
-;; Destroys:
-;;  af, bc, hl, de
+;;  Modified: AF, BC, DE, HL
 ;;      
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;sys_text_draw_small_char_number::
@@ -403,6 +459,15 @@ _ns8_Num2:
 ;;    pop ix
 ;;    ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_text_draw_small_char_number
+;;
+;;  Draws one small numeric glyph with masked colorization.
+;;  Input: A = digit; DE = video address; B = color
+;;  Output:
+;;  Modified: AF, BC, DE, HL
+;;
 sys_text_draw_small_char_number::
     push de                             ;; store video memory address in stack
   
@@ -454,11 +519,10 @@ COLOR_REP = . +1
 ;;  hl : number to convert
 ;;  de : screen address
 ;;  b  : color (0-15)
-;;  
-;; Returns: 
+;;
+;;  Output:
 ;;  Nothing
-;; Destroys:
-;;  af, bc, hl, de
+;;  Modified: AF, BC, DE, HL
 ;;
 ;;  Routine adapted from WikiTI (https://wikiti.brandonw.net/index.php?title=Z80_Routines:Other:DispHL)
 ;;
@@ -476,7 +540,17 @@ sys_text_draw_small_number::
     cp #10                      ;; check if number is lower than 10
 	call nc, _dsn_Num1           ;; if number is upper 9 then call
 	ld	c,b
-_dsn_Num1:	
+;;-----------------------------------------------------------------
+;;
+;; _dsn_Num1
+;;
+;;  Extracts and draws one decimal digit using the active small-number color.
+;;  Input: HL = remaining value; BC = negative decimal divisor;
+;;         DE = video-memory destination
+;;  Output: HL = remainder; DE advances two video bytes
+;;  Modified: AF, DE, HL; BC preserved
+;;
+_dsn_Num1:
     ld a, #-1                           
 _dsn_Num2:
     inc	a

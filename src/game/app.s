@@ -6,14 +6,32 @@
 
 .area _DATA
 
-_game_loaded_string: .asciz " GAME LOADED - V.084"
+_game_loaded_string: .asciz " GAME LOADED - V.085"
 app_state:: .db APP_STATE_MENU
 
 .area _CODE
 
+;;-----------------------------------------------------------------
+;;
+;; game_app_init
+;;
+;;  Initializes the application in the main-menu state.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL
+;;
 game_app_init::
     jp game_menu_init
 
+;;-----------------------------------------------------------------
+;;
+;; game_app_update
+;;
+;;  Dispatches one frame to the active menu or gameplay state.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX, IY
+;;
 game_app_update::
     ld a, (app_state)
     or a

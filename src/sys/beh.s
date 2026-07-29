@@ -25,6 +25,9 @@ sys_beh_actions_left:: .db 0
 ;; sys_beh_init
 ;;
 ;;  Initializes the behavior system (currently a no-op).
+;;  Input:
+;;  Output:
+;;  Modified: None
 ;;
 sys_beh_init::
     ret
@@ -122,6 +125,15 @@ sys_beh_next::
     ld e_beh+1(ix), d
     jp sys_beh_run
 
+;;-----------------------------------------------------------------
+;;
+;; sbhn_destroy
+;;
+;;  Invalidates the current entity when a behavior targets DESTROY_ENTITY.
+;;  Input: IX = entity
+;;  Output:
+;;  Modified: AF
+;;
 sbhn_destroy::
     ld e_cmps(ix), #c_cmp_invalid
     ret
@@ -164,6 +176,15 @@ sys_beh_check_conditions::
     inc de
     jp sys_beh_check_conditions
 
+;;-----------------------------------------------------------------
+;;
+;; sbhcc_true
+;;
+;;  Loads a satisfied condition target and continues behavior dispatch.
+;;  Input: IX = entity; DE = pointer to target address
+;;  Output: Does not return directly; continues through sys_beh_next
+;;  Modified: DE, HL
+;;
 sbhcc_true::
     ;; True: read target address from DE into DE, then advance
     ex de, hl           ;; HL = ptr to target addr bytes, DE (stale)
@@ -196,28 +217,38 @@ sys_beh_update::
 ;;===============================================================================
 
 ;;-----------------------------------------------------------------
+;;
 ;; beh_action_idle
 ;;
-;;  Blocking: immediately check conditions.
-;;  DE points to the condition table on entry.
+;;  Blocks at the current behavior action and immediately checks its conditions.
+;;  Input: IX = entity; DE = condition table
+;;  Output: Does not return directly; continues through sys_beh_check_conditions
+;;  Modified: AF, DE, HL
 ;;
 beh_action_idle::
     jp sys_beh_check_conditions
 
 ;;-----------------------------------------------------------------
+;;
 ;; beh_action_wait
 ;;
-;;  Blocking: decrement e_beh_timer, then check conditions.
-;;  If the timer hits 0 the `timeout` condition will fire.
+;;  Decrements the entity behavior timer and checks the following conditions.
+;;  Input: IX = entity; DE = condition table
+;;  Output: Does not return directly; continues through sys_beh_check_conditions
+;;  Modified: AF, DE, HL
 ;;
 beh_action_wait::
     dec e_beh_timer(ix)
     jp sys_beh_check_conditions
 
 ;;-----------------------------------------------------------------
+;;
 ;; beh_action_set_timer
 ;;
-;;  Non-blocking: set e_beh_timer = inline byte arg.
+;;  Stores the inline byte in e_beh_timer and advances behavior dispatch.
+;;  Input: IX = entity; DE = inline timer byte
+;;  Output: Does not return directly; continues through sys_beh_next
+;;  Modified: AF, DE, HL
 ;;
 beh_action_set_timer::
     ld a, (de)
@@ -226,9 +257,13 @@ beh_action_set_timer::
     jp sys_beh_next
 
 ;;-----------------------------------------------------------------
+;;
 ;; beh_action_set_vx
 ;;
-;;  Non-blocking: set e_speed_x (low byte) = inline byte arg.
+;;  Stores the inline signed byte in e_speed_x, marks the entity moved and advances.
+;;  Input: IX = entity; DE = inline signed X speed
+;;  Output: Does not return directly; continues through sys_beh_next
+;;  Modified: AF, DE, HL
 ;;
 beh_action_set_vx::
     ld a, (de)
@@ -238,9 +273,13 @@ beh_action_set_vx::
     jp sys_beh_next
 
 ;;-----------------------------------------------------------------
+;;
 ;; beh_action_set_vy
 ;;
-;;  Non-blocking: set e_speed_y (low byte) = inline byte arg.
+;;  Stores the inline signed byte in e_speed_y, marks the entity moved and advances.
+;;  Input: IX = entity; DE = inline signed Y speed
+;;  Output: Does not return directly; continues through sys_beh_next
+;;  Modified: AF, DE, HL
 ;;
 beh_action_set_vy::
     ld a, (de)
@@ -250,14 +289,13 @@ beh_action_set_vy::
     jp sys_beh_next
 
 ;;-----------------------------------------------------------------
+;;
 ;; beh_action_drive_vx
 ;;
-;;  Blocking: re-apply e_speed_x = inline byte arg every frame, then
-;;  check conditions. Because it is blocking, e_beh stays at this
-;;  instruction so the speed is restored on each tick.
-;;  This is the standard way for AI behaviors to move at a fixed speed:
-;;    DRIVE_VX #2  → entity moves at exactly 2 bytes/frame (right)
-;;    DRIVE_VX #-1 → entity moves at exactly 1 byte/frame  (left)
+;;  Applies an inline X speed at the requested stride, then checks conditions.
+;;  Input: IX = entity; DE = inline signed speed followed by stride
+;;  Output: Does not return directly; continues through sys_beh_check_conditions
+;;  Modified: AF, BC, DE, HL
 ;;
 beh_action_drive_vx::
     ld a, (de)              ;; A = speed
@@ -295,11 +333,13 @@ bdvx_done:
     jp sys_beh_check_conditions
 
 ;;-----------------------------------------------------------------
+;;
 ;; beh_action_set_animation
 ;;
-;;  Non-blocking: set e_anim = inline .dw arg (descriptor pointer).
-;;  Also resets e_anim_frame and e_anim_timer so the new animation
-;;  starts from frame 0 on the next anim update.
+;;  Selects the inline animation descriptor and advances behavior dispatch.
+;;  Input: IX = entity; DE = inline animation descriptor address
+;;  Output: Does not return directly; continues through sys_beh_next
+;;  Modified: AF, DE, HL
 ;;
 beh_action_set_animation::
     ld a, (de)
@@ -314,9 +354,13 @@ beh_action_set_animation::
     jp sys_beh_next
 
 ;;-----------------------------------------------------------------
+;;
 ;; beh_action_set_moved
 ;;
-;;  Non-blocking: mark entity dirty so the renderer redraws it.
+;;  Marks the entity dirty so the renderer redraws it, then advances.
+;;  Input: IX = entity; DE = next behavior position
+;;  Output: Does not return directly; continues through sys_beh_next
+;;  Modified: AF, DE, HL
 ;;
 beh_action_set_moved::
     ld e_moved(ix), #1
@@ -327,14 +371,26 @@ beh_action_set_moved::
 ;;===============================================================================
 
 ;;-----------------------------------------------------------------
-;; beh_cond_true — always returns Z=1 (true).
+;;
+;; beh_cond_true
+;;
+;;  Implements an unconditional true behavior condition.
+;;  Input: IX = entity; DE = condition target pointer
+;;  Output: Z = 1; A = 0
+;;  Modified: AF
 ;;
 beh_cond_true::
     xor a               ;; A=0 → Z=1
     ret
 
 ;;-----------------------------------------------------------------
-;; beh_cond_timeout — Z=1 when e_beh_timer == 0.
+;;
+;; beh_cond_timeout
+;;
+;;  Tests whether the entity behavior timer has expired.
+;;  Input: IX = entity; DE = condition target pointer
+;;  Output: Z = 1 when e_beh_timer is zero; Z = 0 otherwise
+;;  Modified: AF
 ;;
 beh_cond_timeout::
     ld a, e_beh_timer(ix)
@@ -342,8 +398,13 @@ beh_cond_timeout::
     ret
 
 ;;-----------------------------------------------------------------
-;; beh_cond_on_ground — Z=1 when entity is on the ground.
-;;  Uses e_on_air: 0 = on ground, non-zero = in the air.
+;;
+;; beh_cond_on_ground
+;;
+;;  Tests whether the entity is on the ground.
+;;  Input: IX = entity; DE = condition target pointer
+;;  Output: Z = 1 when e_on_air is zero; Z = 0 otherwise
+;;  Modified: AF
 ;;
 beh_cond_on_ground::
     ld a, e_on_air(ix)
@@ -351,7 +412,13 @@ beh_cond_on_ground::
     ret
 
 ;;-----------------------------------------------------------------
-;; beh_cond_not_on_ground — Z=1 when entity is airborne.
+;;
+;; beh_cond_not_on_ground
+;;
+;;  Tests whether the entity is airborne.
+;;  Input: IX = entity; DE = condition target pointer
+;;  Output: Z = 1 and A = 0 when airborne; Z = 0 and A = 1 on ground
+;;  Modified: AF
 ;;
 beh_cond_not_on_ground::
     ld a, e_on_air(ix)
@@ -359,22 +426,28 @@ beh_cond_not_on_ground::
     jr z, bcnog_false   ;; on ground → false
     xor a               ;; airborne → return Z=1
     ret
+;;-----------------------------------------------------------------
+;;
+;; bcnog_false
+;;
+;;  Returns the false result for the not-on-ground condition.
+;;  Input:
+;;  Output: Z = 0; A = 1
+;;  Modified: AF
+;;
 bcnog_false::
     ld a, #1            ;; Z=0 → false
     or a
     ret
 
 ;;-----------------------------------------------------------------
-;; beh_cond_edge_ahead — Z=1 when the tile below the leading foot
-;; is passable (i.e. entity is at a platform edge).
 ;;
-;; Checks the tile at (e_y + e_height, leading_x):
-;;   Moving right: leading_x = e_x + e_width  (one byte past right edge)
-;;   Moving left:  leading_x = e_x - 1        (one byte past left edge)
-;;   Not moving:   always false (Z=0)
+;; beh_cond_edge_ahead
 ;;
-;; sys_map_is_solid_at returns Z=1 for passable, which is exactly
-;; the "true" value we need (at edge → reverse).
+;;  Tests whether the tile below the leading foot is passable.
+;;  Input: IX = entity; DE = condition target pointer
+;;  Output: Z = 1 at an edge; Z = 0 over landable ground or when stationary
+;;  Modified: AF, BC, HL; DE preserved
 ;;
 beh_cond_edge_ahead::
     ld a, e_speed_x(ix)

@@ -11,6 +11,15 @@ sys_inventory_items:: .ds SYS_INVENTORY_CAPACITY
 
 .area _CODE
 
+;;-----------------------------------------------------------------
+;;
+;; sys_inventory_init
+;;
+;;  Clears the inventory count and every item slot.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL
+;;
 sys_inventory_init::
     xor a
     ld (sys_inventory_count), a
@@ -23,6 +32,15 @@ sys_inventory_init::
 
 ;; A=item -> Z=present, HL=matching slot or first free slot, B=items remaining
 ;; from the match (including it). C preserves the requested item id.
+;;-----------------------------------------------------------------
+;;
+;; inventory_find
+;;
+;;  Searches occupied inventory slots for an item.
+;;  Input: A = item id
+;;  Output: Z = 1 and HL = matching slot when found; Z = 0 and HL = first free slot otherwise; B = items remaining; C = item id
+;;  Modified: AF, B, C, HL
+;;
 inventory_find:
     ld c, a
     ld a, (sys_inventory_count)
@@ -41,6 +59,15 @@ inventory_not_found:
     or a
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_inventory_add
+;;
+;;  Adds a unique, nonzero item to the inventory.
+;;  Input: A = item id
+;;  Output: Carry clear on success; carry set if the id is zero, duplicated or the inventory is full
+;;  Modified: AF, B, C, HL
+;;
 sys_inventory_add::
     or a
     jr z, inventory_fail
@@ -55,6 +82,15 @@ sys_inventory_add::
     or a
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_inventory_remove
+;;
+;;  Removes an item and compacts the following occupied slots.
+;;  Input: A = item id
+;;  Output: Carry clear on success; carry set if the id is zero or absent
+;;  Modified: AF, BC, DE, HL
+;;
 sys_inventory_remove::
     or a
     jr z, inventory_fail
@@ -79,6 +115,15 @@ inventory_remove_clear_last:
     or a
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_inventory_contains
+;;
+;;  Tests whether an item is present using the behavior-condition convention.
+;;  Input: A = item id
+;;  Output: Z = 1 and A = 0 when present; Z = 0 and A = 1 when absent
+;;  Modified: AF, B, C, HL
+;;
 sys_inventory_contains::
     or a
     jr z, inventory_absent
@@ -91,6 +136,15 @@ inventory_absent:
     or a
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_inventory_get
+;;
+;;  Returns the item stored at a zero-based occupied slot.
+;;  Input: A = slot index
+;;  Output: A = item id and carry clear; A = 0 and carry set when the index is invalid
+;;  Modified: AF, DE, HL
+;;
 sys_inventory_get::
     ld e, a
     ld a, (sys_inventory_count)

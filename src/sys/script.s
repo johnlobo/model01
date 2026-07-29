@@ -12,17 +12,53 @@ script_branch_target: .dw 0
 
 .area _CODE
 
+;;-----------------------------------------------------------------
+;;
+;; sys_script_init
+;;
+;;  Stops the event-script interpreter and clears its program counter.
+;;  Input:
+;;  Output:
+;;  Modified: AF
+;;
 sys_script_init::
+;;-----------------------------------------------------------------
+;;
+;; sys_script_stop
+;;
+;;  Stops the event-script interpreter and clears its program counter.
+;;  Input:
+;;  Output:
+;;  Modified: AF
+;;
 sys_script_stop::
     xor a
     ld (sys_script_pc), a
     ld (sys_script_pc + 1), a
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_script_start
+;;
+;;  Starts interpreting bytecode at the supplied address; zero leaves it stopped.
+;;  Input: HL = script bytecode address or 0
+;;  Output:
+;;  Modified: None
+;;
 sys_script_start::
     ld (sys_script_pc), hl
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_script_is_running
+;;
+;;  Tests whether an event script has a nonzero program counter.
+;;  Input:
+;;  Output: Z = 1 and A = 0 when running; Z = 0 and A = 1 when stopped
+;;  Modified: AF, HL
+;;
 sys_script_is_running::
     ld hl, (sys_script_pc)
     ld a, h
@@ -35,6 +71,15 @@ script_not_running:
     or a
     ret
 
+;;-----------------------------------------------------------------
+;;
+;; sys_script_update
+;;
+;;  Executes script opcodes until the script stops, branches to zero or exhausts its per-tick budget.
+;;  Input:
+;;  Output:
+;;  Modified: AF, BC, DE, HL, IX, IY
+;;
 sys_script_update::
     ld a, #SYS_SCRIPT_MAX_OPS_PER_TICK
     ld (sys_script_ops_left), a
@@ -97,6 +142,15 @@ script_clear_flag:
     jp script_next
 
 ;; Parse id + failure target. Returns A=id, DE=failure, PC=continuation.
+;;-----------------------------------------------------------------
+;;
+;; script_parse_condition
+;;
+;;  Decodes an id and absolute failure target from the current script instruction.
+;;  Input: HL = first operand byte
+;;  Output: A = id; DE = failure target; script PC points to the continuation
+;;  Modified: AF, DE, HL
+;;
 script_parse_condition:
     ld a, (hl)
     inc hl
@@ -191,6 +245,16 @@ script_call:
     ex de, hl
     call script_call_hl
     jp script_next
+
+;;-----------------------------------------------------------------
+;;
+;; script_call_hl
+;;
+;;  Indirect-call trampoline used by the SCRIPT_OP_CALL opcode.
+;;  Input: HL = callback address
+;;  Output: Callback-defined
+;;  Modified: Callback-defined
+;;
 script_call_hl:
     jp (hl)
 

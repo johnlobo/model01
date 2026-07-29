@@ -85,6 +85,15 @@ transparency_table_src:
 ;; MAIN function. This is the entry point of the application.
 ;;    _main:: global symbol is required for correctly compiling and linking
 ;;
+;;-----------------------------------------------------------------
+;;
+;; _main
+;;
+;;  Initializes the CPC runtime and repeatedly dispatches application frames.
+;;  Input:
+;;  Output: Does not return
+;;  Modified: AF, BC, DE, HL, IX, IY
+;;
 _main::
    ;; Disable firmware to prevent it from interfering with string drawing
    ;;call cpct_disableFirmware_asm

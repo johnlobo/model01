@@ -117,6 +117,31 @@ blocking action
 | `beh_cond_timeout` | `e_beh_timer == 0` |
 | `beh_cond_on_ground` | `e_on_air == 0` |
 | `beh_cond_not_on_ground` | `e_on_air != 0` |
+| `beh_cond_edge_ahead` | No existe superficie bajo el pie delantero |
+
+## Model01 enemy examples
+
+Model01 adds three blocking actions in `src/game/behaviors.s`. They demonstrate
+how a game can extend the interpreter without adding game imports to `sys/beh`:
+
+| Macro | Inline configuration | Result |
+|---|---|---|
+| `GAME_CHASE_PLAYER speed, stride` | speed magnitude and frame stride | Recomputes left/right direction toward the player every tick |
+| `GAME_PATROL_X left, right, speed, stride` | absolute world-X limits | Reverses at configured positions, independently of platform edges |
+| `GAME_FLY_Y top, bottom, speed, stride` | absolute world-Y limits | Moves directly between two heights without gravity |
+
+Corresponding complete programs are `game_beh_chase_player`,
+`game_beh_patrol_positions` and `game_beh_flying_enemy`. Their factories accept
+`B=x`, `C=y`, `D=room`:
+
+```asm
+call game_entity_create_chaser_enemy
+call game_entity_create_position_patrol_enemy
+call game_entity_create_flying_enemy
+```
+
+The flying factory intentionally omits `c_cmp_movable`; its behavior owns
+vertical motion, so generic gravity and terrain physics do not affect it.
 
 ---
 
